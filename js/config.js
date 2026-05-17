@@ -60,7 +60,7 @@ let pageNums = {};
 // Supabase Dashboard → Settings → API
 // ══════════════════════════════════════════════════════
 const SUPABASE_URL  = 'https://qyiaswmlnkqtldjtprub.supabase.co'; // ← GANTI
-const SUPABASE_ANON = 'sb_publishable_d9dzn7U5q9n66Hvzm5jEOg_yQ1n4N0M';  // ← GANTI
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWFzd21sbmtxdGxkanRwcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjUxMzAsImV4cCI6MjA5NDYwMTEzMH0.3kl65V5vQl8RVNRKiN9oILwOSjOyCI2AtnzbA9N0u_Q';  // ← GANTI
 
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
