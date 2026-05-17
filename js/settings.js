@@ -46,7 +46,7 @@ async function renderUserTable(){
 }
 
 // ── Tambah user baru via Supabase Auth ─────────────────────
-function openTambahUser(){
+function openTambahUser()
   document.getElementById('modal-title').textContent = 'Undang Pengguna Baru';
   document.getElementById('modal-body').innerHTML = `
     <div style="font-size:12px;color:var(--tx2);background:var(--primary-bg);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
