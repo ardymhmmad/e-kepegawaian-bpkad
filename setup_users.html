@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup Admin — E-Kepegawaian</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f0f9ff;color:#0c2d48;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:16px;padding:32px;max-width:660px;width:100%;box-shadow:0 8px 32px rgba(14,165,233,.12)}
+  h1{font-size:20px;margin-bottom:4px;color:#0369a1}
+  .sub{font-size:13px;color:#2e6b8a;margin-bottom:24px}
+  .warn{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;margin-bottom:20px}
+  .step{display:flex;gap:10px;margin-bottom:16px;align-items:flex-start}
+  .step-num{width:26px;height:26px;border-radius:50%;background:#0284c7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+  .step-text{font-size:13px;color:#1e4059;line-height:1.6}
+  code{background:#e0f2fe;padding:2px 7px;border-radius:4px;font-size:12px;font-family:monospace}
+  pre{background:#e0f2fe;border-radius:8px;padding:14px;font-size:12px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;word-break:break-all;margin:10px 0}
+  .copy-btn{background:none;border:1px solid #0284c7;color:#0284c7;border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;font-weight:600;margin-top:6px}
+  .copy-btn:hover{background:#e0f2fe}
+  hr{border:none;border-top:1px solid #e0f2fe;margin:22px 0}
+  .badge{display:inline-block;background:#0284c7;color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-left:6px}
+  label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2e6b8a;margin-bottom:5px;margin-top:12px}
+  input{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #bae6fd;font-size:13px;outline:none;font-family:inherit}
+  input:focus{border-color:#0284c7;box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+  button.gen{background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:14px}
+  button.gen:hover{opacity:.9}
+  .result{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-top:16px;display:none}
+  .result h3{font-size:13px;font-weight:700;margin-bottom:10px;color:#0369a1}
+  .ok{background:#ecfdf5;border-radius:8px;padding:10px 12px;font-size:12px;color:#065f46;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚙ Setup Admin — E-Kepegawaian</h1>
+  <p class="sub">Panduan setup akun admin pertama kali menggunakan Supabase Auth</p>
+
+  <div class="warn">⚠ Halaman ini hanya untuk setup awal. Hapus file ini dari hosting setelah selesai.</div>
+
+  <!-- LANGKAH 1 -->
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text">
+      <strong>Jalankan SQL migrasi</strong> <code>migrate_to_supabase_auth.sql</code> di
+      <strong>Supabase Dashboard → SQL Editor</strong>.<br>
+      File ini membuat tabel <code>profiles</code>, trigger otomatis, dan RLS policy baru.
+    </div>
+  </div>
+
+  <!-- LANGKAH 2 -->
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text">
+      Buka <strong>Supabase Dashboard → Authentication → Users → Add user</strong>.<br>
+      Isi email dan password admin, centang <em>"Auto Confirm User"</em>, lalu klik <strong>Create user</strong>.
+    </div>
+  </div>
+
+  <!-- LANGKAH 3 -->
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-text">
+      Setelah user dibuat, jalankan SQL berikut untuk menetapkan role <strong>admin</strong>.<br>
+      Ganti email sesuai yang Anda daftarkan:
+    </div>
+  </div>
+
+  <label>Email Admin</label>
+  <input type="email" id="admin-email" placeholder="contoh: admin@bpkad.go.id">
+  <label>Nama / Label</label>
+  <input type="text" id="admin-label" value="Administrator BPKAD" placeholder="Nama tampilan">
+  <button class="gen" onclick="generateSQL()">🔑 Generate SQL Set Admin</button>
+
+  <div class="result" id="result">
+    <h3>SQL — Jalankan di Supabase SQL Editor:</h3>
+    <pre id="sql-output"></pre>
+    <button class="copy-btn" onclick="copySql()">📋 Salin SQL</button>
+    <div class="ok">✓ Setelah menjalankan SQL, buka <b>index.html</b> dan login dengan email dan password yang sudah didaftarkan.</div>
+  </div>
+
+  <hr>
+
+  <!-- LANGKAH 4 -->
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-text">
+      Untuk menambah pengguna lain setelahnya, gunakan menu <strong>Pengaturan → Manajemen Pengguna</strong>
+      di dalam aplikasi. Tidak perlu kembali ke halaman ini.
+    </div>
+  </div>
+
+  <!-- LANGKAH 5 -->
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-text">
+      Pastikan di <strong>Supabase Dashboard → Authentication → Settings</strong>:<br>
+      • <em>Site URL</em> diisi dengan URL hosting Anda (misal: <code>https://username.github.io/ekepegawaian</code>)<br>
+      • <em>Email Confirmations</em> bisa dimatikan untuk kemudahan internal
+    </div>
+  </div>
+</div>
+
+<script>
+function generateSQL(){
+  const email = document.getElementById('admin-email').value.trim();
+  const label = document.getElementById('admin-label').value.trim();
+  if(!email){ alert('Email wajib diisi'); return; }
+
+  const sql =
+`-- Set role admin untuk: ${email}
+-- Jalankan di Supabase Dashboard → SQL Editor
+
+UPDATE profiles
+SET role  = 'admin',
+    label = '${label.replace(/'/g,"''")}'
+WHERE id = (
+  SELECT id FROM auth.users WHERE email = '${email.replace(/'/g,"''")}'
+);
+
+-- Verifikasi hasil:
+SELECT u.email, p.role, p.label
+FROM auth.users u
+JOIN profiles p ON p.id = u.id
+WHERE u.email = '${email.replace(/'/g,"''")}';`;
+
+  document.getElementById('sql-output').textContent = sql;
+  document.getElementById('result').style.display = 'block';
+}
+
+function copySql(){
+  const txt = document.getElementById('sql-output').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Tersalin!';
+    setTimeout(()=>btn.textContent='📋 Salin SQL', 2000);
+  });
+}
+</script>
+</body>
+</html>
