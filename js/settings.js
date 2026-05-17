@@ -115,34 +115,37 @@ async function simpanTambahUser(){
   if(pw.length < 8)  { showErr('Password minimal 8 karakter'); return; }
   if(pw !== pw2)     { showErr('Konfirmasi password tidak cocok'); return; }
 
-  // Daftar user baru via signUp (kompatibel dengan anon key)
+  // Simpan session admin sebelum signUp menggantikannya
+  const { data: { session: adminSession } } = await supa.auth.getSession();
+  if(!adminSession) { showErr('Session admin tidak ditemukan, coba refresh halaman.'); return; }
+  const adminRefreshToken = adminSession.refresh_token;
+
+  // Daftar user baru via signUp
   const { data, error } = await supa.auth.signUp({
     email,
     password: pw,
     options: { data: { label, role } }
   });
 
-  if(error){ showErr(error.message); return; }
-  if(!data?.user){ showErr('Gagal membuat user, coba lagi.'); return; }
-
-  // Upsert profil secara eksplisit
-  const { error: profErr } = await supa.from('profiles')
-    .upsert({ id: data.user.id, label, role }, { onConflict: 'id' });
-  if(profErr){ showErr('User dibuat tapi profil gagal disimpan: ' + profErr.message); return; }
-
-  // Logout dari session signUp agar tidak menggantikan session admin
-  // signUp di Supabase otomatis login — kita perlu restore session admin
-  const { data: { session: adminSession } } = await supa.auth.getSession();
-  if(adminSession?.user?.id === data.user.id){
-    // Session berpindah ke user baru, kembalikan ke admin
-    await supa.auth.signOut();
-    showToast(`Pengguna "${label}" berhasil dibuat. Silakan login kembali.`, 'success');
-    setTimeout(()=>doLogout(), 1500);
-    return;
+  if(error){
+    // Pulihkan session admin jika signUp gagal
+    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
+    showErr(error.message); return;
   }
+  if(!data?.user){
+    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
+    showErr('Gagal membuat user, coba lagi.'); return;
+  }
+
+  // Upsert profil user baru
+  await supa.from('profiles').upsert({ id: data.user.id, label, role }, { onConflict: 'id' });
+
+  // Pulihkan session admin
+  await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
 
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
+}
 }
 
 // ── Edit user ──────────────────────────────────────────────
