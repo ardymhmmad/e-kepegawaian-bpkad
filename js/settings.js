@@ -146,7 +146,7 @@ async function simpanTambahUser(){
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
 }
-}
+
 
 // ── Edit user ──────────────────────────────────────────────
 function openEditUser(uid){
