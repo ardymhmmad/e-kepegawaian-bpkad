@@ -18,8 +18,7 @@ async function loadFonnteToken(){
   const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').single();
   if(data?.setting_val){
     el.value = data.setting_val;
-    // Terapkan ke variabel global
-    if(typeof FONNTE_TOKEN !== 'undefined') window._FONNTE_TOKEN = data.setting_val;
+    FONNTE_TOKEN = data.setting_val; // update variabel global langsung
   }
 }
 
