@@ -7,7 +7,48 @@ function renderSettings(){
   if(sui && session) sui.textContent = `${session.label} (${session.email})`;
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
+  // Load Fonnte token dari settings tabel
+  loadFonnteToken();
   renderUserTable();
+}
+
+// ── Fonnte Token ───────────────────────────────────────────
+async function loadFonnteToken(){
+  const el = document.getElementById('fonnte-token-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').single();
+  if(data?.setting_val){
+    el.value = data.setting_val;
+    // Terapkan ke variabel global
+    if(typeof FONNTE_TOKEN !== 'undefined') window._FONNTE_TOKEN = data.setting_val;
+  }
+}
+
+async function saveFonnteToken(){
+  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
+  const { error } = await supa.from('settings').upsert({ setting_key:'fonnte_token', setting_val:token },{ onConflict:'setting_key' });
+  if(!error){
+    FONNTE_TOKEN = token;
+    showToast('Token Fonnte disimpan','success');
+  } else showToast(error.message,'error');
+}
+
+async function testFonnteToken(){
+  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
+  if(!token){ showToast('Isi token terlebih dahulu','error'); return; }
+  const noTest = prompt('Masukkan nomor WA untuk test (cth: 08123456789):','');
+  if(!noTest) return;
+  let nomor = noTest.replace(/\D/g,'');
+  if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
+  try{
+    const res = await fetch('https://api.fonnte.com/send',{
+      method:'POST',
+      headers:{ 'Authorization': token },
+      body: new URLSearchParams({ target:nomor, message:'✅ Test notifikasi dari E-Kepegawaian BPKAD berhasil!', countryCode:'62' })
+    });
+    const data = await res.json();
+    if(data.status===true) showToast('✅ WA terkirim! Fonnte berhasil terhubung.','success');
+    else showToast('Gagal: '+(data.reason||JSON.stringify(data)),'error');
+  }catch(e){ showToast('Error: '+e.message,'error'); }
 }
 
 // ── Tabel daftar user ──────────────────────────────────────
@@ -146,7 +187,6 @@ async function simpanTambahUser(){
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
 }
-
 
 // ── Edit user ──────────────────────────────────────────────
 function openEditUser(uid){

@@ -107,7 +107,10 @@ function renderAlokasiTable(){
               <div style="font-size:9px;color:var(--tx3)">${pct}%</div>
             </div>
           </td>
-          ${isAdmin?`<td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditAlokasi('${a.id}',${yr})">Atur</button></td>`:''}
+          ${isAdmin?`<td style="white-space:nowrap;display:flex;gap:4px">
+            <button class="btn btn-sm" onclick="openEditAlokasi('${a.id}',${yr})">Atur</button>
+            ${(isAlOvr||isCoOvr)?`<button class="btn btn-sm btn-danger" onclick="hapusOverrideAlokasi('${a.id}',${yr},'${a.nama}')" title="Reset ke default">Reset</button>`:''}
+          </td>`:''}
         </tr>`;
       }).join('')
     : `<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:24px">Tidak ada data ASN</td></tr>`;
@@ -250,6 +253,23 @@ async function resetAlokasiPegawai(asnId, yr){
 }
 
 function resetAlokasi(asnId, yr){ resetAlokasiPegawai(asnId, yr); }
+
+function hapusOverrideAlokasi(asnId, yr, nama){
+  showConfirm(
+    'Reset Alokasi Cuti',
+    `Reset alokasi override <strong>${nama}</strong> tahun ${yr}?<br>
+     <span style="font-size:11px;color:var(--tx3)">Akan kembali ke default sistem (${DEF_ALOKASI} hari + carry over otomatis).</span>`,
+    async () => {
+      if(DB.alokasi[asnId]){
+        delete DB.alokasi[asnId][yr];
+        if(!Object.keys(DB.alokasi[asnId]).length) delete DB.alokasi[asnId];
+      }
+      await supa.from('alokasi_cuti').delete().eq('asn_id',asnId).eq('tahun',yr);
+      renderAlokasiTable();
+      showToast(`Alokasi ${nama} direset ke default`,'success');
+    }
+  );
+}
 
 // ── Export cuti ────────────────────────────────────────────────
 function exportCutiExcel(){

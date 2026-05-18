@@ -109,10 +109,13 @@ function goPage(type,pg){ pageNums[type]=pg; refreshTable(type); }
 function renderKP(filters={}){
   const q=(filters.q||'').toLowerCase();
   const unit=filters.unit||'';
+  const status=filters.status||'';
   const heads=['NIP','Nama ASN','Gol Saat Ini','Gol Berikutnya','TMT Terakhir','Tgl Jatuh Tempo','Status','Keterangan'];
   const th=document.getElementById('kp-thead');
   if(th) th.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  const data=DB.asn.filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit));
+  const data=DB.asn
+    .filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit))
+    .filter(a=>{ if(!status) return true; const k=calcKP(a); return k.status===status; });
   const pg=Math.min(pageNums['kp']||1,Math.ceil(data.length/PER_PAGE)||1);
   pageNums['kp']=pg;
   const slice=data.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
@@ -142,6 +145,7 @@ function renderPg2(type,total,filters){
   el.innerHTML=h;
 }
 function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
+function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
 
 // ═══════════════════════════════════════════════════
 // KGB TABLE
@@ -149,10 +153,13 @@ function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilter
 function renderKGB(filters={}){
   const q=(filters.q||'').toLowerCase();
   const unit=filters.unit||'';
+  const status=filters.status||'';
   const heads=['NIP','Nama ASN','Unit Kerja','Gol','TMT KGB','Gaji Saat Ini','Tgl KGB Berikut','Status','Keterangan'];
   const th=document.getElementById('kgb-thead');
   if(th) th.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  const data=DB.asn.filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit));
+  const data=DB.asn
+    .filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit))
+    .filter(a=>{ if(!status) return true; const k=calcKGB(a); return k.status===status; });
   const pg=Math.min(pageNums['kgb']||1,Math.ceil(data.length/PER_PAGE)||1);
   pageNums['kgb']=pg;
   const slice=data.slice((pg-1)*PER_PAGE,pg*PER_PAGE);

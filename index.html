@@ -221,7 +221,7 @@ var _xlsxReady = false;
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title" id="asn-count">Data ASN</div></div>
-            <div style="overflow-x:auto"><table><thead id="asn-thead"></thead><tbody id="asn-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="asn-thead"></thead><tbody id="asn-tbody"></tbody></table></div>
             <div class="pg" id="asn-pg"></div>
           </div>
         </div>
@@ -235,7 +235,7 @@ var _xlsxReady = false;
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title" id="pppk-count">PPPK PW</div></div>
-            <div style="overflow-x:auto"><table><thead id="pppk-thead"></thead><tbody id="pppk-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="pppk-thead"></thead><tbody id="pppk-tbody"></tbody></table></div>
             <div class="pg" id="pppk-pg"></div>
           </div>
         </div>
@@ -249,7 +249,7 @@ var _xlsxReady = false;
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title" id="pjlp-count">PJLP</div></div>
-            <div style="overflow-x:auto"><table><thead id="pjlp-thead"></thead><tbody id="pjlp-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="pjlp-thead"></thead><tbody id="pjlp-tbody"></tbody></table></div>
             <div class="pg" id="pjlp-pg"></div>
           </div>
         </div>
@@ -259,10 +259,17 @@ var _xlsxReady = false;
           <div class="filter-row">
             <input class="search-box" type="text" placeholder="Cari NIP / Nama...">
             <select class="filter-sel" id="kp-f-unit"><option value="">Semua Unit</option></select>
+            <select class="filter-sel" id="kp-f-status" onchange="refreshTable2('kp')">
+              <option value="">Semua Status</option>
+              <option value="Sudah Naik Pangkat">Sudah Naik Pangkat</option>
+              <option value="Segera">Segera (≤ 6 bulan)</option>
+              <option value="Belum">Belum</option>
+              <option value="Batas Maksimal">Batas Maksimal</option>
+            </select>
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title">Kenaikan Pangkat</div></div>
-            <div style="overflow-x:auto"><table><thead id="kp-thead"></thead><tbody id="kp-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="kp-thead"></thead><tbody id="kp-tbody"></tbody></table></div>
             <div class="pg" id="kp-pg"></div>
           </div>
         </div>
@@ -272,10 +279,16 @@ var _xlsxReady = false;
           <div class="filter-row">
             <input class="search-box" type="text" placeholder="Cari NIP / Nama...">
             <select class="filter-sel" id="kgb-f-unit"><option value="">Semua Unit</option></select>
+            <select class="filter-sel" id="kgb-f-status" onchange="refreshTable2('kgb')">
+              <option value="">Semua Status</option>
+              <option value="Segera">Segera (≤ 30 hari)</option>
+              <option value="Normal">Normal</option>
+              <option value="Lewat Jatuh Tempo">Lewat Jatuh Tempo</option>
+            </select>
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title">KGB</div></div>
-            <div style="overflow-x:auto"><table><thead id="kgb-thead"></thead><tbody id="kgb-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="kgb-thead"></thead><tbody id="kgb-tbody"></tbody></table></div>
             <div class="pg" id="kgb-pg"></div>
           </div>
         </div>
@@ -307,6 +320,23 @@ var _xlsxReady = false;
                 </div>
               </div>
               <div id="logo-upload-status"></div>
+            </div>
+
+            <!-- Fonnte WA Config -->
+            <div class="cc admin-only" style="margin-bottom:16px">
+              <div class="cc-title"><span class="cc-title-dot" style="background:#25D366"></span>Konfigurasi WhatsApp (Fonnte)</div>
+              <div style="font-size:12px;color:var(--tx2);margin-bottom:12px;line-height:1.6;background:var(--grn-bg);border-radius:8px;padding:10px 12px">
+                Token didapat dari <strong>dashboard.fonnte.com</strong> → Devices → Token.<br>
+                Token disimpan di database dan digunakan untuk notifikasi pengajuan & persetujuan cuti.
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-end">
+                <div class="fg" style="flex:1;margin-bottom:0">
+                  <label>Fonnte Token</label>
+                  <input type="text" id="fonnte-token-input" placeholder="Paste token Fonnte di sini...">
+                </div>
+                <button class="btn btn-success always-allow" onclick="saveFonnteToken()" style="white-space:nowrap">Simpan Token</button>
+                <button class="btn always-allow" onclick="testFonnteToken()" style="white-space:nowrap">Test WA</button>
+              </div>
             </div>
 
             <!-- Manajemen Pengguna -->
@@ -363,7 +393,7 @@ var _xlsxReady = false;
           </div>
           <div class="tc">
             <div class="tc-hdr"><div class="tc-title" id="cuti-count">Pengajuan Cuti</div></div>
-            <div style="overflow-x:auto"><table><thead id="cuti-thead"></thead><tbody id="cuti-tbody"></tbody></table></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="cuti-thead"></thead><tbody id="cuti-tbody"></tbody></table></div>
             <div class="pg" id="cuti-pg"></div>
           </div>
         </div>
@@ -416,7 +446,7 @@ var _xlsxReady = false;
                 </select>
               </div>
               <div style="overflow-x:auto">
-                <table><thead id="alokasi-thead"></thead><tbody id="alokasi-tbody"></tbody></table>
+                <table style="width:100%"><thead id="alokasi-thead"></thead><tbody id="alokasi-tbody"></tbody></table>
               </div>
               <div class="pg" id="alokasi-pg"></div>
             </div>

@@ -81,7 +81,8 @@ function getFilters(type){
   return {
     q:(document.querySelector('#page-'+type+' .search-box')?.value||'').toLowerCase(),
     unit:document.getElementById(type+'-f-unit')?.value||'',
-    sub:document.getElementById(type+'-f-sub')?.value||''
+    sub:document.getElementById(type+'-f-sub')?.value||'',
+    status:document.getElementById(type+'-f-status')?.value||''
   };
 }
 

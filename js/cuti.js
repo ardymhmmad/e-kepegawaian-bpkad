@@ -1,6 +1,15 @@
 // ═══════════════════════════════════════════════════════════════
-// CUTI MODULE — Pengajuan Cuti (tanpa tipe, alokasi hari saja)
+// CUTI MODULE V2 — Pengajuan Cuti + WA Fonnte + Mandiri
 // ═══════════════════════════════════════════════════════════════
+
+const JENIS_CUTI = [
+  'Cuti Tahunan',
+  'Cuti Sakit',
+  'Cuti Melahirkan',
+  'Cuti Besar',
+  'Cuti Alasan Penting',
+  'Cuti Di Luar Tanggungan Negara',
+];
 
 // ── Hari libur nasional 2025–2026 ─────────────────────────────
 const HARI_LIBUR = {
@@ -15,106 +24,54 @@ const HARI_LIBUR = {
 
 function getLiburSet(yr){ return new Set(HARI_LIBUR[String(yr)]||[]); }
 
-// Parse string 'YYYY-MM-DD' ke Date lokal (bukan UTC) — mencegah pergeseran timezone
 function parseDateLocal(str){
   if(!str) return null;
   const [y,m,d]=str.split('-').map(Number);
   return new Date(y,m-1,d);
 }
-// Format Date lokal ke string 'YYYY-MM-DD'
 function fmtDateLocal(dt){
   return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
 }
 
-function hitungHariKerja(s, e){
+function hitungHariKerja(s,e){
   if(!s||!e) return 0;
-  // Parse tanggal sebagai lokal (bukan UTC) agar tidak ada pergeseran zona waktu
-  const parseLoc = str => {
-    const [y,m,d] = str.split('-').map(Number);
-    return new Date(y, m-1, d); // lokal, bukan UTC
-  };
-  const start = parseLoc(s);
-  const end   = parseLoc(e);
-  if(end < start) return 0;
-
-  // Gunakan tahun mulai untuk set hari libur;
-  // jika rentang melewati tahun, gabungkan keduanya
-  const liburSet = new Set([
-    ...Array.from(getLiburSet(start.getFullYear())),
-    ...Array.from(getLiburSet(end.getFullYear()))
-  ]);
-
-  let n = 0;
-  const cur = new Date(start);
-  while(cur <= end){
-    const dow = cur.getDay();                        // 0=Min, 6=Sab
-    // Format tanggal lokal manual (hindari toISOString yang UTC-based)
-    const ds  = cur.getFullYear()+'-'+
-                String(cur.getMonth()+1).padStart(2,'0')+'-'+
-                String(cur.getDate()).padStart(2,'0');
-    // Hari kerja: bukan Sabtu (6), bukan Minggu (0), bukan hari libur
-    if(dow !== 0 && dow !== 6 && !liburSet.has(ds)) n++;
-    cur.setDate(cur.getDate() + 1);
+  const parseLoc=str=>{ const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d); };
+  const start=parseLoc(s), end=parseLoc(e);
+  if(end<start) return 0;
+  const liburSet=new Set([...Array.from(getLiburSet(start.getFullYear())),...Array.from(getLiburSet(end.getFullYear()))]);
+  let n=0; const cur=new Date(start);
+  while(cur<=end){
+    const dow=cur.getDay();
+    const ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    if(dow!==0&&dow!==6&&!liburSet.has(ds)) n++;
+    cur.setDate(cur.getDate()+1);
   }
   return n;
 }
 
 // ── Storage ───────────────────────────────────────────────────
-let DEF_ALOKASI = 12;          // default hari per tahun (global)
-// DB.alokasi = { asn_id: { [tahun]: { alokasi:N } } }
-// DB.cuti    = [ {...} ]
+let DEF_ALOKASI=12;
+function saveCuti(){} function loadCuti(){ DB.cuti=[]; }
+let CARRY_OVER_ENABLED=true, CARRY_OVER_MAX=999;
+function saveAlokasi(){} function loadAlokasi(){ DB.alokasi={}; }
 
-function saveCuti(){}
-function loadCuti(){ DB.cuti=[]; }
-// CARRY_OVER: true = sisa tahun lalu otomatis terbawa
-// DB.alokasi[asnId][tahun] = { alokasi:N, carryover_override:N|null }
-// carryover_override null = pakai hitungan otomatis, angka = manual admin
-let CARRY_OVER_ENABLED = true;   // kebijakan global on/off
-let CARRY_OVER_MAX     = 999;    // maks hari carry over (999 = tidak terbatas)
-
-function saveAlokasi(){}
-function loadAlokasi(){ DB.alokasi={}; }
-
-// ── Alokasi helpers (with carry over) ─────────────────────────
-function getAlokasiTahun(asnId, tahun){
-  return DB.alokasi?.[asnId]?.[tahun]?.alokasi ?? DEF_ALOKASI;
-}
-function getTerpakaiTahun(asnId, tahun){
-  return DB.cuti.filter(c=>c.asn_id===asnId&&c.status==='approved'&&c.tahun===tahun)
-                .reduce((s,c)=>s+(c.hari_kerja||0),0);
-}
-// Sisa murni tahun tsb (tanpa carry over)
-function getSisaMurni(asnId, tahun){
-  return Math.max(0, getAlokasiTahun(asnId,tahun)-getTerpakaiTahun(asnId,tahun));
-}
-// Carry over dari tahun sebelumnya:
-//   - Jika admin sudah set override manual → pakai itu
-//   - Jika belum → hitung otomatis dari sisa tahun lalu (jika CARRY_OVER_ENABLED)
-//   - Dibatasi CARRY_OVER_MAX
-function getCarryOver(asnId, tahun){
+function getAlokasiTahun(asnId,tahun){ return DB.alokasi?.[asnId]?.[tahun]?.alokasi??DEF_ALOKASI; }
+function getTerpakaiTahun(asnId,tahun){ return DB.cuti.filter(c=>c.asn_id===asnId&&c.status==='approved'&&c.tahun===tahun).reduce((s,c)=>s+(c.hari_kerja||0),0); }
+function getSisaMurni(asnId,tahun){ return Math.max(0,getAlokasiTahun(asnId,tahun)-getTerpakaiTahun(asnId,tahun)); }
+function getCarryOver(asnId,tahun){
   if(!CARRY_OVER_ENABLED) return 0;
-  const thnLalu = tahun - 1;
-  const ovr = DB.alokasi?.[asnId]?.[tahun]?.carryover_override;
-  if(ovr !== undefined && ovr !== null) return Math.max(0, ovr);
-  // Hitung otomatis
-  const sisa = getSisaMurni(asnId, thnLalu);
-  return Math.min(sisa, CARRY_OVER_MAX);
+  const ovr=DB.alokasi?.[asnId]?.[tahun]?.carryover_override;
+  if(ovr!==undefined&&ovr!==null) return Math.max(0,ovr);
+  return Math.min(getSisaMurni(asnId,tahun-1),CARRY_OVER_MAX);
 }
-// Total alokasi efektif tahun ini = alokasi tahun ini + carry over
-function getTotalAlokasi(asnId, tahun){
-  return getAlokasiTahun(asnId, tahun) + getCarryOver(asnId, tahun);
-}
-// Sisa total (termasuk carry over)
-function getSisaTahun(asnId, tahun){
-  return Math.max(0, getTotalAlokasi(asnId, tahun) - getTerpakaiTahun(asnId, tahun));
-}
+function getTotalAlokasi(asnId,tahun){ return getAlokasiTahun(asnId,tahun)+getCarryOver(asnId,tahun); }
+function getSisaTahun(asnId,tahun){ return Math.max(0,getTotalAlokasi(asnId,tahun)-getTerpakaiTahun(asnId,tahun)); }
 function generateNoSurat(){
   const yr=new Date().getFullYear();
   const n=DB.cuti.filter(c=>c.status==='approved'&&c.tahun===yr).length+1;
   return `${String(n).padStart(3,'0')}/CUTI/BPKAD/${yr}`;
 }
 
-// ── Badge ─────────────────────────────────────────────────────
 function updateCutiBadge(){
   const n=DB.cuti.filter(c=>c.status==='step1'||c.status==='step2').length;
   const el=document.getElementById('cuti-badge');
@@ -122,13 +79,55 @@ function updateCutiBadge(){
 }
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER PENGAJUAN CUTI TABLE
+// FONNTE — Kirim WA
+// ═══════════════════════════════════════════════════════════════
+async function kirimWA(target, pesan){
+  if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
+  if(!target) return false;
+  // Normalisasi nomor: hilangkan +, awalan 0 → 62
+  let nomor = target.replace(/\D/g,'');
+  if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
+  try{
+    const res = await fetch('https://api.fonnte.com/send',{
+      method:'POST',
+      headers:{ 'Authorization': FONNTE_TOKEN },
+      body: new URLSearchParams({ target: nomor, message: pesan, countryCode:'62' })
+    });
+    const data = await res.json();
+    return data.status === true;
+  } catch(e){ console.error('WA error:',e); return false; }
+}
+
+function pesanPengajuan(c, asnNama){
+  return `*📋 Pengajuan Cuti Baru*\n\n` +
+    `Pegawai  : ${asnNama}\n` +
+    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
+    `Hari Kerja: ${c.hari_kerja} hari\n` +
+    `Keperluan : ${c.keperluan||'-'}\n\n` +
+    `Silakan buka aplikasi E-Kepegawaian untuk melakukan persetujuan.`;
+}
+
+function pesanPersetujuan(c, disetujui){
+  const status = disetujui ? '✅ DISETUJUI' : '❌ DITOLAK';
+  return `*${status} — Pengajuan Cuti*\n\n` +
+    `Nama      : ${c.nama}\n` +
+    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
+    `Hari Kerja: ${c.hari_kerja} hari\n` +
+    (disetujui ? `No. Surat : ${c.no_surat||'-'}\n` : '') +
+    `\nSilakan cek detail di aplikasi E-Kepegawaian.`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER TABLE
 // ═══════════════════════════════════════════════════════════════
 function renderCutiPage(){
   const unitSel=document.getElementById('cuti-f-unit');
   if(unitSel&&unitSel.options.length<=1)
     Object.keys(UNITS).forEach(u=>unitSel.add(new Option(u,u)));
-
   const yearSel=document.getElementById('cuti-f-year');
   if(yearSel&&yearSel.options.length<=1){
     const yrs=[...new Set(DB.cuti.map(c=>c.tahun))].sort((a,b)=>b-a);
@@ -143,12 +142,15 @@ function renderCutiPage(){
 }
 
 function renderCutiTable(){
-  const q   =(document.getElementById('cuti-search')?.value||'').toLowerCase();
+  const q=(document.getElementById('cuti-search')?.value||'').toLowerCase();
   const unit=document.getElementById('cuti-f-unit')?.value||'';
   const stat=document.getElementById('cuti-f-status')?.value||'';
-  const yr  =document.getElementById('cuti-f-year')?.value||'';
+  const yr=document.getElementById('cuti-f-year')?.value||'';
+  const isAdmin=session?.role==='admin';
 
-  const data=[...DB.cuti].filter(c=>{
+  let data=[...DB.cuti].filter(c=>{
+    // User biasa hanya lihat pengajuan milik sendiri (by email)
+    if(!isAdmin && c.diajukan_oleh && c.diajukan_oleh!=='admin' && c.diajukan_oleh!==session?.email) return false;
     if(q&&!c.nama.toLowerCase().includes(q)&&!c.nip.includes(q)) return false;
     if(unit&&c.unit!==unit) return false;
     if(stat&&c.status!==stat) return false;
@@ -159,14 +161,11 @@ function renderCutiTable(){
   document.getElementById('cuti-count').textContent=`Pengajuan Cuti (${data.length})`;
   updateCutiBadge();
 
-  const isAdmin=session?.role==='admin';
-  const heads=['No Surat','Nama / NIP','Tgl Mulai','Tgl Selesai','Hari Kerja','Keperluan','Status','Approval','Aksi'];
+  const heads=['No Surat','Nama / NIP','Jenis','Tgl Mulai','Tgl Selesai','Hari Kerja','Status','Approval','Aksi'];
   const th=document.getElementById('cuti-thead');
   if(th) th.innerHTML='<tr>'+(isAdmin?'<th style="width:32px"><input type="checkbox" id="chk-all-cuti" onchange="toggleAllCutiCheck(this)" style="accent-color:var(--primary)"></th>':'')+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
 
-  const pg=pageNums['cuti']||1;
-  const pages=Math.ceil(data.length/PER_PAGE)||1;
-  const cur=Math.min(pg,pages);
+  const pg=pageNums['cuti']||1, pages=Math.ceil(data.length/PER_PAGE)||1, cur=Math.min(pg,pages);
   pageNums['cuti']=cur;
   const slice=data.slice((cur-1)*PER_PAGE,cur*PER_PAGE);
 
@@ -176,21 +175,21 @@ function renderCutiTable(){
         ${isAdmin?`<td style="width:32px"><input type="checkbox" class="cuti-chk" value="${c.id}" style="accent-color:var(--primary)"></td>`:''}
         <td class="td-mono" style="font-size:10px">${c.no_surat||'—'}</td>
         <td><div style="font-weight:600;font-size:12px">${c.nama}</div><div class="emp-av-nip">${c.nip}</div></td>
+        <td style="font-size:11px">${c.jenis_cuti||'Cuti Tahunan'}</td>
         <td style="font-size:11px">${fmt(c.tgl_mulai)}</td>
         <td style="font-size:11px">${fmt(c.tgl_selesai)}</td>
         <td style="text-align:center"><span class="badge b-blue">${c.hari_kerja} hari</span></td>
-        <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.keperluan||''}">${c.keperluan||'—'}</td>
         <td>${cutiStatusBadge(c.status)}</td>
         <td>${cutiApprovalMini(c)}</td>
         <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="openCutiDetail('${c.id}')">Detail</button>
           ${c.status==='approved'?`<button class="btn btn-sm btn-success" onclick="cetakSuratCuti('${c.id}')">Cetak</button>`:''}
-          ${c.status==='draft'&&session?.role==='admin'?`<button class="btn btn-sm" onclick="openAjukanCuti('${c.id}')">Edit</button>`:''}
-          ${['draft','step1'].includes(c.status)&&session?.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="batalkanCuti('${c.id}')">Batal</button>`:''}
-          ${session?.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="hapusCuti('${c.id}')" title="Hapus riwayat permanen">🗑</button>`:''}
+          ${c.status==='draft'&&(isAdmin||c.diajukan_oleh===session?.email)?`<button class="btn btn-sm" onclick="openAjukanCuti('${c.id}')">Edit</button>`:''}
+          ${['draft','step1'].includes(c.status)&&isAdmin?`<button class="btn btn-sm btn-danger" onclick="batalkanCuti('${c.id}')">Batal</button>`:''}
+          ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="hapusCuti('${c.id}')" title="Hapus permanen">🗑</button>`:''}
         </td>
       </tr>`).join('')
-    : `<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:24px">Belum ada pengajuan cuti</td></tr>`;
+    : `<tr><td colspan="${heads.length+(isAdmin?1:0)}" style="text-align:center;color:var(--tx3);padding:24px">Belum ada pengajuan cuti</td></tr>`;
 
   const pgEl=document.getElementById('cuti-pg');
   if(pgEl){
@@ -208,7 +207,7 @@ function cutiStatusBadge(s){
 }
 function cutiApprovalMini(c){
   const icon=s=>s==='done'?'✓':s==='rejected'?'✗':s==='active'?'●':'○';
-  const cls =s=>s==='done'?'b-green':s==='active'?'b-blue':s==='rejected'?'b-red':'b-gray';
+  const cls=s=>s==='done'?'b-green':s==='active'?'b-blue':s==='rejected'?'b-red':'b-gray';
   const s1=c.status==='step2'||c.status==='approved'?'done':c.status==='step1'?'active':c.status==='rejected'&&c.step===1?'rejected':'pending';
   const s2=c.status==='approved'?'done':c.status==='step2'?'active':c.status==='rejected'&&c.step===2?'rejected':'pending';
   const s3=c.status==='approved'?'done':c.status==='rejected'&&c.step===3?'rejected':'pending';
@@ -222,25 +221,42 @@ function cutiApprovalMini(c){
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FORM PENGAJUAN — kalender interaktif, tanpa tipe cuti
+// FORM PENGAJUAN
 // ═══════════════════════════════════════════════════════════════
 let _calState={ month:new Date().getMonth(), year:new Date().getFullYear(), start:null, end:null };
 
 function openAjukanCuti(editId=null){
-  if(session?.role==='user'){ showToast('Hanya Admin yang dapat mengajukan cuti','error'); return; }
-  const ex=editId?DB.cuti.find(c=>c.id===editId):null;
-  document.getElementById('modal-title').textContent=editId?'Edit Pengajuan Cuti':'Ajukan Cuti Baru';
-  document.getElementById('modal-box').style.maxWidth='800px';
+  const isAdmin = session?.role==='admin';
+  const ex = editId ? DB.cuti.find(c=>c.id===editId) : null;
 
-  const asnOpts=DB.asn.map(a=>`<option value="${a.id}" data-nip="${a.nip}"${ex?.asn_id===a.id?' selected':''}>${a.nama} — ${a.nip}</option>`).join('');
+  // User biasa hanya bisa ajukan untuk dirinya sendiri
+  let asnOpts='';
+  if(isAdmin){
+    asnOpts=DB.asn.map(a=>`<option value="${a.id}" data-nip="${a.nip}" data-hp="${a.no_hp||''}"${ex?.asn_id===a.id?' selected':''}>${a.nama} — ${a.nip}</option>`).join('');
+  } else {
+    // Cari ASN berdasarkan email session — user hanya lihat dirinya
+    const asnSelf = DB.asn.find(a=>a.email===session?.email);
+    if(!asnSelf){ showToast('Data ASN Anda tidak ditemukan. Hubungi admin.','error'); return; }
+    asnOpts=`<option value="${asnSelf.id}" data-nip="${asnSelf.nip}" data-hp="${asnSelf.no_hp||''}" selected>${asnSelf.nama} — ${asnSelf.nip}</option>`;
+  }
+
+  document.getElementById('modal-title').textContent=editId?'Edit Pengajuan Cuti':'Ajukan Cuti Baru';
+  document.getElementById('modal-box').style.maxWidth='860px';
   const initS=ex?.tgl_mulai||'', initE=ex?.tgl_selesai||'';
+  const jenisSel=JENIS_CUTI.map(j=>`<option value="${j}"${(ex?.jenis_cuti||'Cuti Tahunan')===j?' selected':''}>${j}</option>`).join('');
 
   document.getElementById('modal-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:18px">
       <div>
         <div class="fg" style="margin-bottom:11px">
           <label>Pegawai ASN *</label>
-          <select id="ca-asn" style="width:100%" onchange="onCaAsnChange()">${asnOpts}</select>
+          <select id="ca-asn" style="width:100%" onchange="onCaAsnChange()" ${!isAdmin?'disabled':''}>${asnOpts}</select>
+        </div>
+        <div class="form-grid" style="margin-bottom:11px">
+          <div class="fg">
+            <label>Jenis Cuti *</label>
+            <select id="ca-jenis" style="width:100%">${jenisSel}</select>
+          </div>
         </div>
         <div id="ca-alokasi-info" style="font-size:11px;background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:11px;min-height:44px"></div>
         <div class="form-grid" style="margin-bottom:11px">
@@ -265,9 +281,27 @@ function openAjukanCuti(editId=null){
           <label>Keperluan / Keterangan</label>
           <textarea id="ca-keperluan" rows="3" style="width:100%;resize:none" placeholder="Uraikan keperluan cuti...">${ex?.keperluan||''}</textarea>
         </div>
-        <div class="fg">
+        <div class="fg" style="margin-bottom:11px">
           <label>Alamat Selama Cuti</label>
           <input type="text" id="ca-alamat" value="${ex?.alamat||''}" placeholder="Alamat lengkap selama menjalani cuti">
+        </div>
+        <!-- Nomor WA untuk notifikasi -->
+        <div style="background:var(--grn-bg);border:1px solid var(--grn-bd);border-radius:9px;padding:12px;margin-bottom:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--grn-tx);margin-bottom:8px">📱 Notifikasi WhatsApp (opsional)</div>
+          <div class="form-grid">
+            <div class="fg">
+              <label>No WA Pegawai</label>
+              <input type="text" id="ca-wa-pegawai" value="${ex?.wa_pegawai||''}" placeholder="cth: 08123456789">
+            </div>
+            <div class="fg">
+              <label>No WA Kepala Subbagian</label>
+              <input type="text" id="ca-wa-atasan1" value="${ex?.wa_atasan1||''}" placeholder="cth: 08123456789">
+            </div>
+            <div class="fg full">
+              <label>No WA Kepala Bidang</label>
+              <input type="text" id="ca-wa-atasan2" value="${ex?.wa_atasan2||''}" placeholder="cth: 08123456789">
+            </div>
+          </div>
         </div>
       </div>
       <div>
@@ -295,8 +329,7 @@ function openAjukanCuti(editId=null){
 
   document.getElementById('modal').style.display='flex';
   _calState={ month:new Date().getMonth(), year:new Date().getFullYear(),
-    start: initS?parseDateLocal(initS):null,
-    end:   initE?parseDateLocal(initE):null };
+    start:initS?parseDateLocal(initS):null, end:initE?parseDateLocal(initE):null };
   renderCalendar();
   onCaAsnChange();
   if(initS&&initE) onCaDateChange();
@@ -305,10 +338,11 @@ function openAjukanCuti(editId=null){
 function onCaAsnChange(){
   const sel=document.getElementById('ca-asn'); if(!sel?.value) return;
   const asn=DB.asn.find(a=>a.id===sel.value); if(!asn) return;
+  // Auto-isi nomor WA pegawai jika ada
+  const waEl=document.getElementById('ca-wa-pegawai');
+  if(waEl&&!waEl.value&&asn.no_hp) waEl.value=asn.no_hp;
   const yr=new Date().getFullYear();
-  const al=getAlokasiTahun(asn.id,yr);
-  const tp=getTerpakaiTahun(asn.id,yr);
-  const ss=getSisaTahun(asn.id,yr);
+  const al=getAlokasiTahun(asn.id,yr), tp=getTerpakaiTahun(asn.id,yr), ss=getSisaTahun(asn.id,yr);
   const pct=Math.min(100,Math.round(tp/al*100));
   const col=ss<=3?'var(--red-tx)':ss<=7?'var(--amb-tx)':'var(--grn-tx)';
   document.getElementById('ca-alokasi-info').innerHTML=`
@@ -322,8 +356,7 @@ function onCaAsnChange(){
 }
 
 function onCaDateChange(){
-  const s=document.getElementById('ca-mulai')?.value;
-  const e=document.getElementById('ca-selesai')?.value;
+  const s=document.getElementById('ca-mulai')?.value, e=document.getElementById('ca-selesai')?.value;
   const n=hitungHariKerja(s,e);
   const el=document.getElementById('ca-hari'); if(el) el.textContent=n||'—';
   const note=document.getElementById('ca-hari-note');
@@ -334,19 +367,15 @@ function onCaDateChange(){
   }
   if(s) _calState.start=parseDateLocal(s);
   if(e) _calState.end=parseDateLocal(e);
-  renderCalendar();
-  checkSisaWarning();
+  renderCalendar(); checkSisaWarning();
 }
 
 function checkSisaWarning(){
-  const asnSel=document.getElementById('ca-asn');
-  if(!asnSel?.value) return;
-  const hari=parseInt(document.getElementById('ca-hari')?.textContent)||0;
-  if(!hari) return;
+  const asnSel=document.getElementById('ca-asn'); if(!asnSel?.value) return;
+  const hari=parseInt(document.getElementById('ca-hari')?.textContent)||0; if(!hari) return;
   const yr=new Date().getFullYear();
   const sisa=getSisaTahun(asnSel.value,yr);
-  const chip=document.getElementById('ca-sisa-chip');
-  if(!chip) return;
+  const chip=document.getElementById('ca-sisa-chip'); if(!chip) return;
   if(hari>sisa) chip.innerHTML=`<span style="color:var(--red-tx);font-weight:700">⚠ Melebihi sisa<br>${sisa} hari tersisa</span>`;
   else chip.innerHTML=`<span style="color:var(--grn-tx);font-weight:600">✓ Cukup<br>${sisa-hari} sisa</span>`;
 }
@@ -366,23 +395,17 @@ function renderCalendar(){
   const lbl=document.getElementById('cal-lbl'); if(lbl) lbl.textContent=`${MNAMES[month]} ${year}`;
   const grid=document.getElementById('cuti-cal-grid'); if(!grid) return;
   let h=DAY_H.map(d=>`<div class="cuti-cal-head">${d}</div>`).join('');
-  const fd=new Date(year,month,1).getDay();
-  const dim=new Date(year,month+1,0).getDate();
+  const fd=new Date(year,month,1).getDay(), dim=new Date(year,month+1,0).getDate();
   for(let i=0;i<fd;i++) h+=`<div class="cuti-cal-day other-month"></div>`;
   for(let d=1;d<=dim;d++){
-    const cur=new Date(year,month,d);
-    const dow=cur.getDay();
-    const ds=cur.toISOString().slice(0,10);
-    const isWE=dow===0||dow===6;
-    const isHL=libur.has(ds);
-    const isSt=start&&ds===fmtDateLocal(start);
-    const isEn=end&&ds===fmtDateLocal(end);
+    const cur=new Date(year,month,d), dow=cur.getDay();
+    const ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    const isWE=dow===0||dow===6, isHL=libur.has(ds);
+    const isSt=start&&ds===fmtDateLocal(start), isEn=end&&ds===fmtDateLocal(end);
     const inRng=start&&end&&cur>start&&cur<end;
     let cls='cuti-cal-day';
-    if(isWE) cls+=' weekend';
-    if(isHL) cls+=' holiday';
-    if(isSt||isEn) cls+=' selected';
-    else if(inRng) cls+=' in-range';
+    if(isWE) cls+=' weekend'; if(isHL) cls+=' holiday';
+    if(isSt||isEn) cls+=' selected'; else if(inRng) cls+=' in-range';
     h+=`<div class="${cls}" onclick="pickDate('${ds}')">${d}</div>`;
   }
   grid.innerHTML=h;
@@ -390,18 +413,16 @@ function renderCalendar(){
 
 function pickDate(ds){
   const d=parseDateLocal(ds);
-  const mulai=document.getElementById('ca-mulai');
-  const selesai=document.getElementById('ca-selesai');
+  const mulai=document.getElementById('ca-mulai'), selesai=document.getElementById('ca-selesai');
   if(!_calState.start||(_calState.start&&_calState.end)){
     _calState.start=d; _calState.end=null;
-    if(mulai) mulai.value=ds;
-    if(selesai) selesai.value='';
+    if(mulai) mulai.value=ds; if(selesai) selesai.value='';
     document.getElementById('ca-hari').textContent='—';
     document.getElementById('ca-hari-note').textContent='Pilih tanggal selesai';
   } else {
     if(d<_calState.start){_calState.end=_calState.start;_calState.start=d;}
     else _calState.end=d;
-    if(mulai)   mulai.value  =_calState.start.toISOString().slice(0,10);
+    if(mulai)   mulai.value=_calState.start.toISOString().slice(0,10);
     if(selesai) selesai.value=_calState.end.toISOString().slice(0,10);
     onCaDateChange();
   }
@@ -419,18 +440,26 @@ async function simpanCuti(editId=null){
   const asn=DB.asn.find(a=>a.id===asnSel.value);
   const keperluan=document.getElementById('ca-keperluan')?.value||'';
   const alamat=document.getElementById('ca-alamat')?.value||'';
+  const jenis_cuti=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const wa_pegawai=document.getElementById('ca-wa-pegawai')?.value||'';
+  const wa_atasan1=document.getElementById('ca-wa-atasan1')?.value||'';
+  const wa_atasan2=document.getElementById('ca-wa-atasan2')?.value||'';
   const btn=document.querySelector('#modal-footer .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
-    let error;
+    let error, newId=editId;
     if(editId){
-      ({error}=await supa.from('cuti').update({tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari,keperluan,alamat}).eq('id',editId));
+      ({error}=await supa.from('cuti').update({tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari,keperluan,alamat,jenis_cuti,wa_pegawai,wa_atasan1,wa_atasan2}).eq('id',editId));
     } else {
-      ({error}=await supa.from('cuti').insert({
+      const payload={
         asn_id:asn.id,nip:asn.nip,nama:asn.nama,unit:asn.unit,
         tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari,keperluan,alamat,
-        status:'draft',step:0,tahun:new Date().getFullYear()
-      }));
+        jenis_cuti,wa_pegawai,wa_atasan1,wa_atasan2,
+        status:'draft',step:0,tahun:new Date().getFullYear(),
+        diajukan_oleh: session?.role==='admin' ? 'admin' : (session?.email||'admin')
+      };
+      const res=await supa.from('cuti').insert(payload).select().single();
+      error=res.error; if(res.data) newId=res.data.id;
     }
     if(error) throw new Error(error.message);
     await loadCutiFromServer(); closeModal(); renderCutiTable(); updateCutiBadge();
@@ -446,16 +475,14 @@ function openCutiDetail(id){
   const c=DB.cuti.find(x=>x.id===id); if(!c) return;
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const yr=c.tahun||new Date().getFullYear();
-  const al=getAlokasiTahun(c.asn_id,yr);
-  const tp=getTerpakaiTahun(c.asn_id,yr);
-  const ss=getSisaTahun(c.asn_id,yr);
-  const pct=Math.min(100,Math.round(tp/al*100));
-  const col=ss<=3?'var(--red-tx)':ss<=7?'var(--amb-tx)':'var(--grn-tx)';
+  const al=getAlokasiTahun(c.asn_id,yr), tp=getTerpakaiTahun(c.asn_id,yr), ss=getSisaTahun(c.asn_id,yr);
+  const pct=Math.min(100,Math.round(tp/al*100)), col=ss<=3?'var(--red-tx)':ss<=7?'var(--amb-tx)':'var(--grn-tx)';
+  const isAdmin=session?.role==='admin';
 
   const steps=[
     {label:'Kepala Subbagian',by:c.step1_by,at:c.step1_at,note:c.step1_note},
     {label:'Kepala Bidang',   by:c.step2_by,at:c.step2_at,note:c.step2_note},
-    {label:'Admin (Final)',   by:c.final_by, at:c.final_at, note:c.final_note},
+    {label:'Admin (Final)',   by:c.final_by,at:c.final_at,note:c.final_note},
   ];
   const stepState=(i)=>{
     if(c.status==='approved') return 'done';
@@ -470,75 +497,77 @@ function openCutiDetail(id){
     return 'pending';
   };
 
+  const actionBtns=()=>{
+    if(!isAdmin) return '';
+    if(c.status==='draft') return `<button class="btn btn-primary" onclick="ajukanStep1('${c.id}')">Ajukan ke Kepala Subbagian</button>`;
+    if(c.status==='step1') return `
+      <button class="btn btn-success" onclick="approveStep('${c.id}',1)">✓ Setujui (Kasubbag)</button>
+      <button class="btn btn-danger"  onclick="rejectStep('${c.id}',1)">✗ Tolak</button>`;
+    if(c.status==='step2') return `
+      <button class="btn btn-success" onclick="approveStep('${c.id}',2)">✓ Setujui (Kabid)</button>
+      <button class="btn btn-danger"  onclick="rejectStep('${c.id}',2)">✗ Tolak</button>
+      <button class="btn btn-primary" onclick="approveStep('${c.id}',3)">✓ Final Admin</button>`;
+    if(c.status==='approved') return `<button class="btn btn-success" onclick="cetakSuratCuti('${c.id}')">🖨 Cetak Surat</button>`;
+    return '';
+  };
+
   document.getElementById('cuti-detail-content').innerHTML=`
     <button class="btn btn-sm" onclick="showPage('cuti',document.querySelector('.ni.active'))" style="margin-bottom:14px">← Kembali ke Daftar</button>
-
-    <div class="cc" style="margin-bottom:12px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-        <div>
-          <div style="font-size:16px;font-weight:700">${c.nama}</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:2px">${c.nip} · ${c.unit}</div>
-          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-            ${cutiStatusBadge(c.status)}
-            ${c.no_surat?`<span class="badge b-gray">${c.no_surat}</span>`:''}
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${c.status==='approved'?`<button class="btn btn-success btn-sm" onclick="cetakSuratCuti('${c.id}')">🖨 Cetak Surat</button>`:''}
-          ${c.status==='draft'&&session?.role==='admin'?`<button class="btn btn-sm btn-primary" onclick="ajukanStep1('${c.id}')">Ajukan ke Kasubbag →</button>`:''}
-          ${c.status==='draft'&&session?.role==='admin'?`<button class="btn btn-sm" onclick="openAjukanCuti('${c.id}')">Edit</button>`:''}
-          ${c.status==='step1'&&session?.role==='admin'?`<button class="btn btn-sm btn-success" onclick="approveStep('${c.id}',1)">✓ Kasubbag Setuju</button><button class="btn btn-sm btn-danger" onclick="rejectStep('${c.id}',1)">✗ Tolak</button>`:''}
-          ${c.status==='step2'&&session?.role==='admin'?`<button class="btn btn-sm btn-success" onclick="approveStep('${c.id}',2)">✓ Kabid Setuju</button><button class="btn btn-sm btn-danger" onclick="rejectStep('${c.id}',2)">✗ Tolak</button>`:''}
-          ${c.status==='step2'&&session?.role==='admin'?`<button class="btn btn-sm btn-primary" onclick="approveStep('${c.id}',3)">✓ Admin Setuju — Selesai</button>`:''}
-          ${['draft','step1'].includes(c.status)&&session?.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="batalkanCuti('${c.id}')">Batalkan</button>`:''}
-          ${session?.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="hapusCuti('${c.id}',true)" title="Hapus riwayat permanen">Hapus Riwayat</button>`:''}
-        </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="cc">
+        <div class="cc-title"><span class="cc-title-dot"></span>Data Pegawai</div>
+        <table style="font-size:12px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:var(--tx3);width:120px">Nama</td><td style="font-weight:600">${c.nama}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">NIP</td><td>${c.nip}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Unit</td><td>${c.unit||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Pangkat</td><td>${asn?.pangkat||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Jabatan</td><td>${asn?.jabatan||'—'}</td></tr>
+        </table>
       </div>
-
-      <div class="detail-grid" style="margin-bottom:16px">
-        <div class="dc">
-          <div class="dc-title">Rincian Cuti</div>
-          ${dr('Tanggal Mulai',fmt(c.tgl_mulai))}
-          ${dr('Tanggal Selesai',fmt(c.tgl_selesai))}
-          ${dr('Hari Kerja','<span class="badge b-blue">'+c.hari_kerja+' hari</span>')}
-          ${dr('Keperluan',c.keperluan||'—')}
-          ${dr('Alamat Selama Cuti',c.alamat||'—')}
-          ${dr('Tanggal Pengajuan',fmt(c.created_at?.slice(0,10)))}
-        </div>
-        <div class="dc">
-          <div class="dc-title">Sisa Alokasi Cuti ${yr}</div>
-          ${dr('Alokasi Tahun '+yr, al+' hari')}
-          ${dr('Carry Over (thn '+(yr-1)+')', getCarryOver(c.asn_id,yr)>0
-            ? '<span class="badge b-green">+'+getCarryOver(c.asn_id,yr)+' hari</span>'
-            : '<span style="color:var(--tx3)">—</span>')}
-          ${dr('Total Efektif','<strong style="color:var(--primary)">'+getTotalAlokasi(c.asn_id,yr)+' hari</strong>')}
-          ${dr('Sudah Terpakai',tp+' hari')}
-          ${dr('Sisa','<strong style="color:'+col+'">'+ss+' hari</strong>')}
-          <div style="margin-top:8px">
-            <div class="leave-bar-track" style="height:8px"><div class="leave-bar-fill" style="width:${pct}%;background:${col}"></div></div>
-            <div style="font-size:10px;color:var(--tx3);margin-top:3px">${pct}% dari total ${getTotalAlokasi(c.asn_id,yr)} hari</div>
-          </div>
-          ${asn?dr('Pangkat / Gol','<span class="badge '+golBadge(asn.pangkat)+'">'+asn.pangkat+'</span>'):'' }
-          ${asn?dr('Jabatan',asn.jabatan||'—'):''}
-        </div>
+      <div class="cc">
+        <div class="cc-title"><span class="cc-title-dot" style="background:var(--grn-tx)"></span>Detail Cuti</div>
+        <table style="font-size:12px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:var(--tx3);width:120px">Jenis</td><td style="font-weight:600">${c.jenis_cuti||'Cuti Tahunan'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Mulai</td><td>${fmt(c.tgl_mulai)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Selesai</td><td>${fmt(c.tgl_selesai)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Hari Kerja</td><td><span class="badge b-blue">${c.hari_kerja} hari</span></td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Status</td><td>${cutiStatusBadge(c.status)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Keperluan</td><td>${c.keperluan||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Alamat</td><td>${c.alamat||'—'}</td></tr>
+          ${c.no_surat?`<tr><td style="padding:4px 0;color:var(--tx3)">No. Surat</td><td style="font-weight:700;color:var(--primary)">${c.no_surat}</td></tr>`:''}
+        </table>
       </div>
-
-      <!-- Approval timeline -->
-      <div class="dc-title" style="margin-bottom:10px">Alur Persetujuan</div>
-      <div class="approval-timeline">
+    </div>
+    <!-- Alokasi -->
+    <div class="cc" style="margin-bottom:16px">
+      <div class="cc-title"><span class="cc-title-dot" style="background:var(--amb-tx)"></span>Alokasi Cuti ${yr}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--tx2)">Sisa Cuti</span>
+        <span style="font-size:16px;font-weight:700;color:${col}">${ss} <span style="font-size:11px;font-weight:400;color:var(--tx3)">/ ${al} hari</span></span>
+      </div>
+      <div class="leave-bar-track"><div class="leave-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${tp} hari terpakai</div>
+    </div>
+    <!-- Timeline approval -->
+    <div class="cc" style="margin-bottom:16px">
+      <div class="cc-title"><span class="cc-title-dot" style="background:#8b5cf6"></span>Alur Persetujuan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${steps.map((s,i)=>{
           const st=stepState(i);
-          const dotCls=st==='done'?'done':st==='active'?'active':st==='rejected'?'rejected':'pending';
-          return `<div class="atstep">
-            <div class="atstep-dot ${dotCls}">${st==='done'?'✓':st==='rejected'?'✗':(i+1)}</div>
-            <div class="atstep-label">${s.label}</div>
-            ${s.by?`<div class="atstep-sub">${s.by}</div>`:'' }
-            ${s.at?`<div class="atstep-sub">${s.at.slice(0,10)}</div>`:''}
-            ${s.note?`<div class="atstep-sub" style="color:var(--red-tx)">"${s.note}"</div>`:''}
+          const bc=st==='done'?'var(--grn-bg)':st==='active'?'var(--primary-bg)':st==='rejected'?'var(--red-bg)':'var(--bg2)';
+          const tc=st==='done'?'var(--grn-tx)':st==='active'?'var(--primary-tx)':st==='rejected'?'var(--red-tx)':'var(--tx3)';
+          const ic=st==='done'?'✓':st==='rejected'?'✗':st==='active'?'●':'○';
+          return `<div style="flex:1;min-width:140px;background:${bc};border-radius:10px;padding:10px 12px">
+            <div style="font-size:11px;font-weight:700;color:${tc};margin-bottom:4px">${ic} ${s.label}</div>
+            ${s.by?`<div style="font-size:10px;color:var(--tx2)">${s.by}</div>`:''}
+            ${s.at?`<div style="font-size:10px;color:var(--tx3)">${new Date(s.at).toLocaleDateString('id-ID')}</div>`:''}
+            ${s.note?`<div style="font-size:10px;color:var(--red-tx);margin-top:3px;font-style:italic">"${s.note}"</div>`:''}
           </div>`;
-        }).join('<div style="flex:1;height:2px;background:var(--bg3);margin-top:16px"></div>')}
+        }).join('')}
       </div>
-    </div>`;
+    </div>
+    <!-- Tombol aksi -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${actionBtns()}</div>`;
 
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-cuti-detail').classList.add('active');
@@ -550,41 +579,52 @@ function openCutiDetail(id){
 
 async function ajukanStep1(id){
   const {error}=await supa.from('cuti').update({status:'step1',step:1}).eq('id',id);
-  if(!error){ await loadCutiFromServer(); openCutiDetail(id); updateCutiBadge(); showToast('Diajukan ke Kepala Subbagian','success'); }
-  else showToast(error.message,'error');
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  // Kirim WA ke atasan1
+  if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanPengajuan(c, c.nama));
+  openCutiDetail(id); updateCutiBadge();
+  showToast('Diajukan ke Kepala Subbagian','success');
 }
 
 async function approveStep(id,step){
   const now=new Date().toISOString();
-  const who=session?.label||session?.username||'Admin';
+  const who=session?.label||'Admin';
   let upd={};
   if(step===1) upd={step1_by:who,step1_at:now,status:'step2',step:2};
   else if(step===2) upd={step2_by:who,step2_at:now,status:'step2',step:2};
   else if(step===3){
-    const yr=new Date().getFullYear();
-    const {count}=await supa.from('cuti').select('*',{count:'exact',head:true}).eq('status','approved').eq('tahun',yr);
+    const {count}=await supa.from('cuti').select('*',{count:'exact',head:true}).eq('status','approved').eq('tahun',new Date().getFullYear());
     const no=String((count||0)+1).padStart(3,'0');
-    upd={final_by:who,final_at:now,status:'approved',step:3,no_surat:`${no}/CUTI/BPKAD/${yr}`};
+    upd={final_by:who,final_at:now,status:'approved',step:3,no_surat:`${no}/CUTI/BPKAD/${new Date().getFullYear()}`};
   }
   const {error}=await supa.from('cuti').update(upd).eq('id',id);
-  if(!error){
-    await loadCutiFromServer(); openCutiDetail(id); updateCutiBadge();
-    const c=DB.cuti.find(x=>x.id===id);
-    showToast(step===3?`Cuti disetujui! No. Surat: ${c?.no_surat||'-'}`:'Disetujui','success');
-  } else showToast(error.message,'error');
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  // Kirim WA notifikasi
+  if(step===1&&c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanPengajuan(c, c.nama));
+  if(step===3&&c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, true));
+  openCutiDetail(id); updateCutiBadge();
+  showToast(step===3?`Cuti disetujui! No. Surat: ${c?.no_surat||'-'}`:'Disetujui','success');
 }
 
 async function rejectStep(id,step){
   const note=prompt('Alasan penolakan (wajib):','');
   if(!note||!note.trim()){ showToast('Alasan wajib diisi','error'); return; }
-  const now=new Date().toISOString();
-  const who=session?.label||'Admin';
+  const now=new Date().toISOString(), who=session?.label||'Admin';
   let upd={status:'rejected',step};
   if(step===1) upd={...upd,step1_by:who,step1_at:now,step1_note:note.trim()};
   else upd={...upd,step2_by:who,step2_at:now,step2_note:note.trim()};
   const {error}=await supa.from('cuti').update(upd).eq('id',id);
-  if(!error){ await loadCutiFromServer(); openCutiDetail(id); updateCutiBadge(); showToast('Pengajuan ditolak','error'); }
-  else showToast(error.message,'error');
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  // Kirim WA ke pegawai bahwa ditolak
+  if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, false));
+  openCutiDetail(id); updateCutiBadge();
+  showToast('Pengajuan ditolak','error');
 }
 
 function batalkanCuti(id){
@@ -595,11 +635,10 @@ function batalkanCuti(id){
   });
 }
 
-// Hapus satu riwayat permanen
-function hapusCuti(id, dariDetail=false){
+function hapusCuti(id,dariDetail=false){
   const c=DB.cuti.find(x=>x.id===id);
   const warn=c?.status==='approved'?'<br><span style="color:var(--red-tx);font-weight:700">⚠ Cuti ini sudah disetujui.</span>':'';
-  showConfirm('Hapus Riwayat Cuti',`Hapus permanen riwayat ini?<br>Data tidak dapat dikembalikan.${warn}`,async()=>{
+  showConfirm('Hapus Riwayat Cuti',`Hapus permanen riwayat ini?${warn}`,async()=>{
     const {error}=await supa.from('cuti').delete().eq('id',id);
     if(!error){
       await loadCutiFromServer();
@@ -610,7 +649,6 @@ function hapusCuti(id, dariDetail=false){
   });
 }
 
-// Hapus riwayat terpilih
 function hapusCutiTerpilih(){
   const ids=[...document.querySelectorAll('.cuti-chk:checked')].map(el=>el.value);
   if(!ids.length){ showToast('Pilih riwayat terlebih dahulu','error'); return; }
@@ -621,33 +659,27 @@ function hapusCutiTerpilih(){
   });
 }
 
-// Toggle semua checkbox
 function toggleAllCutiCheck(el){
   document.querySelectorAll('.cuti-chk').forEach(chk=>chk.checked=el.checked);
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CETAK SURAT CUTI
+// CETAK SURAT CUTI — Format Resmi Pemerintah
 // ═══════════════════════════════════════════════════════════════
 function cetakSuratCuti(id){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tglLong=d=>{ if(!d) return '—'; const dt=new Date(d); return `${dt.getDate()} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][dt.getMonth()]} ${dt.getFullYear()}`; };
-  const tglHari=(d)=>{ if(!d) return '—'; return d.slice(0,10); };
-
-  // Nomor surat format resmi: 800.1.11.4 / NNN / BPKAD / YYYY
-  const tahunSurat = c.tahun || new Date().getFullYear();
-  const nomorUrut  = c.no_surat ? c.no_surat.split('/')[0].trim() : '___';
-  const nomorResmi = `800.1.11.4 / ${nomorUrut} / BPKAD / ${tahunSurat}`;
-  const logoHtml   = _logoData
-    ? `<img src="${_logoData}" style="width:70px;height:70px;object-fit:contain">`
-    : `<div style="width:68px;height:68px;border:1.5px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-align:center;line-height:1.2">LOGO<br>INSTANSI</div>`;
+  const tahunSurat=c.tahun||new Date().getFullYear();
+  const nomorUrut=c.no_surat?c.no_surat.split('/')[0].trim():'___';
+  const nomorResmi=`800.1.11.4 / ${nomorUrut} / BPKAD / ${tahunSurat}`;
+  const logoHtml=_logoData
+    ?`<img src="${_logoData}" style="width:70px;height:70px;object-fit:contain">`
+    :`<div style="width:68px;height:68px;border:1.5px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-align:center;line-height:1.2">LOGO<br>INSTANSI</div>`;
 
   document.getElementById('print-surat').innerHTML=`
     <div class="surat-print">
-
-      <!-- KOP SURAT -->
       <div class="surat-kop">
         <div class="surat-kop-logo">${logoHtml}</div>
         <div class="surat-kop-text">
@@ -661,68 +693,29 @@ function cetakSuratCuti(id){
       </div>
       <hr class="surat-garis-kop">
       <hr class="surat-garis-kop2">
-
-      <!-- JUDUL -->
-      <div class="surat-title">Surat Izin Cuti Tahunan</div>
+      <div class="surat-title">Surat Izin ${c.jenis_cuti||'Cuti Tahunan'}</div>
       <div class="surat-nomor">Nomor : ${nomorResmi}</div>
-
-      <!-- BUTIR 1 -->
       <div class="surat-butir">
         <span class="surat-butir-num">1.</span>
-        <span>Diberikan Cuti Tahunan ${tahunSurat} Kepada Pegawai Negeri Sipil :</span>
+        <span>Diberikan ${c.jenis_cuti||'Cuti Tahunan'} ${tahunSurat} Kepada Pegawai Negeri Sipil :</span>
       </div>
-
-      <!-- TABEL DATA PEGAWAI -->
       <table class="surat-tabel">
-        <tr>
-          <td>Nama</td><td>:</td>
-          <td><strong>${c.nama}</strong></td>
-        </tr>
-        <tr>
-          <td>NIP</td><td>:</td>
-          <td>${c.nip}</td>
-        </tr>
-        <tr>
-          <td>Pangkat / Gol. Ruang</td><td>:</td>
-          <td>${asn?.pangkat||'—'}</td>
-        </tr>
-        <tr>
-          <td>Jabatan</td><td>:</td>
-          <td>${asn?.jabatan||'—'}</td>
-        </tr>
-        <tr>
-          <td>Satuan Organisasi</td><td>:</td>
-          <td>Badan Pengelolaan Keuangan dan Aset Daerah<br>Provinsi Kalimantan Selatan</td>
-        </tr>
-        <tr>
-          <td>Selama ${c.hari_kerja} (${terbilang(c.hari_kerja)}) hari kalender, terhitung mulai tanggal ${tglLong(c.tgl_mulai)} s/d ${tglLong(c.tgl_selesai)} dengan ketentuan sebagai berikut :</td>
-          <td></td><td></td>
-        </tr>
+        <tr><td>Nama</td><td>:</td><td><strong>${c.nama}</strong></td></tr>
+        <tr><td>NIP</td><td>:</td><td>${c.nip}</td></tr>
+        <tr><td>Pangkat / Gol. Ruang</td><td>:</td><td>${asn?.pangkat||'—'}</td></tr>
+        <tr><td>Jabatan</td><td>:</td><td>${asn?.jabatan||'—'}</td></tr>
+        <tr><td>Satuan Organisasi</td><td>:</td><td>Badan Pengelolaan Keuangan dan Aset Daerah<br>Provinsi Kalimantan Selatan</td></tr>
+        <tr><td colspan="3">Selama ${c.hari_kerja} (${terbilang(c.hari_kerja)}) hari kerja, terhitung mulai tanggal ${tglLong(c.tgl_mulai)} s/d ${tglLong(c.tgl_selesai)} dengan ketentuan sebagai berikut :</td></tr>
       </table>
-
-      <!-- KETENTUAN a, b, c -->
       <table class="surat-ketentuan">
-        <tr>
-          <td>a.</td>
-          <td>Sebelum menjalankan cuti tahunan wajib menyerahkan pekerjaannya kepada atasan langsung atau pejabat yang ditentukan.</td>
-        </tr>
-        <tr>
-          <td>b.</td>
-          <td>Setelah selesai menjalankan cuti tahunan wajib melaporkan diri kepada atasan langsungnya dan bekerja kembali sebagaimana mestinya.</td>
-        </tr>
-        <tr>
-          <td>c.</td>
-          <td>Alamat Selama Cuti : ${c.alamat||'____________________'}</td>
-        </tr>
+        <tr><td>a.</td><td>Sebelum menjalankan cuti wajib menyerahkan pekerjaannya kepada atasan langsung atau pejabat yang ditentukan.</td></tr>
+        <tr><td>b.</td><td>Setelah selesai menjalankan cuti wajib melaporkan diri kepada atasan langsungnya dan bekerja kembali sebagaimana mestinya.</td></tr>
+        <tr><td>c.</td><td>Alamat Selama Cuti : ${c.alamat||'____________________'}</td></tr>
       </table>
-
-      <!-- BUTIR 2 -->
       <div class="surat-butir" style="margin-top:4px">
         <span class="surat-butir-num">2.</span>
-        <span>Demikian Surat Izin Cuti Tahunan ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</span>
+        <span>Demikian Surat Izin ${c.jenis_cuti||'Cuti'} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</span>
       </div>
-
-      <!-- TANDA TANGAN -->
       <div class="surat-ttd-wrap">
         <div class="surat-ttd-box">
           <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
@@ -737,7 +730,6 @@ function cetakSuratCuti(id){
           <div style="font-size:10pt">NIP. .................................................</div>
         </div>
       </div>
-
     </div>`;
 
   document.getElementById('print-surat').style.display='block';
@@ -756,4 +748,3 @@ function terbilang(n){
   if(n<50) return 'empat puluh'+(n%10?' '+s[n%10]:'');
   return String(n);
 }
-
