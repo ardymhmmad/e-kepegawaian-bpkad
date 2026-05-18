@@ -582,8 +582,11 @@ async function ajukanStep1(id){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  // Kirim WA ke atasan1
-  if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanPengajuan(c, c.nama));
+  // Notif WA → Kepala Subbagian
+  if(c?.wa_atasan1){
+    const ok=await kirimWA(c.wa_atasan1, pesanPengajuan(c, c.nama));
+    showToast(ok?'✓ WA terkirim ke Kepala Subbagian':'Diajukan (WA gagal terkirim)','success');
+  }
   openCutiDetail(id); updateCutiBadge();
   showToast('Diajukan ke Kepala Subbagian','success');
 }
@@ -592,7 +595,7 @@ async function approveStep(id,step){
   const now=new Date().toISOString();
   const who=session?.label||'Admin';
   let upd={};
-  if(step===1) upd={step1_by:who,step1_at:now,status:'step2',step:2};
+  if(step===1)      upd={step1_by:who,step1_at:now,status:'step2',step:2};
   else if(step===2) upd={step2_by:who,step2_at:now,status:'step2',step:2};
   else if(step===3){
     const {count}=await supa.from('cuti').select('*',{count:'exact',head:true}).eq('status','approved').eq('tahun',new Date().getFullYear());
@@ -603,11 +606,71 @@ async function approveStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  // Kirim WA notifikasi
-  if(step===1&&c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanPengajuan(c, c.nama));
-  if(step===3&&c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, true));
+
+  // ── Notifikasi WA sesuai step ──────────────────────
+  if(step===1){
+    // Kasubbag setuju → notif ke Kabid untuk approve step 2
+    if(c?.wa_atasan2){
+      const pesan=`*📋 Persetujuan Cuti — Tahap 2 (Kepala Bidang)*\n\n` +
+        `Pengajuan cuti berikut telah disetujui oleh Kepala Subbagian dan menunggu persetujuan Anda:\n\n` +
+        `Pegawai   : ${c.nama}\n` +
+        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+        `Selesai   : ${fmt(c.tgl_selesai)}\n` +
+        `Hari Kerja: ${c.hari_kerja} hari\n\n` +
+        `Silakan buka aplikasi E-Kepegawaian untuk memberikan persetujuan.`;
+      await kirimWA(c.wa_atasan2, pesan);
+    }
+    // Notif ke pegawai bahwa sudah melewati step 1
+    if(c?.wa_pegawai){
+      const pesan=`*✅ Update Pengajuan Cuti — Tahap 1 Disetujui*\n\n` +
+        `Pengajuan cuti Anda telah disetujui oleh Kepala Subbagian.\n\n` +
+        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+        `Selesai   : ${fmt(c.tgl_selesai)}\n\n` +
+        `Menunggu persetujuan Kepala Bidang.`;
+      await kirimWA(c.wa_pegawai, pesan);
+    }
+    showToast('Disetujui Kasubbag — WA dikirim ke Kabid & pegawai','success');
+
+  } else if(step===2){
+    // Kabid setuju → notif ke admin untuk final approval
+    // Cari wa admin dari settings atau tampilkan info
+    const pesan=`*📋 Persetujuan Cuti — Tahap Final (Admin)*\n\n` +
+      `Pengajuan cuti berikut telah disetujui oleh Kepala Bidang dan menunggu persetujuan final:\n\n` +
+      `Pegawai   : ${c.nama}\n` +
+      `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+      `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+      `Selesai   : ${fmt(c.tgl_selesai)}\n` +
+      `Hari Kerja: ${c.hari_kerja} hari\n\n` +
+      `Silakan buka aplikasi E-Kepegawaian untuk persetujuan final.`;
+    // Notif ke pegawai bahwa sudah melewati step 2
+    if(c?.wa_pegawai){
+      const pesanPeg=`*✅ Update Pengajuan Cuti — Tahap 2 Disetujui*\n\n` +
+        `Pengajuan cuti Anda telah disetujui oleh Kepala Bidang.\n\n` +
+        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+        `Selesai   : ${fmt(c.tgl_selesai)}\n\n` +
+        `Menunggu persetujuan final Admin.`;
+      await kirimWA(c.wa_pegawai, pesanPeg);
+    }
+    showToast('Disetujui Kabid — menunggu persetujuan final Admin','success');
+
+  } else if(step===3){
+    // Final approved → notif ke pegawai
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, true));
+    // Notif ke atasan1 & atasan2 bahwa sudah final
+    const pesanFinal=`*✅ Cuti Disetujui Final*\n\n` +
+      `Pengajuan cuti atas nama ${c.nama} telah disetujui.\n` +
+      `No. Surat : ${c.no_surat||'-'}\n` +
+      `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+      `Selesai   : ${fmt(c.tgl_selesai)}`;
+    if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanFinal);
+    if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanFinal);
+    showToast(`✅ Cuti disetujui! No. Surat: ${c?.no_surat||'-'} — WA terkirim ke semua pihak`,'success');
+  }
+
   openCutiDetail(id); updateCutiBadge();
-  showToast(step===3?`Cuti disetujui! No. Surat: ${c?.no_surat||'-'}`:'Disetujui','success');
 }
 
 async function rejectStep(id,step){
@@ -616,15 +679,24 @@ async function rejectStep(id,step){
   const now=new Date().toISOString(), who=session?.label||'Admin';
   let upd={status:'rejected',step};
   if(step===1) upd={...upd,step1_by:who,step1_at:now,step1_note:note.trim()};
-  else upd={...upd,step2_by:who,step2_at:now,step2_note:note.trim()};
+  else         upd={...upd,step2_by:who,step2_at:now,step2_note:note.trim()};
   const {error}=await supa.from('cuti').update(upd).eq('id',id);
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  // Kirim WA ke pegawai bahwa ditolak
-  if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, false));
+  const pesanTolak=`*❌ Pengajuan Cuti DITOLAK*\n\n` +
+    `Pengajuan cuti atas nama ${c.nama} telah ditolak.\n\n` +
+    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
+    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
+    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
+    `Ditolak oleh: ${who}\n` +
+    `Alasan    : ${note.trim()}`;
+  // Kirim WA ke pegawai, atasan1, dan atasan2
+  if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanTolak);
+  if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanTolak);
+  if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanTolak);
   openCutiDetail(id); updateCutiBadge();
-  showToast('Pengajuan ditolak','error');
+  showToast('Pengajuan ditolak — WA terkirim ke semua pihak','error');
 }
 
 function batalkanCuti(id){
