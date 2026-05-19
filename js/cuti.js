@@ -795,15 +795,14 @@ function cetakSuratCuti(id){
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <tr>
           <td style="width:55%"></td>
-          <td style="text-align:center">
+          <td style="text-align:center;font-family:'Times New Roman',serif;font-size:11pt;line-height:1.6">
             <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
             <div>A.n. KEPALA BADAN PENGELOLAAN KEUANGAN</div>
             <div>DAN ASET DAERAH</div>
             <div>PROVINSI KALIMANTAN SELATAN,</div>
             <div style="margin-top:4px">Sekretaris,</div>
-            <div style="height:70px"></div>
-            <div style="border-bottom:1px solid #000;width:80%;margin:0 auto"></div>
-            <div style="margin-top:4px">NIP. .............................................</div>
+            <div style="height:80px"></div>
+            <div style="font-size:9pt;font-style:italic;color:#555">(Ditandatangani secara elektronik)</div>
           </td>
         </tr>
       </table>
