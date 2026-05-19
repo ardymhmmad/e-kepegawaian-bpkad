@@ -20,34 +20,23 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
     });
   });
+
+  // Load logo di halaman login tanpa perlu login dulu
+  loadLoginLogo();
 });
 
-// ── Session state ──────────────────────────────────────────
-let _sessionInitialized = false;
-
-// ── Listener perubahan session (JWT auto-refresh) ──────────
-supa.auth.onAuthStateChange(async (event, supaSession) => {
-  if(event === 'INITIAL_SESSION'){
-    // Saat halaman pertama kali dimuat — restore session jika ada
-    if(supaSession && !_sessionInitialized){
-      _sessionInitialized = true;
-      await applySupaSession(supaSession);
-      if(typeof init === 'function') init();
-    } else if(!supaSession){
-      // Tidak ada session — tampilkan login
-      clearAppSession();
+// ── Load logo untuk halaman login ─────────────────────────
+async function loadLoginLogo(){
+  try{
+    const { data } = await supa.from('settings')
+      .select('setting_val').eq('setting_key','logo_path').single();
+    if(data?.setting_val){
+      _logoData = data.setting_val;
+      const els = document.querySelectorAll('.login-logo-img,.app-logo-img,.sidebar-logo');
+      els.forEach(el=>{ if(el.tagName==='IMG') el.src=data.setting_val; });
     }
-  } else if(event === 'SIGNED_IN' && supaSession){
-    _sessionInitialized = true;
-    await applySupaSession(supaSession);
-    if(typeof init === 'function') init();
-  } else if(event === 'SIGNED_OUT'){
-    _sessionInitialized = false;
-    clearAppSession();
-  } else if(event === 'TOKEN_REFRESHED' && supaSession){
-    session = await buildSession(supaSession);
-  }
-});
+  } catch(e){}
+}
 
 // ── Helper: ambil profil dari tabel profiles ───────────────
 async function buildSession(supaSession){
@@ -76,17 +65,35 @@ async function applySupaSession(supaSession){
 
 function clearAppSession(){
   session = null;
-  _sessionInitialized = false;
   DB = { asn:[], pppk:[], pjlp:[], cuti:[], alokasi:{} };
   document.body.classList.remove('readonly');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('l-pass').value = '';
   document.getElementById('l-err').style.display = 'none';
-  // Reset tombol login agar tidak stuck
   const btn = document.querySelector('.login-btn');
   if(btn){ btn.disabled = false; btn.textContent = 'Masuk ke Sistem'; }
 }
+
+// ── Cek session saat halaman dimuat ───────────────────────
+(async ()=>{
+  try{
+    const { data:{ session: existing } } = await supa.auth.getSession();
+    if(existing){
+      await applySupaSession(existing);
+      await init();
+    }
+  } catch(e){ console.error('Session restore error:', e); }
+})();
+
+// ── Token refresh otomatis ─────────────────────────────────
+supa.auth.onAuthStateChange((event, supaSession) => {
+  if(event === 'TOKEN_REFRESHED' && supaSession){
+    buildSession(supaSession).then(s=>{ session = s; });
+  } else if(event === 'SIGNED_OUT'){
+    clearAppSession();
+  }
+});
 
 // ── Login ──────────────────────────────────────────────────
 document.getElementById('l-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
@@ -105,25 +112,18 @@ async function doLogin(){
   btn.disabled = true; btn.textContent = 'Memverifikasi...';
   errEl.style.display = 'none';
 
-  // Safety net — reset tombol jika tidak ada respon dalam 10 detik
-  const timeout = setTimeout(()=>{
-    btn.disabled = false; btn.textContent = 'Masuk ke Sistem';
-    errEl.textContent = 'Koneksi lambat, coba lagi.';
-    errEl.style.display = 'block';
-  }, 10000);
-
-  try {
-    const { error } = await supa.auth.signInWithPassword({ email, password: pw });
+  try{
+    const { data, error } = await supa.auth.signInWithPassword({ email, password: pw });
     if(error) throw error;
-    // onAuthStateChange akan menangani sisanya
-  } catch(e) {
+    await applySupaSession(data.session);
+    await init();
+  } catch(e){
     const msg = e.message || '';
     if(msg.includes('Invalid login')) errEl.textContent = 'Email atau password salah.';
     else if(msg.includes('Email not confirmed')) errEl.textContent = 'Email belum dikonfirmasi.';
     else errEl.textContent = 'Gagal login: ' + msg;
     errEl.style.display = 'block';
   } finally {
-    clearTimeout(timeout);
     btn.disabled = false; btn.textContent = 'Masuk ke Sistem';
   }
 }
@@ -131,5 +131,5 @@ async function doLogin(){
 // ── Logout ─────────────────────────────────────────────────
 async function doLogout(){
   await supa.auth.signOut();
-  // clearAppSession dipanggil otomatis via onAuthStateChange
+  clearAppSession();
 }
