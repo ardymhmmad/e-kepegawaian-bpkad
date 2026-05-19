@@ -32,10 +32,9 @@ async function loadLoginLogo(){
       .select('setting_val').eq('setting_key','logo_path').maybeSingle();
     if(data?.setting_val){
       _logoData = data.setting_val;
-      const els = document.querySelectorAll('.login-logo-img,.app-logo-img,.sidebar-logo');
-      els.forEach(el=>{ if(el.tagName==='IMG') el.src=data.setting_val; });
+      applyLogoEverywhere(data.setting_val);
     }
-  } catch(e){}
+  } catch(e){ console.warn('Logo load:', e.message); }
 }
 
 // ── Helper: ambil profil dari tabel profiles ───────────────
@@ -61,6 +60,8 @@ async function applySupaSession(supaSession){
   document.getElementById('user-role-badge').textContent = session.role === 'admin' ? 'Administrator' : 'Pengguna';
   if(session.role !== 'admin') document.body.classList.add('readonly');
   else document.body.classList.remove('readonly');
+  // Terapkan logo jika sudah ada di cache
+  if(_logoData) applyLogoEverywhere(_logoData);
 }
 
 function clearAppSession(){
