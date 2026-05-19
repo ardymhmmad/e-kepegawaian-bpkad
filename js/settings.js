@@ -24,11 +24,29 @@ async function loadFonnteToken(){
 
 async function saveFonnteToken(){
   const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
-  const { error } = await supa.from('settings').upsert({ setting_key:'fonnte_token', setting_val:token },{ onConflict:'setting_key' });
+  if(!token){ showToast('Token tidak boleh kosong','error'); return; }
+
+  // Coba UPDATE dulu, jika tidak ada row baru INSERT
+  const { data: existing } = await supa.from('settings')
+    .select('id').eq('setting_key','fonnte_token').single();
+
+  let error;
+  if(existing){
+    ({ error } = await supa.from('settings')
+      .update({ setting_val: token })
+      .eq('setting_key','fonnte_token'));
+  } else {
+    ({ error } = await supa.from('settings')
+      .insert({ setting_key:'fonnte_token', setting_val: token }));
+  }
+
   if(!error){
     FONNTE_TOKEN = token;
-    showToast('Token Fonnte disimpan','success');
-  } else showToast(error.message,'error');
+    showToast('✅ Token Fonnte berhasil disimpan','success');
+  } else {
+    showToast('Gagal simpan: '+error.message,'error');
+    console.error('saveFonnteToken error:', error);
+  }
 }
 
 async function testFonnteToken(){

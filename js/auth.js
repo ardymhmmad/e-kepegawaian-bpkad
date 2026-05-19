@@ -22,26 +22,32 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 });
 
+// ── Session state ──────────────────────────────────────────
+let _sessionInitialized = false;
+
 // ── Listener perubahan session (JWT auto-refresh) ──────────
 supa.auth.onAuthStateChange(async (event, supaSession) => {
-  if(event === 'SIGNED_IN' && supaSession){
+  if(event === 'INITIAL_SESSION'){
+    // Saat halaman pertama kali dimuat — restore session jika ada
+    if(supaSession && !_sessionInitialized){
+      _sessionInitialized = true;
+      await applySupaSession(supaSession);
+      if(typeof init === 'function') init();
+    } else if(!supaSession){
+      // Tidak ada session — tampilkan login
+      clearAppSession();
+    }
+  } else if(event === 'SIGNED_IN' && supaSession){
+    _sessionInitialized = true;
     await applySupaSession(supaSession);
     if(typeof init === 'function') init();
   } else if(event === 'SIGNED_OUT'){
+    _sessionInitialized = false;
     clearAppSession();
   } else if(event === 'TOKEN_REFRESHED' && supaSession){
     session = await buildSession(supaSession);
   }
 });
-
-// Cek session aktif saat halaman dimuat
-(async ()=>{
-  const { data:{ session: existing } } = await supa.auth.getSession();
-  if(existing){
-    await applySupaSession(existing);
-    if(typeof init === 'function') init();
-  }
-})();
 
 // ── Helper: ambil profil dari tabel profiles ───────────────
 async function buildSession(supaSession){
@@ -70,12 +76,16 @@ async function applySupaSession(supaSession){
 
 function clearAppSession(){
   session = null;
+  _sessionInitialized = false;
   DB = { asn:[], pppk:[], pjlp:[], cuti:[], alokasi:{} };
   document.body.classList.remove('readonly');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('l-pass').value = '';
   document.getElementById('l-err').style.display = 'none';
+  // Reset tombol login agar tidak stuck
+  const btn = document.querySelector('.login-btn');
+  if(btn){ btn.disabled = false; btn.textContent = 'Masuk ke Sistem'; }
 }
 
 // ── Login ──────────────────────────────────────────────────
@@ -95,6 +105,13 @@ async function doLogin(){
   btn.disabled = true; btn.textContent = 'Memverifikasi...';
   errEl.style.display = 'none';
 
+  // Safety net — reset tombol jika tidak ada respon dalam 10 detik
+  const timeout = setTimeout(()=>{
+    btn.disabled = false; btn.textContent = 'Masuk ke Sistem';
+    errEl.textContent = 'Koneksi lambat, coba lagi.';
+    errEl.style.display = 'block';
+  }, 10000);
+
   try {
     const { error } = await supa.auth.signInWithPassword({ email, password: pw });
     if(error) throw error;
@@ -106,6 +123,7 @@ async function doLogin(){
     else errEl.textContent = 'Gagal login: ' + msg;
     errEl.style.display = 'block';
   } finally {
+    clearTimeout(timeout);
     btn.disabled = false; btn.textContent = 'Masuk ke Sistem';
   }
 }
