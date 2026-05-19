@@ -79,12 +79,44 @@ function updateCutiBadge(){
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FONNTE — Kirim WA
+// FONNTE — Kirim WA dengan template dari database
 // ═══════════════════════════════════════════════════════════════
+let WA_TEMPLATES = {};
+
+async function loadWATemplates(){
+  const keys = ['wa_tmpl_pengajuan','wa_tmpl_step1','wa_tmpl_step1_pegawai',
+                 'wa_tmpl_step2','wa_tmpl_approved','wa_tmpl_rejected'];
+  const { data } = await supa.from('settings')
+    .select('setting_key,setting_val')
+    .in('setting_key', keys);
+  if(data) data.forEach(r=>{ WA_TEMPLATES[r.setting_key]=r.setting_val; });
+}
+
+function renderTemplate(tmpl, data){
+  if(!tmpl) return '';
+  return tmpl
+    .replace(/{nama}/g,         data.nama        || '—')
+    .replace(/{nip}/g,          data.nip         || '—')
+    .replace(/{jenis_cuti}/g,   data.jenis_cuti  || 'Cuti Tahunan')
+    .replace(/{tgl_mulai}/g,    fmt(data.tgl_mulai)  || '—')
+    .replace(/{tgl_selesai}/g,  fmt(data.tgl_selesai) || '—')
+    .replace(/{hari_kerja}/g,   data.hari_kerja  || '—')
+    .replace(/{no_surat}/g,     data.no_surat    || '—')
+    .replace(/{alasan}/g,       data.alasan      || '—')
+    .replace(/{disetujui_oleh}/g, data.disetujui_oleh || '—')
+    .replace(/{sisa_cuti}/g,    data.sisa_cuti   || '—');
+}
+
+function getCutiData(c, extra={}){
+  const asnId = c.asn_id;
+  const tahun = c.tahun || new Date().getFullYear();
+  const sisa  = getSisaTahun(asnId, tahun);
+  return { ...c, sisa_cuti: sisa, ...extra };
+}
+
 async function kirimWA(target, pesan){
   if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
   if(!target) return false;
-  // Normalisasi nomor: hilangkan +, awalan 0 → 62
   let nomor = target.replace(/\D/g,'');
   if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
   try{
@@ -96,29 +128,6 @@ async function kirimWA(target, pesan){
     const data = await res.json();
     return data.status === true;
   } catch(e){ console.error('WA error:',e); return false; }
-}
-
-function pesanPengajuan(c, asnNama){
-  return `*📋 Pengajuan Cuti Baru*\n\n` +
-    `Pegawai  : ${asnNama}\n` +
-    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
-    `Hari Kerja: ${c.hari_kerja} hari\n` +
-    `Keperluan : ${c.keperluan||'-'}\n\n` +
-    `Silakan buka aplikasi E-Kepegawaian untuk melakukan persetujuan.`;
-}
-
-function pesanPersetujuan(c, disetujui){
-  const status = disetujui ? '✅ DISETUJUI' : '❌ DITOLAK';
-  return `*${status} — Pengajuan Cuti*\n\n` +
-    `Nama      : ${c.nama}\n` +
-    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
-    `Hari Kerja: ${c.hari_kerja} hari\n` +
-    (disetujui ? `No. Surat : ${c.no_surat||'-'}\n` : '') +
-    `\nSilakan cek detail di aplikasi E-Kepegawaian.`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -582,10 +591,9 @@ async function ajukanStep1(id){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  // Notif WA → Kepala Subbagian
   if(c?.wa_atasan1){
-    const ok=await kirimWA(c.wa_atasan1, pesanPengajuan(c, c.nama));
-    showToast(ok?'✓ WA terkirim ke Kepala Subbagian':'Diajukan (WA gagal terkirim)','success');
+    const pesan=renderTemplate(WA_TEMPLATES.wa_tmpl_pengajuan, getCutiData(c));
+    await kirimWA(c.wa_atasan1, pesan);
   }
   openCutiDetail(id); updateCutiBadge();
   showToast('Diajukan ke Kepala Subbagian','success');
@@ -609,62 +617,20 @@ async function approveStep(id,step){
 
   // ── Notifikasi WA sesuai step ──────────────────────
   if(step===1){
-    // Kasubbag setuju → notif ke Kabid untuk approve step 2
-    if(c?.wa_atasan2){
-      const pesan=`*📋 Persetujuan Cuti — Tahap 2 (Kepala Bidang)*\n\n` +
-        `Pengajuan cuti berikut telah disetujui oleh Kepala Subbagian dan menunggu persetujuan Anda:\n\n` +
-        `Pegawai   : ${c.nama}\n` +
-        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-        `Selesai   : ${fmt(c.tgl_selesai)}\n` +
-        `Hari Kerja: ${c.hari_kerja} hari\n\n` +
-        `Silakan buka aplikasi E-Kepegawaian untuk memberikan persetujuan.`;
-      await kirimWA(c.wa_atasan2, pesan);
-    }
-    // Notif ke pegawai bahwa sudah melewati step 1
-    if(c?.wa_pegawai){
-      const pesan=`*✅ Update Pengajuan Cuti — Tahap 1 Disetujui*\n\n` +
-        `Pengajuan cuti Anda telah disetujui oleh Kepala Subbagian.\n\n` +
-        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-        `Selesai   : ${fmt(c.tgl_selesai)}\n\n` +
-        `Menunggu persetujuan Kepala Bidang.`;
-      await kirimWA(c.wa_pegawai, pesan);
-    }
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, renderTemplate(WA_TEMPLATES.wa_tmpl_step1, d));
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step1_pegawai, d));
     showToast('Disetujui Kasubbag — WA dikirim ke Kabid & pegawai','success');
 
   } else if(step===2){
-    // Kabid setuju → notif ke admin untuk final approval
-    // Cari wa admin dari settings atau tampilkan info
-    const pesan=`*📋 Persetujuan Cuti — Tahap Final (Admin)*\n\n` +
-      `Pengajuan cuti berikut telah disetujui oleh Kepala Bidang dan menunggu persetujuan final:\n\n` +
-      `Pegawai   : ${c.nama}\n` +
-      `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-      `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-      `Selesai   : ${fmt(c.tgl_selesai)}\n` +
-      `Hari Kerja: ${c.hari_kerja} hari\n\n` +
-      `Silakan buka aplikasi E-Kepegawaian untuk persetujuan final.`;
-    // Notif ke pegawai bahwa sudah melewati step 2
-    if(c?.wa_pegawai){
-      const pesanPeg=`*✅ Update Pengajuan Cuti — Tahap 2 Disetujui*\n\n` +
-        `Pengajuan cuti Anda telah disetujui oleh Kepala Bidang.\n\n` +
-        `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-        `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-        `Selesai   : ${fmt(c.tgl_selesai)}\n\n` +
-        `Menunggu persetujuan final Admin.`;
-      await kirimWA(c.wa_pegawai, pesanPeg);
-    }
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step2, d));
     showToast('Disetujui Kabid — menunggu persetujuan final Admin','success');
 
   } else if(step===3){
-    // Final approved → notif ke pegawai
-    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanPersetujuan(c, true));
-    // Notif ke atasan1 & atasan2 bahwa sudah final
-    const pesanFinal=`*✅ Cuti Disetujui Final*\n\n` +
-      `Pengajuan cuti atas nama ${c.nama} telah disetujui.\n` +
-      `No. Surat : ${c.no_surat||'-'}\n` +
-      `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-      `Selesai   : ${fmt(c.tgl_selesai)}`;
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_approved, d));
+    const pesanFinal=renderTemplate(WA_TEMPLATES.wa_tmpl_approved, d);
     if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanFinal);
     if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanFinal);
     showToast(`✅ Cuti disetujui! No. Surat: ${c?.no_surat||'-'} — WA terkirim ke semua pihak`,'success');
@@ -684,14 +650,8 @@ async function rejectStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  const pesanTolak=`*❌ Pengajuan Cuti DITOLAK*\n\n` +
-    `Pengajuan cuti atas nama ${c.nama} telah ditolak.\n\n` +
-    `Jenis     : ${c.jenis_cuti||'Cuti Tahunan'}\n` +
-    `Mulai     : ${fmt(c.tgl_mulai)}\n` +
-    `Selesai   : ${fmt(c.tgl_selesai)}\n` +
-    `Ditolak oleh: ${who}\n` +
-    `Alasan    : ${note.trim()}`;
-  // Kirim WA ke pegawai, atasan1, dan atasan2
+  const d=getCutiData(c,{disetujui_oleh:who, alasan:note.trim()});
+  const pesanTolak=renderTemplate(WA_TEMPLATES.wa_tmpl_rejected, d);
   if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanTolak);
   if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanTolak);
   if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanTolak);

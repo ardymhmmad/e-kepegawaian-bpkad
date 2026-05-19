@@ -7,8 +7,8 @@ function renderSettings(){
   if(sui && session) sui.textContent = `${session.label} (${session.email})`;
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
-  // Load Fonnte token dari settings tabel
   loadFonnteToken();
+  renderWATemplatesForm();
   renderUserTable();
 }
 
@@ -326,4 +326,45 @@ function togglePwVis(id, btn){
   if(!el) return;
   el.type = el.type === 'password' ? 'text' : 'password';
   btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Template Pesan WA ──────────────────────────────────────
+const WA_TMPL_LABELS = {
+  wa_tmpl_pengajuan:     '📋 Pengajuan Baru → Kepala Subbagian',
+  wa_tmpl_step1:         '✅ Disetujui Kasubbag → Kepala Bidang',
+  wa_tmpl_step1_pegawai: '📢 Disetujui Kasubbag → Pegawai',
+  wa_tmpl_step2:         '📢 Disetujui Kabid → Pegawai',
+  wa_tmpl_approved:      '🎉 Disetujui Final → Semua Pihak',
+  wa_tmpl_rejected:      '❌ Ditolak → Semua Pihak',
+};
+
+async function renderWATemplatesForm(){
+  const el = document.getElementById('wa-templates-form'); if(!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px 0">Memuat template...</div>';
+  const keys = Object.keys(WA_TMPL_LABELS);
+  const { data } = await supa.from('settings').select('setting_key,setting_val').in('setting_key', keys);
+  const vals = {};
+  if(data) data.forEach(r=>{ vals[r.setting_key]=r.setting_val; });
+  el.innerHTML = keys.map(k=>`
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:5px">${WA_TMPL_LABELS[k]}</label>
+      <textarea id="tmpl-${k}" rows="7" style="width:100%;resize:vertical;font-size:12px;font-family:monospace;line-height:1.6">${vals[k]||''}</textarea>
+    </div>`).join('');
+}
+
+async function saveWATemplates(){
+  const keys = Object.keys(WA_TMPL_LABELS);
+  const upserts = keys.map(k=>({
+    setting_key: k,
+    setting_val: document.getElementById('tmpl-'+k)?.value||''
+  }));
+  const { error } = await supa.from('settings').upsert(upserts, { onConflict:'setting_key' });
+  if(!error){
+    // Update cache lokal
+    if(typeof WA_TEMPLATES !== 'undefined')
+      upserts.forEach(u=>{ WA_TEMPLATES[u.setting_key]=u.setting_val; });
+    showToast('✅ Semua template berhasil disimpan','success');
+  } else {
+    showToast('Gagal: '+error.message,'error');
+  }
 }

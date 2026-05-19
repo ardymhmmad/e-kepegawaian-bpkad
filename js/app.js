@@ -47,4 +47,6 @@ async function init(){
   }
 
   renderDashboard(); updateCutiBadge();
+  // Load WA templates
+  await loadWATemplates();
 }
