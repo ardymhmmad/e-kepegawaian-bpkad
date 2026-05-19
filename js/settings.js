@@ -15,7 +15,7 @@ function renderSettings(){
 // ── Fonnte Token ───────────────────────────────────────────
 async function loadFonnteToken(){
   const el = document.getElementById('fonnte-token-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').single();
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
   if(data?.setting_val){
     el.value = data.setting_val;
     FONNTE_TOKEN = data.setting_val; // update variabel global langsung
@@ -28,7 +28,7 @@ async function saveFonnteToken(){
 
   // Coba UPDATE dulu, jika tidak ada row baru INSERT
   const { data: existing } = await supa.from('settings')
-    .select('id').eq('setting_key','fonnte_token').single();
+    .select('id').eq('setting_key','fonnte_token').maybeSingle();
 
   let error;
   if(existing){

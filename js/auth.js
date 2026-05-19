@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 async function loadLoginLogo(){
   try{
     const { data } = await supa.from('settings')
-      .select('setting_val').eq('setting_key','logo_path').single();
+      .select('setting_val').eq('setting_key','logo_path').maybeSingle();
     if(data?.setting_val){
       _logoData = data.setting_val;
       const els = document.querySelectorAll('.login-logo-img,.app-logo-img,.sidebar-logo');
