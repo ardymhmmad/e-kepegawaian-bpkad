@@ -34,7 +34,7 @@ const UNITS = {
     'Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III',
     'Kepala Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III'
   ],
-  'Bidang Pengelolaan Barang Daerah': [
+  'Bidang Pengelolaan Barang Milik Daerah': [
     'Kepala Bidang Pengelolaan Barang Milik Daerah',
     'Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
     'Kepala Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
