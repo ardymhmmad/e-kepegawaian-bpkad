@@ -727,12 +727,12 @@ function cetakSuratCuti(id){
       <tr style="border:none">
         <td style="width:80px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
         <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
-          <div style="font-size:13pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
-          <div style="font-size:12pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
-          <div style="font-size:12pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
-          <div style="font-size:9pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
-          <div style="font-size:9pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
-          <div style="font-size:9pt;color:#000">Laman : https://bpkad.kalselprov.go.id/ &nbsp; Pos-el : bpkad@kalselprov.go.id</div>
+          <div style="font-size:14pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div style="font-size:18pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div style="font-size:18pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div style="font-size:10pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div style="font-size:10pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div style="font-size:10pt;color:#000">Laman : https://bpkad.kalselprov.go.id/ &nbsp; Pos-el : bpkad@kalselprov.go.id</div>
         </td>
       </tr>
     </table>
@@ -741,7 +741,7 @@ function cetakSuratCuti(id){
 
     <!-- JUDUL -->
     <div style="text-align:center;margin-bottom:6px;color:#000">
-      <div style="font-size:13pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
+      <div style="font-size:14pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
       <div style="font-size:12pt;color:#000">Nomor : ${nomorSurat}</div>
     </div>
 
