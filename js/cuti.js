@@ -798,7 +798,7 @@ function cetakSuratCuti(id){
     
     <td style="
       text-align:left;
-      font-family:'Times New Roman',serif;
+      font-family:'Arial',serif;
       font-size:11pt;
       line-height:1.7;
       border:none;
@@ -810,13 +810,13 @@ function cetakSuratCuti(id){
       </div>
 
       <div style="display:flex;gap:0">
-        <span style="min-width:40px">A.n.</span>
+        <span style="min-width:40px">a.n.</span>
         
         <span>
-          Kepala Badan Pengelolaan Keuangan<br>
-          dan Aset Daerah<br>
-          Provinsi Kalimantan Selatan,<br>
-          Sekretaris,
+          KEPALA BADAN PENGELOLAAN<br>
+          KEUANGAN DAN ASET DAERAH<br>
+          PROVINSI KALIMANTAN SELATAN,<br>
+          SEKRETARIS,
         </span>
       </div>
 
