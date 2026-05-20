@@ -582,34 +582,10 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
     width:100%;
     background:white;
   }
-  .surat-print{ padding:0; }
+  .surat-print{ padding:10mm 15mm; }
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
-  .surat-print p,
-  .surat-print table,
-  .surat-print table tr,
-  .surat-print div{ page-break-inside:avoid; }
-  .surat-print td, .surat-print p, .surat-print div{
-    word-break:normal !important;
-    overflow-wrap:normal !important;
-    word-wrap:normal !important;
-    hyphens:none !important;
-  }
-  @page {
-    size: A4 portrait;
-    margin-top:2cm;
-    margin-bottom:2cm;
-    margin-left:3cm;
-    margin-right:2.5cm;
-  }
-  .surat-print{ padding:0; font-size:11pt !important; width:100% !important; }
-  .surat-print *{ font-size:11pt !important; line-height:1.4 !important; box-sizing:border-box !important; }
-  .surat-print [style*="font-size:13pt"]{ font-size:12pt !important; }
-  .surat-print [style*="font-size:9pt"]{ font-size:9pt !important; }
-  .surat-print p{ margin:4px 0 !important; }
-  .surat-print table{ margin-bottom:4px !important; width:100% !important; table-layout:fixed !important; }
-  .surat-print td{ word-break:break-word !important; overflow-wrap:break-word !important; }
 }
 #print-surat{ display:none }
 
