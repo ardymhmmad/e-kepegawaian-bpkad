@@ -978,7 +978,7 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:10px">
         <tr style="border:none">
           <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
           <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
@@ -986,7 +986,7 @@ function cetakSuratCuti(id){
       </table>
 
      <!-- TANDA TANGAN -->
-<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:30px">
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
   <tr style="border:none">
     <td style="width:47%;border:none"></td>
     
