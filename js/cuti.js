@@ -758,7 +758,7 @@ function cetakSuratCuti(id){
         <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000"><strong>${c.nama}</strong></td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">NIP</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${c.nip}</td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.pangkat||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Jabatan</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.jabatan||'_______________'}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Jabatan</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${asn?.jabatan||'_______________'}</td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Unit Kerja</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
       </table>
 
