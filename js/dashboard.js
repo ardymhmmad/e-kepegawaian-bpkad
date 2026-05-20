@@ -15,8 +15,8 @@ function renderDashboard(){
   const statCards=[
     {color:'#1649c8',bg:'#eef2ff',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',lbl:'Total Pegawai',val:totalN,note:'ASN + PPPK PW + PJLP',noteClass:'up',delay:'fade-up-1'},
     {color:'#1649c8',bg:'#eef2ff',icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',lbl:'ASN',val:asnN,note:'Aparatur Sipil Negara',noteClass:'up',delay:'fade-up-2'},
-    {color:'#065f46',bg:'#ecfdf5',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',lbl:'PPPK Paruh Waktu',val:pppkN,note:'Pegawai kontrak PPPK',noteClass:'up',delay:'fade-up-3'},
-    {color:'#92400e',bg:'#fffbeb',icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',lbl:'PJLP',val:pjlpN,note:expPJLP?`${expPJLP} kontrak segera berakhir`:'Semua kontrak aktif',noteClass:expPJLP?'warn':'up',delay:'fade-up-4'},
+    {color:'#065f46',bg:'#ecfdf5',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',lbl:'PPPK Paruh Waktu',val:pppkN,note:'Pegawai PPPK',noteClass:'up',delay:'fade-up-3'},
+    {color:'#92400e',bg:'#fffbeb',icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',lbl:'PJLP',val:pjlpN,note:expPJLP?`${expPJLP} kontrak segera berakhir`:'Semua PJLP aktif',noteClass:expPJLP?'warn':'up',delay:'fade-up-4'},
   ];
   document.getElementById('db-stats').innerHTML=statCards.map(s=>`
     <div class="sc fade-up ${s.delay}" style="--sc-color:${s.color}">
