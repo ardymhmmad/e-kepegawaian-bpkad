@@ -582,7 +582,7 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
     width:100%;
     background:white;
   }
-  .surat-print{ padding:8mm 10mm; }
+  .surat-print{ padding:5mm 10mm; }
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
