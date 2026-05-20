@@ -986,7 +986,7 @@ function cetakSuratCuti(id){
       </table>
 
      <!-- TANDA TANGAN -->
-<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:17px">
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:15px">
   <tr style="border:none">
     <td style="width:47%;border:none"></td>
     
