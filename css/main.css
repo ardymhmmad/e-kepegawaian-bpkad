@@ -586,6 +586,10 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
+  .surat-print p,
+  .surat-print table,
+  .surat-print table tr,
+  .surat-print div{ page-break-inside:avoid; }
   @page {
     margin-top:2cm;
     margin-bottom:2cm;
