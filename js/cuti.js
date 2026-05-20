@@ -704,7 +704,7 @@ function cetakSuratCuti(id){
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-  
+
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
@@ -717,7 +717,7 @@ function cetakSuratCuti(id){
   const jenisPeg   = 'Pegawai Negeri Sipil';
 
   const logoHtml = _logoData
-    ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
+    ? `<img src="${_logoData}" style="width:68px;height:68px;object-fit:contain">`
     : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`;
 
   document.getElementById('print-surat').innerHTML=`
@@ -725,14 +725,14 @@ function cetakSuratCuti(id){
     <!-- KOP SURAT -->
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
       <tr style="border:none">
-        <td style="width:130px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
+        <td style="width:80px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
         <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
-          <div style="font-size:14pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
-          <div style="font-size:18pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
-          <div style="font-size:18pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
-          <div style="font-size:10pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
-          <div style="font-size:10pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
-          <div style="font-size:10pt;color:#000">Laman : https://bpkad.kalselprov.go.id,&nbsp; Pos-el : bpkad@kalselprov.go.id</div>
+          <div style="font-size:13pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div style="font-size:12pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div style="font-size:12pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div style="font-size:9pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div style="font-size:9pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div style="font-size:9pt;color:#000">Laman : https://bpkad.kalselprov.go.id/ &nbsp; Pos-el : bpkad@kalselprov.go.id</div>
         </td>
       </tr>
     </table>
@@ -741,7 +741,7 @@ function cetakSuratCuti(id){
 
     <!-- JUDUL -->
     <div style="text-align:center;margin-bottom:6px;color:#000">
-      <div style="font-size:14pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
+      <div style="font-size:13pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
       <div style="font-size:12pt;color:#000">Nomor : ${nomorSurat}</div>
     </div>
 
@@ -791,39 +791,22 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-     <!-- TANDA TANGAN -->
-<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
-  <tr style="border:none">
-    <td style="width:55%;border:none"></td>
-    
-    <td style="
-      text-align:left;
-      font-family:'Arial',serif;
-      font-size:11pt;
-      line-height:1.4;
-      border:none;
-      vertical-align:top
-    ">
-      
-      <div style="margin-left:40px">
-        Banjarbaru, ${tglLong(new Date().toISOString())}
-      </div>
+      <!-- TANDA TANGAN -->
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
+        <tr style="border:none">
+          <td style="width:50%;border:none"></td>
+          <td style="text-align:left;font-size:11pt;color:#000;line-height:1.5;border:none;vertical-align:top;width:50%">
+            <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
+            <div style="display:flex;gap:0;white-space:nowrap">
+              <span style="min-width:32px">A.n.</span>
+              <span style="white-space:normal">Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</span>
+            </div>
+            <div>Sekretaris,</div>
+            <div style="height:70px"></div>
+          </td>
+        </tr>
+      </table>
 
-      <div style="display:flex;gap:0">
-        <span style="min-width:40px">a.n.</span>
-        
-        <span>
-          KEPALA BADAN PENGELOLAAN<br>
-          KEUANGAN DAN ASET DAERAH<br>
-          PROVINSI KALIMANTAN SELATAN,<br>
-          SEKRETARIS,
-        </span>
-      </div>
-
-      <div style="height:80px"></div>
-    </td>
-  </tr>
-</table>
       <!-- TEMBUSAN -->
       <div style="font-size:9pt;color:#000;line-height:1.7">
         <div>Tembusan :</div>
