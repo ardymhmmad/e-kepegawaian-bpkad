@@ -791,20 +791,58 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-      <!-- TANDA TANGAN -->
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
-        <tr style="border:none">
-          <td style="width:55%;border:none"></td>
-          <td style="text-align:left;font-family:'Times New Roman',serif;font-size:11pt;line-height:1.7;border:none;vertical-align:top">
-            <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
-            <div style="display:flex;gap:0">
-              <span style="min-width:40px">A.n.</span>
-              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,<br>Sekretaris,</span>
-            </div>
-            <div style="height:80px"></div>
+     <!-- TANDA TANGAN -->
+<table style="width:100%; border-collapse:collapse; border:none; margin-bottom:20px">
+  <tr style="border:none">
+    
+    <td style="width:55%; border:none"></td>
+
+    <td style="
+      width:45%;
+      border:none;
+      vertical-align:top;
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      line-height:1.7;
+      text-align:left;
+    ">
+      
+      <!-- Tanggal -->
+      <div style="padding-left:40px;">
+        Banjarbaru, ${tglLong(new Date().toISOString())}
+      </div>
+
+      <!-- Jabatan -->
+      <table style="border:none; border-collapse:collapse; margin-top:2px">
+        <tr>
+          <td style="
+            border:none;
+            vertical-align:top;
+            width:40px;
+            padding:0;
+          ">
+            A.n.
+          </td>
+
+          <td style="
+            border:none;
+            vertical-align:top;
+            padding:0;
+          ">
+            Kepala Badan Pengelolaan Keuangan<br>
+            dan Aset Daerah<br>
+            Provinsi Kalimantan Selatan,<br>
+            Sekretaris,
           </td>
         </tr>
       </table>
+
+      <!-- Ruang TTD -->
+      <div style="height:80px"></div>
+
+    </td>
+  </tr>
+</table>
 
       <!-- TEMBUSAN -->
       <div style="font-family:'Times New Roman',serif;font-size:9pt;line-height:1.7">
