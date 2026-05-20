@@ -704,10 +704,7 @@ function cetakSuratCuti(id){
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-@page{
-  size:A4;
-  margin:2cm 2.5cm 2cm 3cm;
-}
+  
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
