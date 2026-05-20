@@ -721,18 +721,18 @@ function cetakSuratCuti(id){
     : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`;
 
   document.getElementById('print-surat').innerHTML=`
-  <div class="surat-print">
+  <div class="surat-print" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000">
     <!-- KOP SURAT -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:4px">
-      <tr>
-        <td style="width:80px;text-align:center;vertical-align:middle">${logoHtml}</td>
-        <td style="text-align:center;vertical-align:middle;padding:0 8px">
-          <div style="font-size:13pt;font-weight:700;font-family:'Times New Roman',serif">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
-          <div style="font-size:12pt;font-weight:700;font-family:'Times New Roman',serif">BADAN PENGELOLAAN KEUANGAN</div>
-          <div style="font-size:12pt;font-weight:700;font-family:'Times New Roman',serif">DAN ASET DAERAH</div>
-          <div style="font-size:9pt;font-family:'Times New Roman',serif">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
-          <div style="font-size:9pt;font-family:'Times New Roman',serif">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
-          <div style="font-size:9pt;font-family:'Times New Roman',serif">Laman : https://bpkad.kalselprov.go.id/ &nbsp; Pos-el : bpkad@kalselprov.go.id</div>
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
+      <tr style="border:none">
+        <td style="width:80px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
+        <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
+          <div style="font-size:13pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div style="font-size:12pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div style="font-size:12pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div style="font-size:9pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div style="font-size:9pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div style="font-size:9pt;color:#000">Laman : https://bpkad.kalselprov.go.id/ &nbsp; Pos-el : bpkad@kalselprov.go.id</div>
         </td>
       </tr>
     </table>
@@ -740,112 +740,75 @@ function cetakSuratCuti(id){
     <hr style="border:none;border-top:1px solid #000;margin:2px 0 10px">
 
     <!-- JUDUL -->
-    <div style="text-align:center;font-family:'Times New Roman',serif;margin-bottom:2px">
-      <div style="font-size:13pt;font-weight:700;text-decoration:underline">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
-      <div style="font-size:11pt">Nomor : ${nomorSurat}</div>
+    <div style="text-align:center;margin-bottom:6px;color:#000">
+      <div style="font-size:13pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
+      <div style="font-size:12pt;color:#000">Nomor : ${nomorSurat}</div>
     </div>
 
     <!-- ISI SURAT -->
-    <div style="font-family:'Times New Roman',serif;font-size:11pt;margin-top:12px">
-      <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
-        <tr>
-          <td style="padding:2px 0;width:40px;vertical-align:top">1.</td>
-          <td style="padding:2px 0;vertical-align:top">Diberikan ${jenisCuti} ${tahun} kepada ${jenisPeg} :</td>
+    <div style="font-size:12pt;color:#000;margin-top:12px;line-height:1.6">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
+        <tr style="border:none">
+          <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">1.</td>
+          <td style="padding:2px 0;vertical-align:top;border:none;font-size:12pt;color:#000">Diberikan ${jenisCuti} ${tahun} kepada ${jenisPeg} :</td>
         </tr>
       </table>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-left:20px;margin-bottom:8px">
-        <tr style="border:none"><td style="width:180px;padding:2px 0;border:none">Nama</td><td style="width:10px;border:none">:</td><td style="padding:2px 0;border:none"><strong>${c.nama}</strong></td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none">NIP</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${c.nip}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none">Pangkat/Gol. Ruang</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${asn?.pangkat||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none">Jabatan</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${asn?.jabatan||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none">Unit Kerja</td><td style="border:none">:</td><td style="padding:2px 0;border:none">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
+        <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000"><strong>${c.nama}</strong></td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">NIP</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${c.nip}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.pangkat||'_______________'}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Jabatan</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.jabatan||'_______________'}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Unit Kerja</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
       </table>
 
-      <p style="margin:8px 0;text-align:justify">
+      <p style="margin:8px 0;text-align:justify;font-size:12pt;color:#000;line-height:1.6">
         Selama <strong>${c.hari_kerja} (${terbilang(c.hari_kerja)})</strong> Hari Kerja, terhitung mulai tanggal
         <strong>${tglLong(c.tgl_mulai)}</strong> sampai dengan <strong>${tglLong(c.tgl_selesai)}</strong>,
         Adapun sisa Cuti selama <strong>${sisa} hari kerja</strong> akan diambil tahun berjalan ${tahun}
         dengan ketentuan sebagai berikut :
       </p>
 
-      <table style="width:100%;border-collapse:collapse;margin-left:20px;margin-bottom:8px">
-        <tr>
-          <td style="width:20px;vertical-align:top;padding:2px 0">a.</td>
-          <td style="padding:2px 0;text-align:justify">Sebelum menjalankan ${jenisCuti} ${tahun} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.</td>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
+        <tr style="border:none">
+          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">a.</td>
+          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000;line-height:1.6">Sebelum menjalankan ${jenisCuti} ${tahun} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.</td>
         </tr>
-        <tr>
-          <td style="width:20px;vertical-align:top;padding:2px 0">b.</td>
-          <td style="padding:2px 0;text-align:justify">Setelah selesai menjalankan ${jenisCuti} ${tahun} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.</td>
+        <tr style="border:none">
+          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">b.</td>
+          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000;line-height:1.6">Setelah selesai menjalankan ${jenisCuti} ${tahun} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.</td>
         </tr>
-        <tr>
-          <td style="width:20px;vertical-align:top;padding:2px 0">c.</td>
-          <td style="padding:2px 0">Alamat Cuti : ${c.alamat||'_______________________________________________'}</td>
-        </tr>
-      </table>
-
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
-        <tr>
-          <td style="padding:2px 0;width:40px;vertical-align:top">2.</td>
-          <td style="padding:2px 0;text-align:justify">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
+        <tr style="border:none">
+          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">c.</td>
+          <td style="padding:2px 0;border:none;font-size:12pt;color:#000">Alamat Cuti : ${c.alamat||'_______________________________________________'}</td>
         </tr>
       </table>
 
-     <!-- TANDA TANGAN -->
-<table style="width:100%; border-collapse:collapse; border:none; margin-bottom:20px">
-  <tr style="border:none">
-    
-    <td style="width:55%; border:none"></td>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16px">
+        <tr style="border:none">
+          <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
+          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
+        </tr>
+      </table>
 
-    <td style="
-      width:45%;
-      border:none;
-      vertical-align:top;
-      font-family:'Times New Roman', serif;
-      font-size:11pt;
-      line-height:1.7;
-      text-align:left;
-    ">
-      
-      <!-- Tanggal -->
-      <div style="padding-left:40px;">
-        Banjarbaru, ${tglLong(new Date().toISOString())}
-      </div>
-
-      <!-- Jabatan -->
-      <table style="border:none; border-collapse:collapse; margin-top:2px">
-        <tr>
-          <td style="
-            border:none;
-            vertical-align:top;
-            width:40px;
-            padding:0;
-          ">
-            A.n.
-          </td>
-
-          <td style="
-            border:none;
-            vertical-align:top;
-            padding:0;
-          ">
-            Kepala Badan Pengelolaan Keuangan<br>
-            dan Aset Daerah<br>
-            Provinsi Kalimantan Selatan,<br>
-            Sekretaris,
+      <!-- TANDA TANGAN -->
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
+        <tr style="border:none">
+          <td style="width:55%;border:none"></td>
+          <td style="text-align:left;font-size:12pt;color:#000;line-height:1.7;border:none;vertical-align:top">
+            <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
+            <div style="display:flex;gap:0">
+              <span style="min-width:38px">A.n.</span>
+              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</span>
+            </div>
+            <div>Sekretaris,</div>
+            <div style="height:80px"></div>
           </td>
         </tr>
       </table>
-
-      <!-- Ruang TTD -->
-      <div style="height:80px"></div>
-
-    </td>
-  </tr>
-</table>
 
       <!-- TEMBUSAN -->
-      <div style="font-family:'Times New Roman',serif;font-size:9pt;line-height:1.7">
+      <div style="font-size:9pt;color:#000;line-height:1.7">
         <div>Tembusan :</div>
         <div style="margin-left:4px">1. Kepala Badan Pengelolaan Keuangan dan Aset Daerah</div>
         <div style="margin-left:4px">2. Yang bersangkutan</div>
