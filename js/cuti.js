@@ -799,9 +799,8 @@ function cetakSuratCuti(id){
             <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
             <div style="display:flex;gap:0">
               <span style="min-width:40px">A.n.</span>
-              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</span>
+              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,<br>Sekretaris,</span>
             </div>
-            <div>Sekretaris,</div>
             <div style="height:80px"></div>
           </td>
         </tr>
