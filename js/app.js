@@ -30,6 +30,7 @@ async function init(){
     if(cfg.carry_over_enabled) CARRY_OVER_ENABLED=cfg.carry_over_enabled==='1';
     if(cfg.carry_over_max)     CARRY_OVER_MAX=parseInt(cfg.carry_over_max)||999;
     if(cfg.fonnte_token)       FONNTE_TOKEN=cfg.fonnte_token;
+    if(cfg.no_urut_cuti)       NO_URUT_CUTI=parseInt(cfg.no_urut_cuti)||1;
   }
 
   // Cache cuti
