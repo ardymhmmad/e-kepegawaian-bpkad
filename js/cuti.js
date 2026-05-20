@@ -792,7 +792,7 @@ function cetakSuratCuti(id){
       </table>
 
      <!-- TANDA TANGAN -->
-<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
   <tr style="border:none">
     <td style="width:55%;border:none"></td>
     
