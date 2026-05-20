@@ -66,10 +66,15 @@ function getCarryOver(asnId,tahun){
 }
 function getTotalAlokasi(asnId,tahun){ return getAlokasiTahun(asnId,tahun)+getCarryOver(asnId,tahun); }
 function getSisaTahun(asnId,tahun){ return Math.max(0,getTotalAlokasi(asnId,tahun)-getTerpakaiTahun(asnId,tahun)); }
-function generateNoSurat(){
-  const yr=new Date().getFullYear();
-  const n=DB.cuti.filter(c=>c.status==='approved'&&c.tahun===yr).length+1;
-  return `${String(n).padStart(3,'0')}/CUTI/BPKAD/${yr}`;
+// Nomor urut surat cuti — diload dari settings saat init
+let NO_URUT_CUTI = 1;
+
+function generateNoSurat(tahun){
+  const yr = tahun || new Date().getFullYear();
+  // Hitung jumlah surat approved tahun ini untuk dapat urutan berikutnya
+  const sudahAda = DB.cuti.filter(c => c.status === 'approved' && c.tahun === yr && c.no_surat).length;
+  const urut = Math.max(NO_URUT_CUTI + sudahAda - 1, sudahAda) || 1;
+  return `${String(urut).padStart(3,'0')}/CUTI/BPKAD/${yr}`;
 }
 
 function updateCutiBadge(){
@@ -701,6 +706,60 @@ function toggleAllCutiCheck(el){
 function cetakSuratCuti(id){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
+
+  // Hitung nomor surat default
+  const tahunCuti = c.tahun || new Date().getFullYear();
+  const suratYgSudahAda = DB.cuti.filter(x =>
+    x.status === 'approved' && x.tahun === tahunCuti && x.no_surat && x.id !== id
+  ).length;
+  const nomorUrut = c.no_surat
+    ? c.no_surat.split('/')[0].trim()
+    : String(NO_URUT_CUTI + suratYgSudahAda).padStart(3,'0');
+  const nomorDefault = `800.1.11.4/${nomorUrut}/BPKAD/${tahunCuti}`;
+
+  // Popup konfirmasi nomor surat
+  document.getElementById('modal-title').textContent = '🖨 Konfirmasi Nomor Surat';
+  document.getElementById('modal-box').style.maxWidth = '480px';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="margin-bottom:14px;font-size:13px;color:var(--tx2);line-height:1.6">
+      Periksa dan sesuaikan nomor surat sebelum dicetak.<br>
+      <span style="font-size:11px;color:var(--tx3)">Format: 800.1.11.4/<strong>NOMOR-URUT</strong>/BPKAD/${tahunCuti}</span>
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label style="font-weight:700">Nomor Surat *</label>
+      <input type="text" id="input-no-surat" value="${nomorDefault}"
+        style="font-family:monospace;font-size:13px;font-weight:600;letter-spacing:.02em">
+      <div style="font-size:10px;color:var(--tx3);margin-top:4px">Edit bagian nomor urut jika perlu</div>
+    </div>
+    <div style="background:var(--primary-bg);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tx2)">
+      <div><strong>Pegawai:</strong> ${c.nama} — ${c.nip}</div>
+      <div><strong>Jenis Cuti:</strong> ${c.jenis_cuti||'Cuti Tahunan'}</div>
+      <div><strong>Tanggal:</strong> ${fmt(c.tgl_mulai)} s.d. ${fmt(c.tgl_selesai)} (${c.hari_kerja} hari kerja)</div>
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}')">🖨 Cetak Sekarang</button>`;
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>{ document.getElementById('input-no-surat')?.focus(); }, 100);
+}
+
+async function eksekusiCetakSurat(id){
+  const nomorSuratInput = (document.getElementById('input-no-surat')?.value||'').trim();
+  if(!nomorSuratInput){ showToast('Nomor surat tidak boleh kosong','error'); return; }
+
+  // Simpan nomor surat ke database
+  await supa.from('cuti').update({ no_surat: nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput }).eq('id', id);
+  // Update cache lokal
+  const idx = DB.cuti.findIndex(x=>x.id===id);
+  if(idx>=0) DB.cuti[idx].no_surat = nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput;
+
+  closeModal();
+  _doCetakSurat(id, nomorSuratInput);
+}
+
+function _doCetakSurat(id, nomorSuratOverride){
+  const c=DB.cuti.find(x=>x.id===id);
+  if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
@@ -711,8 +770,7 @@ function cetakSuratCuti(id){
     return `${dt.getDate()} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][dt.getMonth()]} ${dt.getFullYear()}`;
   };
 
-  const nomorUrut = c.no_surat ? c.no_surat.split('/')[0].trim() : '___';
-  const nomorSurat = `800.1.11.4/${nomorUrut}/BPKAD/${tahun}`;
+  const nomorSurat = nomorSuratOverride || `800.1.11.4/${c.no_surat||'___'}/BPKAD/${tahun}`;
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
   const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
