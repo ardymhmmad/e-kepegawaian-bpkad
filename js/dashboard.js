@@ -55,7 +55,7 @@ function renderDashboard(){
 
   document.getElementById('db-charts1').innerHTML=`
     <div class="cc fade-up">
-      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Jenis Kelamin per Jenis Pegawai</div>
+      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Rekap Jenis Kelamin Seluruh Pegawai </div>
       ${gHtml}
     </div>
     <div class="cc fade-up fade-up-1">
@@ -74,7 +74,7 @@ function renderDashboard(){
   const rankHtml=GOL_LIST.filter(r=>rankMap[r]).map(r=>`<div class="bar-row"><div class="bar-lbl">${r}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(rankMap[r]/maxR*100)}%;background:#1a56db"></div></div><div class="bar-val">${rankMap[r]}</div></div>`).join('');
   const jpHtml=Object.entries(jpMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxJ*100)}%;background:#92400e"></div></div><div class="bar-val">${v}</div></div>`).join('');
   document.getElementById('db-charts2').innerHTML=`
-    <div class="cc fade-up"><div class="cc-title"><span class="cc-title-dot" style="background:#065f46"></span>Pendidikan ASN</div>${eduHtml||noData()}</div>
+    <div class="cc fade-up"><div class="cc-title"><span class="cc-title-dot" style="background:#065f46"></span>Rekap Pendidikan ASN</div>${eduHtml||noData()}</div>
     <div class="cc fade-up fade-up-1"><div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Pangkat / Golongan ASN</div>${rankHtml||noData()}</div>
     <div class="cc fade-up fade-up-2"><div class="cc-title"><span class="cc-title-dot" style="background:#92400e"></span>Jenis Pekerjaan PJLP</div>${jpHtml||noData()}</div>`;
 
