@@ -725,7 +725,7 @@ function cetakSuratCuti(id){
     <!-- KOP SURAT -->
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
       <tr style="border:none">
-        <td style="width:95px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
+        <td style="width:130px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
         <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
           <div style="font-size:14pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
           <div style="font-size:18pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
