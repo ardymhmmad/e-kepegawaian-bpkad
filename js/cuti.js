@@ -795,28 +795,24 @@ function cetakSuratCuti(id){
       <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
         <tr style="border:none">
           <td style="width:55%;border:none"></td>
-          <td style="text-align:left;font-family:'Times New Roman',serif;font-size:11pt;line-height:1.6;border:none">
+          <td style="text-align:left;font-family:'Times New Roman',serif;font-size:11pt;line-height:1.7;border:none;vertical-align:top">
             <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
-            <table style="border:none;border-collapse:collapse;width:100%">
-              <tr style="border:none">
-                <td style="border:none;vertical-align:top;white-space:nowrap;padding-right:4px">A.n.</td>
-                <td style="border:none">Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</td>
-              </tr>
-            </table>
-            <div style="margin-top:2px">Sekretaris,</div>
+            <div style="display:flex;gap:0">
+              <span style="min-width:40px">A.n.</span>
+              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</span>
+            </div>
+            <div>Sekretaris,</div>
             <div style="height:80px"></div>
           </td>
         </tr>
       </table>
 
       <!-- TEMBUSAN -->
-      <div style="font-family:'Times New Roman',serif;font-size:9pt;line-height:1.6">
+      <div style="font-family:'Times New Roman',serif;font-size:9pt;line-height:1.7">
         <div>Tembusan :</div>
-        <table style="margin-left:20px;border-collapse:collapse;border:none;font-size:9pt">
-          <tr style="border:none"><td style="padding:1px 0;width:20px;border:none">1.</td><td style="border:none">Kepala Badan Pengelolaan Keuangan dan Aset Daerah</td></tr>
-          <tr style="border:none"><td style="padding:1px 0;border:none">2.</td><td style="border:none">Yang bersangkutan</td></tr>
-          <tr style="border:none"><td style="padding:1px 0;border:none">3.</td><td style="border:none">Arsip</td></tr>
-        </table>
+        <div style="margin-left:4px">1. Kepala Badan Pengelolaan Keuangan dan Aset Daerah</div>
+        <div style="margin-left:4px">2. Yang bersangkutan</div>
+        <div style="margin-left:4px">3. Arsip</div>
       </div>
     </div>
   </div>`;
