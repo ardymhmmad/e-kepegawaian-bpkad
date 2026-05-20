@@ -791,22 +791,39 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-      <!-- TANDA TANGAN -->
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
-        <tr style="border:none">
-          <td style="width:55%;border:none"></td>
-          <td style="text-align:left;font-size:12pt;color:#000;line-height:1.7;border:none;vertical-align:top">
-            <div>Banjarbaru, ${tglLong(new Date().toISOString())}</div>
-            <div style="display:flex;gap:0">
-              <span style="min-width:38px">A.n.</span>
-              <span>Kepala Badan Pengelolaan Keuangan<br>dan Aset Daerah<br>Provinsi Kalimantan Selatan,</span>
-            </div>
-            <div>Sekretaris,</div>
-            <div style="height:80px"></div>
-          </td>
-        </tr>
-      </table>
+     <!-- TANDA TANGAN -->
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
+  <tr style="border:none">
+    <td style="width:55%;border:none"></td>
+    
+    <td style="
+      text-align:left;
+      font-family:'Times New Roman',serif;
+      font-size:11pt;
+      line-height:1.7;
+      border:none;
+      vertical-align:top
+    ">
+      
+      <div style="margin-left:40px">
+        Banjarbaru, ${tglLong(new Date().toISOString())}
+      </div>
 
+      <div style="display:flex;gap:0">
+        <span style="min-width:40px">A.n.</span>
+        
+        <span>
+          Kepala Badan Pengelolaan Keuangan<br>
+          dan Aset Daerah<br>
+          Provinsi Kalimantan Selatan,<br>
+          Sekretaris,
+        </span>
+      </div>
+
+      <div style="height:80px"></div>
+    </td>
+  </tr>
+</table>
       <!-- TEMBUSAN -->
       <div style="font-size:9pt;color:#000;line-height:1.7">
         <div>Tembusan :</div>
