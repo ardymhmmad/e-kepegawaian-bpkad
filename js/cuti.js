@@ -963,20 +963,82 @@ function cetakSuratCuti(id){
         dengan ketentuan sebagai berikut :
       </p>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
-        <tr style="border:none">
-          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">a.</td>
-          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000;line-height:1.6">Sebelum menjalankan ${jenisCuti} ${tahun} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.</td>
-        </tr>
-        <tr style="border:none">
-          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">b.</td>
-          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000;line-height:1.6">Setelah selesai menjalankan ${jenisCuti} ${tahun} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.</td>
-        </tr>
-        <tr style="border:none">
-          <td style="width:20px;vertical-align:top;padding:2px 0;border:none;font-size:12pt;color:#000">c.</td>
-          <td style="padding:2px 0;border:none;font-size:12pt;color:#000">Alamat Cuti : ${c.alamat||'_______________________________________________'}</td>
-        </tr>
-      </table>
+      <table style="
+    width:100%;
+    border-collapse:collapse;
+    border:none;
+    margin-left:24px;
+    margin-bottom:8px;
+    table-layout:fixed;
+">
+
+<tr style="border:none">
+    <td style="
+        width:25px;
+        vertical-align:top;
+        padding:2px 0;
+        border:none;
+        font-size:12pt;
+        color:#000;
+    ">
+      a.
+    </td>
+
+    <td style="
+        width:auto;
+        padding:2px 0;
+        border:none;
+        font-size:12pt;
+        color:#000;
+        line-height:1.6;
+        text-align:justify;
+        text-justify:inter-word;
+    ">
+      Sebelum menjalankan ${jenisCuti} ${tahun}
+      wajib menyerahkan pekerjaannya kepada Atasan
+      Langsung atau pejabat yang ditentukan.
+    </td>
+</tr>
+
+<tr style="border:none">
+    <td style="
+        width:25px;
+        vertical-align:top;
+        padding:2px 0;
+        border:none;
+        font-size:12pt;
+        color:#000;
+    ">
+      b.
+    </td>
+
+    <td style="
+        width:auto;
+        padding:2px 0;
+        border:none;
+        font-size:12pt;
+        color:#000;
+        line-height:1.6;
+        text-align:justify;
+        text-justify:inter-word;
+    ">
+      Setelah selesai menjalankan ${jenisCuti} ${tahun}
+      wajib melaporkan diri kepada Atasan Langsungnya
+      dan bekerja kembali sebagaimana mestinya.
+    </td>
+</tr>
+
+<tr style="border:none">
+    <td style="width:25px;vertical-align:top">
+      c.
+    </td>
+
+    <td style="font-size:12pt">
+      Alamat Cuti : ${c.alamat || '________________'}
+    </td>
+</tr>
+
+</table>
 
       <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8px">
         <tr style="border:none">
