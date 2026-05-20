@@ -754,7 +754,7 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px;vertical-align:top">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
         <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top"><strong>${c.nama}</strong></td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">NIP</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${c.nip}</td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${asn?.pangkat||'_______________'}</td></tr>
