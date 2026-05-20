@@ -755,11 +755,11 @@ function cetakSuratCuti(id){
       </table>
 
       <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
-        <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000"><strong>${c.nama}</strong></td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">NIP</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${c.nip}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.pangkat||'_______________'}</td></tr>
+        <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top"><strong>${c.nama}</strong></td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">NIP</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${c.nip}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${asn?.pangkat||'_______________'}</td></tr>
         <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Jabatan</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">${asn?.jabatan||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Unit Kerja</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Unit Kerja</td><td style="border:none;font-size:12pt;color:#000;vertical-align:top">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000;vertical-align:top">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
       </table>
 
       <p style="margin:8px 0;text-align:justify;font-size:12pt;color:#000;line-height:1.6">
