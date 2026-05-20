@@ -603,13 +603,13 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
     margin-left:3cm;
     margin-right:2.5cm;
   }
-  .surat-print{ padding:0; font-size:11pt !important; }
-  .surat-print *{ font-size:11pt !important; line-height:1.4 !important; }
-  .surat-print [style*="font-size:13pt"]{ font-size:13pt !important; }
-  .surat-print [style*="font-size:12pt"]{ font-size:11pt !important; }
+  .surat-print{ padding:0; font-size:11pt !important; width:100% !important; }
+  .surat-print *{ font-size:11pt !important; line-height:1.4 !important; box-sizing:border-box !important; }
+  .surat-print [style*="font-size:13pt"]{ font-size:12pt !important; }
   .surat-print [style*="font-size:9pt"]{ font-size:9pt !important; }
   .surat-print p{ margin:4px 0 !important; }
-  .surat-print table{ margin-bottom:4px !important; }
+  .surat-print table{ margin-bottom:4px !important; width:100% !important; table-layout:fixed !important; }
+  .surat-print td{ word-break:break-word !important; overflow-wrap:break-word !important; }
 }
 #print-surat{ display:none }
 
