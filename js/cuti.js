@@ -717,7 +717,7 @@ function cetakSuratCuti(id){
   const jenisPeg   = 'Pegawai Negeri Sipil';
 
   const logoHtml = _logoData
-    ? `<img src="${_logoData}" style="width:80px;height:80px;object-fit:contain">`
+    ? `<img src="${_logoData}" style="width:95px;height:95px;object-fit:contain">`
     : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`;
 
   document.getElementById('print-surat').innerHTML=`
