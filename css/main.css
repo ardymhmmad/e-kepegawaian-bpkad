@@ -590,6 +590,12 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
   .surat-print table,
   .surat-print table tr,
   .surat-print div{ page-break-inside:avoid; }
+  .surat-print td, .surat-print p, .surat-print div{
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+    word-wrap:normal !important;
+    hyphens:none !important;
+  }
   @page {
     margin-top:2cm;
     margin-bottom:2cm;
