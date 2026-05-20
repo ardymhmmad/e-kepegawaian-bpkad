@@ -800,7 +800,7 @@ function cetakSuratCuti(id){
       text-align:left;
       font-family:'Arial',serif;
       font-size:11pt;
-      line-height:1.5;
+      line-height:1.4;
       border:none;
       vertical-align:top
     ">
