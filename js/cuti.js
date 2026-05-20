@@ -714,6 +714,7 @@ function cetakSuratCuti(id){
   const nomorUrut = c.no_surat ? c.no_surat.split('/')[0].trim() : '___';
   const nomorSurat = `800.1.11.4/${nomorUrut}/BPKAD/${tahun}`;
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
+  const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
 
   const logoHtml = _logoData
@@ -768,7 +769,7 @@ function cetakSuratCuti(id){
         font-size:12pt;
         color:#000;
       ">
-        Diberikan ${jenisCuti} ${tahun} kepada ${jenisPeg} :
+        Diberikan ${jenisCutiLabel} kepada ${jenisPeg} :
       </td>
     </tr>
   </table>
@@ -968,14 +969,14 @@ function cetakSuratCuti(id){
   <div style="display:flex;margin-bottom:6px">
     <div style="width:20px">a.</div>
     <div style="flex:1;text-align:justify;line-height:1.6">
-      Sebelum menjalankan ${jenisCuti} ${tahun} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.
+      Sebelum menjalankan ${jenisCutiLabel} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.
     </div>
   </div>
 
   <div style="display:flex;margin-bottom:6px">
     <div style="width:20px">b.</div>
     <div style="flex:1;text-align:justify;line-height:1.6">
-      Setelah selesai menjalankan ${jenisCuti} ${tahun} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.
+      Setelah selesai menjalankan ${jenisCutiLabel} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.
     </div>
   </div>
 
