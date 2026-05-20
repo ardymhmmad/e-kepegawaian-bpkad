@@ -746,21 +746,213 @@ function cetakSuratCuti(id){
     </div>
 
     <!-- ISI SURAT -->
-    <div style="font-size:12pt;color:#000;margin-top:12px;line-height:1">
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
-        <tr style="border:none">
-          <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">1.</td>
-          <td style="padding:2px 0;vertical-align:top;border:none;font-size:12pt;color:#000">Diberikan ${jenisCuti} ${tahun} kepada ${jenisPeg} :</td>
-        </tr>
-      </table>
+    <div style="font-size:12pt;color:#000;margin-top:12px;line-height:1.4">
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-left:24px;margin-bottom:8px">
-        <tr style="border:none"><td style="width:175px;padding:2px 0;border:none;font-size:12pt;color:#000">Nama</td><td style="width:10px;border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000"><strong>${c.nama}</strong></td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">NIP</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${c.nip}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Pangkat/Gol. Ruang</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.pangkat||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Jabatan</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">${asn?.jabatan||'_______________'}</td></tr>
-        <tr style="border:none"><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Unit Kerja</td><td style="border:none;font-size:12pt;color:#000">:</td><td style="padding:2px 0;border:none;font-size:12pt;color:#000">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
-      </table>
+  <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
+    <tr style="border:none">
+      <td style="
+        width:30px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        1.
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Diberikan ${jenisCuti} ${tahun} kepada ${jenisPeg} :
+      </td>
+    </tr>
+  </table>
+
+  <table style="
+    width:100%;
+    border-collapse:collapse;
+    border:none;
+    margin-left:24px;
+    margin-bottom:8px;
+    table-layout:fixed;
+  ">
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Nama
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        <strong>${c.nama}</strong>
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        NIP
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${c.nip}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Pangkat/Gol. Ruang
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${asn?.pangkat || '_______________'}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Jabatan
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${asn?.jabatan || '_______________'}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Unit Kerja
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel
+      </td>
+    </tr>
+
+  </table>
 
       <p style="margin:8px 0;text-align:justify;font-size:12pt;color:#000;line-height:1.6">
         Selama <strong>${c.hari_kerja} (${terbilang(c.hari_kerja)})</strong> Hari Kerja, terhitung mulai tanggal
