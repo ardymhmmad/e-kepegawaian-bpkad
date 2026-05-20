@@ -754,12 +754,12 @@ function cetakSuratCuti(id){
         </tr>
       </table>
 
-      <table style="width:100%;border-collapse:collapse;margin-left:20px;margin-bottom:8px">
-        <tr><td style="width:180px;padding:2px 0">Nama</td><td style="width:10px">:</td><td style="padding:2px 0"><strong>${c.nama}</strong></td></tr>
-        <tr><td style="padding:2px 0">NIP</td><td>:</td><td style="padding:2px 0">${c.nip}</td></tr>
-        <tr><td style="padding:2px 0">Pangkat/Gol. Ruang</td><td>:</td><td style="padding:2px 0">${asn?.pangkat||'_______________'}</td></tr>
-        <tr><td style="padding:2px 0">Jabatan</td><td>:</td><td style="padding:2px 0">${asn?.jabatan||'_______________'}</td></tr>
-        <tr><td style="padding:2px 0">Unit Kerja</td><td>:</td><td style="padding:2px 0">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-left:20px;margin-bottom:8px">
+        <tr style="border:none"><td style="width:180px;padding:2px 0;border:none">Nama</td><td style="width:10px;border:none">:</td><td style="padding:2px 0;border:none"><strong>${c.nama}</strong></td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none">NIP</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${c.nip}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none">Pangkat/Gol. Ruang</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${asn?.pangkat||'_______________'}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none">Jabatan</td><td style="border:none">:</td><td style="padding:2px 0;border:none">${asn?.jabatan||'_______________'}</td></tr>
+        <tr style="border:none"><td style="padding:2px 0;border:none">Unit Kerja</td><td style="border:none">:</td><td style="padding:2px 0;border:none">Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel</td></tr>
       </table>
 
       <p style="margin:8px 0;text-align:justify">
