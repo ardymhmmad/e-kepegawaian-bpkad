@@ -979,7 +979,7 @@ function cetakSuratCuti(id){
     </div>
   </div>
 
-  <div style="display:flex">
+  <div style="display:flex;margin-bottom:6px">
     <div style="width:20px">c.</div>
     <div style="flex:1">
       Alamat Cuti : ${c.alamat||'_______________________________________________'}
