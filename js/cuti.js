@@ -707,14 +707,11 @@ function cetakSuratCuti(id){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
 
-  // Hitung nomor surat default
+  // Hitung nomor surat default — pakai NO_URUT_CUTI dari Pengaturan
   const tahunCuti = c.tahun || new Date().getFullYear();
-  const suratYgSudahAda = DB.cuti.filter(x =>
-    x.status === 'approved' && x.tahun === tahunCuti && x.no_surat && x.id !== id
-  ).length;
   const nomorUrut = c.no_surat
     ? c.no_surat.split('/')[0].trim()
-    : String(NO_URUT_CUTI + suratYgSudahAda).padStart(3,'0');
+    : String(NO_URUT_CUTI).padStart(3,'0');
   const nomorDefault = `800.1.11.4/${nomorUrut}/BPKAD/${tahunCuti}`;
 
   // Popup konfirmasi nomor surat
