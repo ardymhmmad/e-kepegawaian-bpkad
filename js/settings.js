@@ -8,6 +8,7 @@ function renderSettings(){
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
   loadFonnteToken();
+  loadNoUrutCuti();
   renderWATemplatesForm();
   renderUserTable();
 }
@@ -326,6 +327,31 @@ function togglePwVis(id, btn){
   if(!el) return;
   el.type = el.type === 'password' ? 'text' : 'password';
   btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Nomor Urut Surat Cuti ──────────────────────────────────
+async function loadNoUrutCuti(){
+  const el = document.getElementById('no-urut-cuti-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','no_urut_cuti').maybeSingle();
+  el.value = data?.setting_val || '1';
+}
+
+async function saveNoUrutCuti(){
+  const val = parseInt(document.getElementById('no-urut-cuti-input')?.value)||1;
+  if(val < 1){ showToast('Nomor urut minimal 1','error'); return; }
+  const { data: existing } = await supa.from('settings').select('id').eq('setting_key','no_urut_cuti').maybeSingle();
+  let error;
+  if(existing){
+    ({ error } = await supa.from('settings').update({ setting_val: String(val) }).eq('setting_key','no_urut_cuti'));
+  } else {
+    ({ error } = await supa.from('settings').insert({ setting_key:'no_urut_cuti', setting_val: String(val) }));
+  }
+  if(!error){
+    NO_URUT_CUTI = val;
+    showToast('✅ Nomor urut surat cuti disimpan','success');
+  } else {
+    showToast('Gagal: '+error.message,'error');
+  }
 }
 
 // ── Template Pesan WA ──────────────────────────────────────
