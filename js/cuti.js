@@ -792,7 +792,7 @@ function cetakSuratCuti(id){
       </table>
 
      <!-- TANDA TANGAN -->
-<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:20px">
   <tr style="border:none">
     <td style="width:55%;border:none"></td>
     
@@ -800,7 +800,7 @@ function cetakSuratCuti(id){
       text-align:left;
       font-family:'Arial',serif;
       font-size:11pt;
-      line-height:1.7;
+      line-height:1.5;
       border:none;
       vertical-align:top
     ">
