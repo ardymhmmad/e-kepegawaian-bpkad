@@ -812,7 +812,9 @@ function cetakSuratCuti(id){
         font-size:12pt;
         color:#000;
       ">
-        <strong>${c.nama}</strong>
+        <span style="font-weight:normal">
+  ${c.nama}
+</span>
       </td>
     </tr>
 
