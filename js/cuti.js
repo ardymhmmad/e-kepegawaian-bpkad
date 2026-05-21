@@ -11,8 +11,9 @@ const JENIS_CUTI = [
   'Cuti Di Luar Tanggungan Negara',
 ];
 
-// ── Hari libur nasional 2025–2026 ─────────────────────────────
-const HARI_LIBUR = {
+// ── Hari libur nasional — hybrid (API + manual override DB) ───
+// Data fallback bawaan (dipakai jika DB kosong & API gagal)
+const HARI_LIBUR_FALLBACK = {
   '2025':['2025-01-01','2025-01-27','2025-01-28','2025-01-29','2025-03-28','2025-03-29',
           '2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-12','2025-05-13',
           '2025-05-29','2025-06-01','2025-06-06','2025-07-07','2025-08-17','2025-09-05',
@@ -22,7 +23,79 @@ const HARI_LIBUR = {
           '2026-12-25']
 };
 
+// Cache libur dari DB / API — diisi saat init
+let HARI_LIBUR = { ...HARI_LIBUR_FALLBACK };
+
+// Ambil libur dari API publik (bypasscors via api.harilibur.net)
+async function fetchLiburFromAPI(tahun){
+  try {
+    const res = await fetch(`https://api.harilibur.net/api?month=all&year=${tahun}`);
+    if(!res.ok) return null;
+    const json = await res.json();
+    // Format: [{holiday_date:"2026-01-01", holiday_name:"...", is_national_holiday:true}]
+    const tanggal = json
+      .filter(h => h.is_national_holiday)
+      .map(h => h.holiday_date);
+    return tanggal.length ? tanggal : null;
+  } catch(e){
+    console.warn('API libur gagal:', e);
+    return null;
+  }
+}
+
+// Load libur dari DB (settings key: libur_TAHUN), fallback ke API, fallback ke hardcode
+async function loadLiburNasional(tahun){
+  const yr = String(tahun);
+  // 1. Cek DB dulu
+  try {
+    const { data } = await supa.from('settings')
+      .select('setting_val').eq('setting_key', `libur_${yr}`).maybeSingle();
+    if(data?.setting_val){
+      HARI_LIBUR[yr] = JSON.parse(data.setting_val);
+      console.log(`✅ Libur ${yr} dari DB (${HARI_LIBUR[yr].length} hari)`);
+      return;
+    }
+  } catch(e){ console.warn('DB libur error:', e); }
+
+  // 2. Coba API
+  const fromAPI = await fetchLiburFromAPI(tahun);
+  if(fromAPI){
+    HARI_LIBUR[yr] = fromAPI;
+    // Simpan ke DB supaya tersedia offline
+    try {
+      const { data: ex } = await supa.from('settings').select('id').eq('setting_key',`libur_${yr}`).maybeSingle();
+      if(ex){
+        await supa.from('settings').update({ setting_val: JSON.stringify(fromAPI) }).eq('setting_key',`libur_${yr}`);
+      } else {
+        await supa.from('settings').insert({ setting_key:`libur_${yr}`, setting_val: JSON.stringify(fromAPI) });
+      }
+    } catch(e){ console.warn('Gagal simpan libur ke DB:', e); }
+    console.log(`✅ Libur ${yr} dari API (${fromAPI.length} hari)`);
+    return;
+  }
+
+  // 3. Fallback hardcode
+  if(HARI_LIBUR_FALLBACK[yr]){
+    HARI_LIBUR[yr] = HARI_LIBUR_FALLBACK[yr];
+    console.log(`⚠️ Libur ${yr} dari fallback hardcode`);
+  }
+}
+
 function getLiburSet(yr){ return new Set(HARI_LIBUR[String(yr)]||[]); }
+
+// Tambah / hapus libur manual dan simpan ke DB
+async function simpanLiburManual(tahun, listTanggal){
+  const yr = String(tahun);
+  HARI_LIBUR[yr] = [...new Set(listTanggal)].sort();
+  const val = JSON.stringify(HARI_LIBUR[yr]);
+  const { data: ex } = await supa.from('settings').select('id').eq('setting_key',`libur_${yr}`).maybeSingle();
+  if(ex){
+    await supa.from('settings').update({ setting_val: val }).eq('setting_key',`libur_${yr}`);
+  } else {
+    await supa.from('settings').insert({ setting_key:`libur_${yr}`, setting_val: val });
+  }
+  showToast(`✅ Libur nasional ${yr} disimpan (${HARI_LIBUR[yr].length} hari)`,'success');
+}
 
 function parseDateLocal(str){
   if(!str) return null;
@@ -35,16 +108,31 @@ function fmtDateLocal(dt){
 
 function hitungHariKerja(s,e){
   if(!s||!e) return 0;
-  const parseLoc=str=>{ const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d); };
-  const start=parseLoc(s), end=parseLoc(e);
-  if(end<start) return 0;
-  const liburSet=new Set([...Array.from(getLiburSet(start.getFullYear())),...Array.from(getLiburSet(end.getFullYear()))]);
-  let n=0; const cur=new Date(start);
-  while(cur<=end){
-    const dow=cur.getDay();
-    const ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
-    if(dow!==0&&dow!==6&&!liburSet.has(ds)) n++;
-    cur.setDate(cur.getDate()+1);
+  // Parse lokal — hindari UTC shift
+  const parseLoc = str => {
+    const [y,m,d] = str.split('-').map(Number);
+    return new Date(y, m-1, d, 0, 0, 0);
+  };
+  const toDS = dt =>
+    dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+
+  const start = parseLoc(s), end = parseLoc(e);
+  if(end < start) return 0;
+
+  // Gabung libur semua tahun yang dicakup rentang
+  const liburSet = new Set();
+  for(let yr = start.getFullYear(); yr <= end.getFullYear(); yr++){
+    getLiburSet(yr).forEach(d => liburSet.add(d));
+  }
+
+  let n = 0;
+  const cur = new Date(start);
+  while(cur <= end){
+    const dow = cur.getDay(); // 0=Minggu, 6=Sabtu
+    const ds  = toDS(cur);
+    // Hanya Senin(1)–Jumat(5) dan bukan libur nasional
+    if(dow >= 1 && dow <= 5 && !liburSet.has(ds)) n++;
+    cur.setDate(cur.getDate() + 1);
   }
   return n;
 }
