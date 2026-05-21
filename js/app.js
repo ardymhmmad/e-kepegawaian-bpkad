@@ -1,29 +1,5 @@
 // ── Pensiun helpers ────────────────────────────────────────
-function getFilters(type){
-  if(type==='pensiun'){
-    return {
-      q:    document.getElementById('pensiun-q')?.value||'',
-      unit: document.getElementById('pensiun-unit')?.value||'',
-      status: document.getElementById('pensiun-status')?.value||''
-    };
-  }
-  // KP / KGB — id elemen berbeda dari pensiun
-  if(type==='kp') return {
-    q:      document.getElementById('kp-q')?.value||'',
-    unit:   document.getElementById('kp-f-unit')?.value||'',
-    status: document.getElementById('kp-f-status')?.value||''
-  };
-  if(type==='kgb') return {
-    q:      document.getElementById('kgb-q')?.value||'',
-    unit:   document.getElementById('kgb-f-unit')?.value||'',
-    status: document.getElementById('kgb-f-status')?.value||''
-  };
-  return {
-    q:    document.getElementById(type+'-q')?.value||'',
-    unit: document.getElementById(type+'-unit')?.value||'',
-    status: document.getElementById(type+'-status')?.value||''
-  };
-}
+// getFilters ada di helpers.js (sudah di-extend untuk pensiun/kp/kgb)
 
 function refreshTablePensiun(){
   pageNums['pensiun']=1;
@@ -110,16 +86,6 @@ async function init(){
   }
 
   renderDashboard(); updateCutiBadge();
-  // Jika halaman pensiun/kp/kgb sudah aktif saat data selesai load, render ulang
-  if(typeof currentPage !== 'undefined'){
-    if(currentPage==='pensiun') renderPensiun(getFilters('pensiun'));
-    else if(currentPage==='kp')  renderKP(getFilters('kp'));
-    else if(currentPage==='kgb') renderKGB(getFilters('kgb'));
-  }
-  // Update badge pensiun (Segera Pensiun ≤6 bln)
-  const _nSegera = (DB.asn||[]).filter(a=>calcPensiun(a).status==='Segera Pensiun').length;
-  const _badgePensiun = document.getElementById('pensiun-badge');
-  if(_badgePensiun){ _badgePensiun.textContent=_nSegera; _badgePensiun.style.display=_nSegera?'':'none'; }
   // Load WA templates
   await loadWATemplates();
 
