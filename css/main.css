@@ -332,7 +332,7 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
 .sc-skel .sc-val{height:28px;width:60px;display:block}.sc-skel .sc-lbl{height:10px;width:80px;display:block;margin-bottom:8px}
 
 /* ── CHART CARDS — glass ── */
-.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
 .charts-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
 .cc{
   background:rgba(255,255,255,.6);
