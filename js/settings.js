@@ -417,10 +417,10 @@ async function saveNoUrutCuti(){
 
 // ── Template Pesan WA ──────────────────────────────────────
 const WA_TMPL_LABELS = {
-  wa_tmpl_pengajuan:     '📋 Pengajuan Baru → Kepala Subbagian',
-  wa_tmpl_step1:         '✅ Disetujui Kasubbag → Kepala Bidang',
-  wa_tmpl_step1_pegawai: '📢 Disetujui Kasubbag → Pegawai',
-  wa_tmpl_step2:         '📢 Disetujui Kabid → Pegawai',
+  wa_tmpl_pengajuan:     '📋 Pengajuan Baru → Atasan Langsung',
+  wa_tmpl_step1:         '✅ Disetujui Atasan Langsung → Pejabat yang Berwenang Memberikan Cuti',
+  wa_tmpl_step1_pegawai: '📢 Disetujui Atasan Langsung → Pegawai',
+  wa_tmpl_step2:         '📢 Disetujui Pejabat yang Berwenang Memberikan Cuti → Pegawai',
   wa_tmpl_approved:      '🎉 Disetujui Final → Semua Pihak',
   wa_tmpl_rejected:      '❌ Ditolak → Semua Pihak',
 };
