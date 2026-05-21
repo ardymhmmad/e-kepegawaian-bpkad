@@ -29,49 +29,25 @@ function showPage(id, btn){
   // Fade-in content
   const pg=document.getElementById('page-'+id);
   if(pg){ pg.style.opacity='0'; requestAnimationFrame(()=>{ pg.style.transition='opacity .22s ease'; pg.style.opacity='1'; }); }
-  if(id==='dashboard')        renderDashboard();
-  else if(id==='settings')    renderSettings();
-  else if(id==='cuti')        renderCutiPage();
+  if(id==='dashboard')         renderDashboard();
+  else if(id==='settings')     renderSettings();
+  else if(id==='cuti')         renderCutiPage();
   else if(id==='alokasi-cuti') renderAlokasiPage();
-  else if(id==='cuti-detail') { /* rendered by openCutiDetail */ }
+  else if(id==='cuti-detail')  { /* rendered by openCutiDetail */ }
   else if(id==='kp'){
     const uKP = document.getElementById('kp-f-unit');
-    if(uKP && uKP.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKP.appendChild(o); });
-    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
-      renderKP(getFilters('kp'));
-    } else {
-      const _t=setInterval(function(){ if(DB.asn && DB.asn.length>0){ clearInterval(_t); renderKP(getFilters('kp')); } },200);
-      setTimeout(function(){ clearInterval(_t); renderKP(getFilters('kp')); },5000);
-    }
+    if(uKP && uKP.options.length<=1) Object.keys(UNITS).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKP.appendChild(o); });
+    renderKP(getFilters('kp'));
   }
   else if(id==='kgb'){
     const uKGB = document.getElementById('kgb-f-unit');
-    if(uKGB && uKGB.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKGB.appendChild(o); });
-    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
-      renderKGB(getFilters('kgb'));
-    } else {
-      const _t=setInterval(function(){ if(DB.asn && DB.asn.length>0){ clearInterval(_t); renderKGB(getFilters('kgb')); } },200);
-      setTimeout(function(){ clearInterval(_t); renderKGB(getFilters('kgb')); },5000);
-    }
+    if(uKGB && uKGB.options.length<=1) Object.keys(UNITS).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKGB.appendChild(o); });
+    renderKGB(getFilters('kgb'));
   }
   else if(id==='pensiun'){
-    // Isi dropdown unit Pensiun jika belum
-    const uPensiun = document.getElementById('pensiun-unit');
-    if(uPensiun && uPensiun.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uPensiun.appendChild(o); });
-    // Pastikan DB.asn sudah terisi sebelum render
-    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
-      renderPensiun(getFilters('pensiun'));
-    } else {
-      // Data belum siap — tunggu sebentar lalu render ulang
-      const _tryRenderPensiun = setInterval(function(){
-        if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
-          clearInterval(_tryRenderPensiun);
-          renderPensiun(getFilters('pensiun'));
-        }
-      }, 200);
-      // Timeout 5 detik — render kosong daripada stuck
-      setTimeout(function(){ clearInterval(_tryRenderPensiun); renderPensiun(getFilters('pensiun')); }, 5000);
-    }
+    const uP = document.getElementById('pensiun-unit');
+    if(uP && uP.options.length<=1) Object.keys(UNITS).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uP.appendChild(o); });
+    renderPensiun(getFilters('pensiun'));
   }
   else refreshTable(id);
 }
@@ -87,7 +63,7 @@ function buildTopbarActions(id){
   } else if(id==='kp'||id==='kgb'){
     h+=`<button class="btn" onclick="exportExcel('${id}')">Export Excel</button>`;
   } else if(id==='pensiun'){
-    h+=`<button class="btn" onclick="exportExcelPensiun()">Export Excel</button>`;
+    h+=`<button class="btn" onclick="exportExcelPensiun()">⬇ Export Excel</button>`;
   } else if(id==='settings'){
     h='';
   } else if(id==='cuti'){
