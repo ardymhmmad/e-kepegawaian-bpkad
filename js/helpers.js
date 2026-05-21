@@ -78,11 +78,30 @@ function updateSubUnit(prefix){
   sel.innerHTML='<option value="">— Pilih Sub Unit —</option>'+subs.map(s=>`<option value="${s}">${s}</option>`).join('');
 }
 function getFilters(type){
+  // Pensiun — pakai id khusus
+  if(type==='pensiun') return {
+    q:      (document.getElementById('pensiun-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('pensiun-unit')?.value||'',
+    status: document.getElementById('pensiun-status')?.value||''
+  };
+  // KP — search pakai id kp-q, filter kp-f-unit, kp-f-status
+  if(type==='kp') return {
+    q:      (document.getElementById('kp-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('kp-f-unit')?.value||'',
+    status: document.getElementById('kp-f-status')?.value||''
+  };
+  // KGB — search pakai id kgb-q, filter kgb-f-unit, kgb-f-status
+  if(type==='kgb') return {
+    q:      (document.getElementById('kgb-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('kgb-f-unit')?.value||'',
+    status: document.getElementById('kgb-f-status')?.value||''
+  };
+  // Default — ASN/PPPK/PJLP
   return {
-    q:(document.querySelector('#page-'+type+' .search-box')?.value||'').toLowerCase(),
-    unit:document.getElementById(type+'-f-unit')?.value||'',
-    sub:document.getElementById(type+'-f-sub')?.value||'',
-    status:document.getElementById(type+'-f-status')?.value||''
+    q:      (document.querySelector('#page-'+type+' .search-box')?.value||'').toLowerCase(),
+    unit:   document.getElementById(type+'-f-unit')?.value||'',
+    sub:    document.getElementById(type+'-f-sub')?.value||'',
+    status: document.getElementById(type+'-f-status')?.value||''
   };
 }
 
@@ -145,4 +164,3 @@ function kontrakBadge(d){ const dy=daysUntil(d); return dy<0?'b-red':dy<=30?'b-a
 // ═══════════════════════════════════════════════════
 function saveLocal(){}
 function loadLocal(){ return false; }
-
