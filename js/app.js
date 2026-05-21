@@ -110,6 +110,12 @@ async function init(){
   }
 
   renderDashboard(); updateCutiBadge();
+  // Jika halaman pensiun/kp/kgb sudah aktif saat data selesai load, render ulang
+  if(typeof currentPage !== 'undefined'){
+    if(currentPage==='pensiun') renderPensiun(getFilters('pensiun'));
+    else if(currentPage==='kp')  renderKP(getFilters('kp'));
+    else if(currentPage==='kgb') renderKGB(getFilters('kgb'));
+  }
   // Update badge pensiun (Segera Pensiun ≤6 bln)
   const _nSegera = (DB.asn||[]).filter(a=>calcPensiun(a).status==='Segera Pensiun').length;
   const _badgePensiun = document.getElementById('pensiun-badge');
