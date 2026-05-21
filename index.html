@@ -264,14 +264,14 @@ var _xlsxReady = false;
         <!-- KP -->
         <div class="page" id="page-kp">
           <div class="filter-row">
-            <input class="search-box" type="text" placeholder="Cari NIP / Nama...">
-            <select class="filter-sel" id="kp-f-unit"><option value="">Semua Unit</option></select>
+            <input class="search-box" type="text" id="kp-q" placeholder="Cari NIP / Nama..." oninput="refreshTable2('kp')">
+            <select class="filter-sel" id="kp-f-unit" onchange="refreshTable2('kp')"><option value="">Semua Unit</option></select>
             <select class="filter-sel" id="kp-f-status" onchange="refreshTable2('kp')">
               <option value="">Semua Status</option>
-              <option value="Sudah Naik Pangkat">Sudah Naik Pangkat</option>
-              <option value="Segera">Segera (≤ 6 bulan)</option>
-              <option value="Belum">Belum</option>
-              <option value="Batas Maksimal">Batas Maksimal</option>
+              <option value="Memenuhi Syarat">Memenuhi Syarat</option>
+              <option value="Mengingatkan">Mengingatkan (≤ 4 bln)</option>
+              <option value="Belum Memenuhi Syarat">Belum Memenuhi Syarat</option>
+              <option value="Batas Pendidikan">Batas Pendidikan</option>
             </select>
           </div>
           <div class="tc">
@@ -284,8 +284,8 @@ var _xlsxReady = false;
         <!-- KGB -->
         <div class="page" id="page-kgb">
           <div class="filter-row">
-            <input class="search-box" type="text" placeholder="Cari NIP / Nama...">
-            <select class="filter-sel" id="kgb-f-unit"><option value="">Semua Unit</option></select>
+            <input class="search-box" type="text" id="kgb-q" placeholder="Cari NIP / Nama..." oninput="refreshTable2('kgb')">
+            <select class="filter-sel" id="kgb-f-unit" onchange="refreshTable2('kgb')"><option value="">Semua Unit</option></select>
             <select class="filter-sel" id="kgb-f-status" onchange="refreshTable2('kgb')">
               <option value="">Semua Status</option>
               <option value="Segera">Segera (≤ 30 hari)</option>
