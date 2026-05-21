@@ -95,21 +95,13 @@ function renderDashboard(){
     </div>`;
 
   // ── Badge notifikasi sidebar ──────────────────────────────
-  // KP: hanya Mengingatkan (≤4 bulan) — bukan Memenuhi Syarat
-  const kpBadgeN = DB.asn.filter(a=>calcKP(a).status==='Mengingatkan').length;
-  const kpBadgeEl = document.getElementById('kp-badge');
-  if(kpBadgeEl){ kpBadgeEl.textContent = kpBadgeN; kpBadgeEl.style.display = kpBadgeN ? '' : 'none'; }
-
-  // KGB: hanya status Segera (≤30 hari)
-  const kgbBadgeN = DB.asn.filter(a=>calcKGB(a).status==='Segera').length;
-  const kgbBadgeEl = document.getElementById('kgb-badge');
-  if(kgbBadgeEl){ kgbBadgeEl.textContent = kgbBadgeN; kgbBadgeEl.style.display = kgbBadgeN ? '' : 'none'; }
-
+  const _sb = (id,n) => { const el=document.getElementById(id); if(el) el.textContent=n; };
+  // KP: Mengingatkan saja (≤4 bulan)
+  _sb('kp-badge', DB.asn.filter(a=>calcKP(a).status==='Mengingatkan').length);
+  // KGB: Segera (≤30 hari)
+  _sb('kgb-badge', DB.asn.filter(a=>calcKGB(a).status==='Segera').length);
   // Pensiun: Segera Pensiun (≤6 bulan)
-  const pensiunBadgeN = DB.asn.filter(a=>calcPensiun(a).status==='Segera Pensiun').length;
-  const pensiunBadgeEl = document.getElementById('pensiun-badge');
-  if(pensiunBadgeEl){ pensiunBadgeEl.textContent = pensiunBadgeN; pensiunBadgeEl.style.display = pensiunBadgeN ? '' : 'none'; }
-
+  _sb('pensiun-badge', DB.asn.filter(a=>calcPensiun(a).status==='Segera Pensiun').length);
   // Cuti: step1 + step2 (belum final admin)
   updateCutiBadge();
 }
