@@ -198,9 +198,9 @@ function renderPensiun(filters={}){
     .filter(a => { if(!status) return true; return calcPensiun(a).status===status; })
     .sort((a,b)=>{
       const pa=calcPensiun(a), pb=calcPensiun(b);
-      // Urutkan: Sudah Pensiun dulu, lalu Segera, lalu Aktif; dalam grup sort by sisaHari
-      const rank={'Sudah Pensiun':0,'Segera Pensiun':1,'Aktif':2,'Data Tidak Valid':3};
-      const ra=rank[pa.status]??3, rb=rank[pb.status]??3;
+      // Segera Pensiun dulu, lalu Aktif, urut by sisaHari
+      const rank={'Segera Pensiun':0,'Aktif':1,'Data Tidak Valid':2};
+      const ra=rank[pa.status]??2, rb=rank[pb.status]??2;
       if(ra!==rb) return ra-rb;
       return (pa.sisaHari??9999)-(pb.sisaHari??9999);
     });
@@ -221,7 +221,7 @@ function renderPensiun(filters={}){
   tb.innerHTML = slice.map(a => {
     const p = calcPensiun(a);
     const sisaLabel = !p.valid ? '—'
-      : p.sisaHari < 0 ? `<span style="color:var(--red-tx)">Lewat ${Math.abs(p.sisaHari)} hari</span>`
+      : p.sisaHari <= 0 ? `<span style="color:#d97706;font-weight:700">Batas usia tercapai</span>`
       : p.sisaHari <= 180 ? `<span style="color:#d97706;font-weight:700">${p.sisaHari} hari</span>`
       : `${p.sisaBulan} bln`;
     return `<tr>
