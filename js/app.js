@@ -50,4 +50,11 @@ async function init(){
   renderDashboard(); updateCutiBadge();
   // Load WA templates
   await loadWATemplates();
+
+  // Load libur nasional tahun ini & tahun depan (hybrid: DB → API → fallback)
+  const tahunIni = new Date().getFullYear();
+  await Promise.all([
+    loadLiburNasional(tahunIni),
+    loadLiburNasional(tahunIni + 1),
+  ]);
 }
