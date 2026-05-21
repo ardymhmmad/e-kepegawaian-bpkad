@@ -14,7 +14,7 @@ function renderDashboard(){
   const expPJLP=DB.pjlp.filter(j=>daysUntil(j.akhir_kontrak)<=30&&daysUntil(j.akhir_kontrak)>=0).length;
   const statCards=[
     {color:'#1649c8',bg:'#eef2ff',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',lbl:'Total Pegawai',val:totalN,note:'ASN + PPPK PW + PJLP',noteClass:'up',delay:'fade-up-1'},
-    {color:'#1649c8',bg:'#eef2ff',icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',lbl:'Aparatur Sipil Negara (PNS dan PPPK Penuh Waktu)',val:asnN,note:'Total Aparatur Sipil Negara',noteClass:'up',delay:'fade-up-2'},
+    {color:'#1649c8',bg:'#eef2ff',icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',lbl:'Aparatur Sipil Negara',val:asnN,note:'Total Aparatur Sipil Negara',noteClass:'up',delay:'fade-up-2'},
     {color:'#065f46',bg:'#ecfdf5',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',lbl:'PPPK Paruh Waktu',val:pppkN,note:'Total PPPK Paruh Waktu',noteClass:'up',delay:'fade-up-3'},
     {color:'#92400e',bg:'#fffbeb',icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',lbl:'PJLP',val:pjlpN,note:expPJLP?`${expPJLP} kontrak segera berakhir`:'Total PJLP',noteClass:expPJLP?'warn':'up',delay:'fade-up-4'},
   ];
@@ -53,6 +53,29 @@ function renderDashboard(){
   const kgbSoon=[...DB.asn].map(a=>({...a,...calcKGB(a)})).sort((a,b)=>a.daysToKGB-b.daysToKGB).slice(0,5);
   const kgbHtml=kgbSoon.length?kgbSoon.map(k=>`<div class="kgb-item"><div class="kgb-av">${initials(k.nama)}</div><div><div class="kgb-name">${shortName(k.nama)}</div><div class="kgb-unit">${k.unit||''}</div></div><div class="kgb-due ${k.daysToKGB<=14?'soon':'ok'}">${k.daysToKGB<0?'Lewat':k.daysToKGB+' hari'}</div></div>`).join(''):'<div style="font-size:12px;color:var(--tx3)">Tidak ada data</div>';
 
+  // KP — Memenuhi Syarat & Mengingatkan, urut paling dekat jatuh tempo
+  const kpSoon=[...DB.asn]
+    .map(a=>({...a,...calcKP(a)}))
+    .filter(a=>a.status==='Memenuhi Syarat'||a.status==='Mengingatkan')
+    .sort((a,b)=>a.daysToKP-b.daysToKP)
+    .slice(0,5);
+  const kpHtml=kpSoon.length?kpSoon.map(k=>{
+    const isMS  = k.status==='Memenuhi Syarat';
+    const label = isMS ? 'Memenuhi Syarat' : k.daysToKP+' hari';
+    const cls   = isMS ? 'soon' : k.daysToKP<=30?'soon':'ok';
+    return `<div class="kgb-item">
+      <div class="kgb-av" style="background:#eef2ff;color:#1649c8">${initials(k.nama)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="kgb-name">${shortName(k.nama)}</div>
+        <div class="kgb-unit">${shortUnit(k.unit)||''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="kgb-due ${cls}">${label}</div>
+        <div style="font-size:9px;color:var(--tx3);margin-top:2px">${k.pangkat} → ${k.nextPangkat}</div>
+      </div>
+    </div>`;
+  }).join(''):'<div style="font-size:12px;color:var(--tx3)">Tidak ada data</div>';
+
   document.getElementById('db-charts1').innerHTML=`
     <div class="cc fade-up">
       <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Rekap Jenis Kelamin Seluruh Pegawai </div>
@@ -61,6 +84,10 @@ function renderDashboard(){
     <div class="cc fade-up fade-up-1">
       <div class="cc-title"><span class="cc-title-dot" style="background:#92400e"></span>KGB Jatuh Tempo — Paling Dekat</div>
       ${kgbHtml}
+    </div>
+    <div class="cc fade-up fade-up-2">
+      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Kenaikan Pangkat — Segera & Memenuhi Syarat</div>
+      ${kpHtml}
     </div>`;
 
   // Edu, Rank, PJLP jobs
@@ -94,15 +121,8 @@ function renderDashboard(){
       <div style="text-align:center;padding:12px;background:var(--pur-bg);border-radius:8px"><div style="font-size:20px;font-weight:700;color:var(--pur-tx)">${DB.asn.filter(a=>calcKP(a).status==='Batas Pendidikan').length}</div><div style="font-size:10px;color:var(--pur-tx);margin-top:3px">Batas Pendidikan</div></div>
     </div>`;
 
-  // ── Badge notifikasi sidebar ──────────────────────────────
-  const _sb = (id,n) => { const el=document.getElementById(id); if(el) el.textContent=n; };
-  // KP: Mengingatkan saja (≤4 bulan)
-  _sb('kp-badge', DB.asn.filter(a=>calcKP(a).status==='Mengingatkan').length);
-  // KGB: Segera (≤30 hari)
-  _sb('kgb-badge', DB.asn.filter(a=>calcKGB(a).status==='Segera').length);
-  // Pensiun: Segera Pensiun (≤6 bulan)
-  _sb('pensiun-badge', DB.asn.filter(a=>calcPensiun(a).status==='Segera Pensiun').length);
-  // Cuti: step1 + step2 (belum final admin)
+  document.getElementById('kp-badge').textContent=kpMS+kpIng;
+  document.getElementById('kgb-badge').textContent=kgbAlert;
   updateCutiBadge();
 }
 function noData(){ return '<div style="font-size:12px;color:var(--tx3);padding:8px 0">Tidak ada data</div>'; }
