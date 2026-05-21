@@ -10,6 +10,7 @@ function renderSettings(){
   loadFonnteToken();
   loadNoUrutCuti();
   renderWATemplatesForm();
+  setTimeout(renderLiburNasional, 300); // tunggu DOM render
   renderUserTable();
 }
 
@@ -330,6 +331,66 @@ function togglePwVis(id, btn){
 }
 
 // ── Nomor Urut Surat Cuti ──────────────────────────────────
+// ── Libur Nasional Manager ────────────────────────────────────
+async function renderLiburNasional(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  const list = HARI_LIBUR[String(yr)] || [];
+  const container = document.getElementById('libur-list');
+  if(!container) return;
+
+  container.innerHTML = list.length
+    ? list.map(d => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:monospace;font-size:13px;flex:1">${d}</span>
+          <span style="font-size:11px;color:var(--tx3)">${new Date(d+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})}</span>
+          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="hapusLibur('${yr}','${d}')">✕</button>
+        </div>`).join('')
+    : '<div style="color:var(--tx3);font-size:12px;padding:8px 0">Belum ada data libur untuk tahun ini.</div>';
+
+  document.getElementById('libur-count').textContent = `${list.length} hari libur`;
+}
+
+async function tambahLiburManual(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  const tgl = document.getElementById('libur-tgl-input')?.value;
+  if(!tgl){ showToast('Pilih tanggal dulu','error'); return; }
+  const list = [...(HARI_LIBUR[String(yr)]||[])];
+  if(list.includes(tgl)){ showToast('Tanggal sudah ada','error'); return; }
+  list.push(tgl);
+  await simpanLiburManual(yr, list);
+  document.getElementById('libur-tgl-input').value = '';
+  renderLiburNasional();
+}
+
+async function hapusLibur(yr, tgl){
+  const list = (HARI_LIBUR[String(yr)]||[]).filter(d => d !== tgl);
+  await simpanLiburManual(yr, list);
+  renderLiburNasional();
+}
+
+async function syncLiburDariAPI(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  showToast('Mengambil data dari API...','info');
+  const fromAPI = await fetchLiburFromAPI(yr);
+  if(!fromAPI){ showToast('API tidak tersedia, coba lagi nanti','error'); return; }
+  // Merge dengan yang sudah ada (union)
+  const existing = HARI_LIBUR[String(yr)] || [];
+  const merged = [...new Set([...existing, ...fromAPI])].sort();
+  await simpanLiburManual(yr, merged);
+  renderLiburNasional();
+}
+
+async function resetLiburKeAPI(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  if(!confirm(`Reset libur ${yr} dari API? Data manual akan ditimpa.`)) return;
+  // Hapus dari DB dulu supaya loadLiburNasional ambil ulang dari API
+  await supa.from('settings').delete().eq('setting_key', `libur_${yr}`);
+  delete HARI_LIBUR[String(yr)];
+  await loadLiburNasional(yr);
+  renderLiburNasional();
+  showToast(`✅ Libur ${yr} direset dari API`,'success');
+}
+
 async function loadNoUrutCuti(){
   const el = document.getElementById('no-urut-cuti-input'); if(!el) return;
   const { data } = await supa.from('settings').select('setting_val').eq('setting_key','no_urut_cuti').maybeSingle();
