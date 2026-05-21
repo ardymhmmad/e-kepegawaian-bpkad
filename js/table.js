@@ -194,7 +194,7 @@ function renderPensiun(filters={}){
   if(th) th.innerHTML = '<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
 
   const data = DB.asn
-    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q))) && (!unit||a.unit===unit))
+    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||(a.nip||'').includes(q))) && (!unit||a.unit===unit))
     .filter(a => { if(!status) return true; return calcPensiun(a).status===status; })
     .sort((a,b)=>{
       const pa=calcPensiun(a), pb=calcPensiun(b);
