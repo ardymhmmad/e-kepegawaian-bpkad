@@ -18,7 +18,6 @@ function getFilters(type){
 function refreshTablePensiun(){
   pageNums['pensiun']=1;
   renderPensiun(getFilters('pensiun'));
-  updatePensiunSummary();
 }
 
 function filterPensiunStatus(status){
@@ -27,21 +26,6 @@ function filterPensiunStatus(status){
   refreshTablePensiun();
 }
 
-function updatePensiunSummary(){
-  const counts = {sudah:0, segera:0, aktif:0};
-  (DB.asn||[]).forEach(a=>{
-    const p = calcPensiun(a);
-    if(p.status==='Sudah Pensiun')  counts.sudah++;
-    else if(p.status==='Segera Pensiun') counts.segera++;
-    else if(p.status==='Aktif')     counts.aktif++;
-  });
-  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  set('ps-sudah-n',  counts.sudah);
-  set('ps-segera-n', counts.segera);
-  set('ps-aktif-n',  counts.aktif);
-  set('dash-pensiun-segera', counts.segera);
-  set('dash-pensiun-sudah',  counts.sudah);
-}
 
 function exportExcelPensiun(){
   const data = (DB.asn||[]).map(a=>{
@@ -115,7 +99,7 @@ async function init(){
     });
   }
 
-  renderDashboard(); updateCutiBadge(); updatePensiunSummary();
+  renderDashboard(); updateCutiBadge();
   // Load WA templates
   await loadWATemplates();
 
@@ -141,6 +125,5 @@ function showPagePensiun(page){
       });
     }
     renderPensiun(getFilters('pensiun'));
-    updatePensiunSummary();
   }
 }
