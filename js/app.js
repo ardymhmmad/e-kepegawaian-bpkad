@@ -1,3 +1,71 @@
+// ── Pensiun helpers ────────────────────────────────────────
+function getFilters(type){
+  if(type==='pensiun'){
+    return {
+      q:    document.getElementById('pensiun-q')?.value||'',
+      unit: document.getElementById('pensiun-unit')?.value||'',
+      status: document.getElementById('pensiun-status')?.value||''
+    };
+  }
+  // KP / KGB pakai format sama
+  return {
+    q:    document.getElementById(type+'-q')?.value||'',
+    unit: document.getElementById(type+'-unit')?.value||'',
+    status: document.getElementById(type+'-status')?.value||''
+  };
+}
+
+function refreshTablePensiun(){
+  pageNums['pensiun']=1;
+  renderPensiun(getFilters('pensiun'));
+  updatePensiunSummary();
+}
+
+function filterPensiunStatus(status){
+  const sel = document.getElementById('pensiun-status');
+  if(sel) sel.value = status;
+  refreshTablePensiun();
+}
+
+function updatePensiunSummary(){
+  const counts = {sudah:0, segera:0, aktif:0};
+  (DB.asn||[]).forEach(a=>{
+    const p = calcPensiun(a);
+    if(p.status==='Sudah Pensiun')  counts.sudah++;
+    else if(p.status==='Segera Pensiun') counts.segera++;
+    else if(p.status==='Aktif')     counts.aktif++;
+  });
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('ps-sudah-n',  counts.sudah);
+  set('ps-segera-n', counts.segera);
+  set('ps-aktif-n',  counts.aktif);
+  set('dash-pensiun-segera', counts.segera);
+  set('dash-pensiun-sudah',  counts.sudah);
+}
+
+function exportExcelPensiun(){
+  const data = (DB.asn||[]).map(a=>{
+    const p = calcPensiun(a);
+    return {
+      'NIP': a.nip,
+      'Nama ASN': a.nama,
+      'Unit Kerja': a.unit,
+      'Tgl Lahir': p.tglLahir ? fmtDate(p.tglLahir) : '—',
+      'Usia (th)': p.usia??'—',
+      'Batas Usia': p.batasUsia+' th',
+      'Tgl Pensiun': p.tglPensiun ? fmtDate(p.tglPensiun) : '—',
+      'Sisa Hari': p.sisaHari??'—',
+      'Status': p.status,
+      'Keterangan': p.keterangan
+    };
+  });
+  if(!data.length){ showToast('Tidak ada data','error'); return; }
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Monitoring Pensiun');
+  XLSX.writeFile(wb, 'monitoring_pensiun_'+new Date().getFullYear()+'.xlsx');
+}
+
 // ═══════════════════════════════════════════════════
 // SEED DATA
 // ═══════════════════════════════════════════════════
@@ -47,7 +115,7 @@ async function init(){
     });
   }
 
-  renderDashboard(); updateCutiBadge();
+  renderDashboard(); updateCutiBadge(); updatePensiunSummary();
   // Load WA templates
   await loadWATemplates();
 
@@ -57,4 +125,22 @@ async function init(){
     loadLiburNasional(tahunIni),
     loadLiburNasional(tahunIni + 1),
   ]);
+}
+
+// ── showPage patch untuk pensiun ──────────────────────────
+const _origShowPage = typeof showPage === 'function' ? showPage : null;
+function showPagePensiun(page){
+  if(page === 'pensiun'){
+    // Isi dropdown unit
+    const sel = document.getElementById('pensiun-unit');
+    if(sel && sel.options.length <= 1){
+      (UNITS||[]).forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u; opt.textContent = u;
+        sel.appendChild(opt);
+      });
+    }
+    renderPensiun(getFilters('pensiun'));
+    updatePensiunSummary();
+  }
 }
