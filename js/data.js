@@ -100,8 +100,13 @@ function calcPensiun(asn){
     batasUsia
   };
 
-  const tglPensiun = new Date(tglLahir);
-  tglPensiun.setFullYear(tglPensiun.getFullYear() + batasUsia);
+  // Pensiun = akhir bulan lahir + batasUsia tahun
+  // Contoh: lahir 14-09-1967, batas 58 → pensiun 30-09-2025
+  const tglPensiun = new Date(
+    tglLahir.getFullYear() + batasUsia,  // tahun lahir + batas usia
+    tglLahir.getMonth() + 1,             // bulan berikutnya (month+1)
+    0                                    // hari ke-0 = hari terakhir bulan lahir
+  );
 
   let usia = today.getFullYear() - tglLahir.getFullYear();
   const bulanDiff = today.getMonth() - tglLahir.getMonth();
