@@ -35,22 +35,43 @@ function showPage(id, btn){
   else if(id==='alokasi-cuti') renderAlokasiPage();
   else if(id==='cuti-detail') { /* rendered by openCutiDetail */ }
   else if(id==='kp'){
-    // Isi dropdown unit KP jika belum
     const uKP = document.getElementById('kp-f-unit');
     if(uKP && uKP.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKP.appendChild(o); });
-    renderKP(getFilters('kp'));
+    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
+      renderKP(getFilters('kp'));
+    } else {
+      const _t=setInterval(function(){ if(DB.asn && DB.asn.length>0){ clearInterval(_t); renderKP(getFilters('kp')); } },200);
+      setTimeout(function(){ clearInterval(_t); renderKP(getFilters('kp')); },5000);
+    }
   }
   else if(id==='kgb'){
-    // Isi dropdown unit KGB jika belum
     const uKGB = document.getElementById('kgb-f-unit');
     if(uKGB && uKGB.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uKGB.appendChild(o); });
-    renderKGB(getFilters('kgb'));
+    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
+      renderKGB(getFilters('kgb'));
+    } else {
+      const _t=setInterval(function(){ if(DB.asn && DB.asn.length>0){ clearInterval(_t); renderKGB(getFilters('kgb')); } },200);
+      setTimeout(function(){ clearInterval(_t); renderKGB(getFilters('kgb')); },5000);
+    }
   }
   else if(id==='pensiun'){
     // Isi dropdown unit Pensiun jika belum
     const uPensiun = document.getElementById('pensiun-unit');
     if(uPensiun && uPensiun.options.length <= 1) (UNITS||[]).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uPensiun.appendChild(o); });
-    renderPensiun(getFilters('pensiun'));
+    // Pastikan DB.asn sudah terisi sebelum render
+    if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
+      renderPensiun(getFilters('pensiun'));
+    } else {
+      // Data belum siap — tunggu sebentar lalu render ulang
+      const _tryRenderPensiun = setInterval(function(){
+        if(typeof DB!=='undefined' && DB.asn && DB.asn.length > 0){
+          clearInterval(_tryRenderPensiun);
+          renderPensiun(getFilters('pensiun'));
+        }
+      }, 200);
+      // Timeout 5 detik — render kosong daripada stuck
+      setTimeout(function(){ clearInterval(_tryRenderPensiun); renderPensiun(getFilters('pensiun')); }, 5000);
+    }
   }
   else refreshTable(id);
 }
