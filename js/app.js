@@ -7,7 +7,17 @@ function getFilters(type){
       status: document.getElementById('pensiun-status')?.value||''
     };
   }
-  // KP / KGB pakai format sama
+  // KP / KGB — id elemen berbeda dari pensiun
+  if(type==='kp') return {
+    q:      document.getElementById('kp-q')?.value||'',
+    unit:   document.getElementById('kp-f-unit')?.value||'',
+    status: document.getElementById('kp-f-status')?.value||''
+  };
+  if(type==='kgb') return {
+    q:      document.getElementById('kgb-q')?.value||'',
+    unit:   document.getElementById('kgb-f-unit')?.value||'',
+    status: document.getElementById('kgb-f-status')?.value||''
+  };
   return {
     q:    document.getElementById(type+'-q')?.value||'',
     unit: document.getElementById(type+'-unit')?.value||'',
@@ -100,6 +110,10 @@ async function init(){
   }
 
   renderDashboard(); updateCutiBadge();
+  // Update badge pensiun (Segera Pensiun ≤6 bln)
+  const _nSegera = (DB.asn||[]).filter(a=>calcPensiun(a).status==='Segera Pensiun').length;
+  const _badgePensiun = document.getElementById('pensiun-badge');
+  if(_badgePensiun){ _badgePensiun.textContent=_nSegera; _badgePensiun.style.display=_nSegera?'':'none'; }
   // Load WA templates
   await loadWATemplates();
 
@@ -109,21 +123,4 @@ async function init(){
     loadLiburNasional(tahunIni),
     loadLiburNasional(tahunIni + 1),
   ]);
-}
-
-// ── showPage patch untuk pensiun ──────────────────────────
-const _origShowPage = typeof showPage === 'function' ? showPage : null;
-function showPagePensiun(page){
-  if(page === 'pensiun'){
-    // Isi dropdown unit
-    const sel = document.getElementById('pensiun-unit');
-    if(sel && sel.options.length <= 1){
-      (UNITS||[]).forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u; opt.textContent = u;
-        sel.appendChild(opt);
-      });
-    }
-    renderPensiun(getFilters('pensiun'));
-  }
 }
