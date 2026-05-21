@@ -604,3 +604,14 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
 .photo-crop-preview{width:120px;height:120px;border-radius:50%;overflow:hidden;border:3px solid var(--primary);margin:0 auto;display:flex;align-items:center;justify-content:center;background:var(--bg2)}
 .photo-size-bar{height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;margin-top:6px}
 .photo-size-fill{height:100%;border-radius:2px;background:var(--primary);transition:width .3s}
+
+/* ── Settings & Alokasi full width ─────────────────────── */
+#page-settings > div,
+#page-alokasi-cuti > div {
+  width: 100%;
+}
+#page-settings .cc,
+#page-alokasi-cuti .cc {
+  width: 100%;
+  box-sizing: border-box;
+}
