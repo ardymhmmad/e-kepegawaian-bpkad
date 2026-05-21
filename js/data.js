@@ -112,9 +112,9 @@ function calcPensiun(asn){
   const sisaBulan = Math.ceil(sisaHari / 30.44);
 
   let status, keterangan;
-  if(sisaHari < 0){
-    status = 'Sudah Pensiun';
-    keterangan = 'Telah memasuki masa pensiun sejak '+fmtDate(tglPensiun)+'.';
+  if(sisaHari <= 0){
+    status = 'Segera Pensiun';
+    keterangan = 'Telah mencapai batas usia pensiun per '+fmtDate(tglPensiun)+'. Segera proses berkas pensiun.';
   } else if(sisaHari <= 180){
     status = 'Segera Pensiun';
     keterangan = 'Akan pensiun dalam '+sisaHari+' hari lagi ('+fmtDate(tglPensiun)+'). Siapkan berkas pensiun.';
@@ -127,7 +127,6 @@ function calcPensiun(asn){
 }
 
 function pensiunBadge(status){
-  if(status==='Sudah Pensiun')  return 'b-red';
   if(status==='Segera Pensiun') return 'b-amber';
   if(status==='Aktif')          return 'b-green';
   return 'b-gray';
