@@ -52,6 +52,7 @@ var _xlsxReady = false;
         <span class="login-badge">Monitoring Kenaikan Pangkat</span>
         <span class="login-badge">Monitoring Cuti</span>
         <span class="login-badge">Pengajuan Cuti</span>
+        <span class="login-badge">Monitoring Pensiun</span>
       </div>
     </div>
     <!-- Right login form -->
@@ -188,6 +189,11 @@ var _xlsxReady = false;
           KGB
           <span class="nbadge warn" id="kgb-badge">0</span>
         </button>
+        <button class="ni" onclick="showPage('pensiun',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><line x1="18" y1="8" x2="22" y2="8"/></svg>
+          Monitoring Pensiun
+          <span class="nbadge warn" id="pensiun-badge">0</span>
+        </button>
         <div class="nl">Sistem</div>
         <button class="ni" onclick="showPage('settings',this)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 1.41 1.41M2.93 4.93a10 10 0 0 0-1.41 1.41M19.07 19.07a10 10 0 0 0 1.41-1.41M2.93 19.07a10 10 0 0 1-1.41-1.41M12 2v2M12 20v2M2 12H0M22 12h2"/><circle cx="12" cy="12" r="7"/></svg>
@@ -291,6 +297,38 @@ var _xlsxReady = false;
             <div class="tc-hdr"><div class="tc-title">KGB</div></div>
             <div style="overflow-x:auto"><table style="width:100%"><thead id="kgb-thead"></thead><tbody id="kgb-tbody"></tbody></table></div>
             <div class="pg" id="kgb-pg"></div>
+          </div>
+        </div>
+
+        <!-- PENSIUN -->
+        <div class="page" id="page-pensiun">
+          <div class="filter-row">
+            <input class="search-box" type="text" id="pensiun-q" placeholder="Cari NIP / Nama..." oninput="refreshTablePensiun()">
+            <select class="filter-sel" id="pensiun-unit" onchange="refreshTablePensiun()"><option value="">Semua Unit</option></select>
+            <select class="filter-sel" id="pensiun-status" onchange="refreshTablePensiun()">
+              <option value="">Semua Status</option>
+              <option value="Sudah Pensiun">Sudah Pensiun</option>
+              <option value="Segera Pensiun">Segera Pensiun (≤6 bln)</option>
+              <option value="Aktif">Aktif</option>
+            </select>
+            <button class="btn btn-primary" onclick="exportExcelPensiun()">⬇ Export Excel</button>
+          </div>
+          <!-- Ringkasan -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <div style="background:#fee2e2;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer" onclick="filterPensiunStatus('Sudah Pensiun')">
+              🏁 <strong id="ps-sudah-n">—</strong> Sudah Pensiun
+            </div>
+            <div style="background:#fef3c7;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer" onclick="filterPensiunStatus('Segera Pensiun')">
+              ⚠️ <strong id="ps-segera-n">—</strong> Segera (≤6 bln)
+            </div>
+            <div style="background:#dcfce7;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer" onclick="filterPensiunStatus('')">
+              ✅ <strong id="ps-aktif-n">—</strong> Aktif
+            </div>
+          </div>
+          <div class="tc">
+            <div class="tc-hdr"><div class="tc-title" id="pensiun-count">Monitoring Pensiun ASN</div></div>
+            <div style="overflow-x:auto"><table style="width:100%"><thead id="pensiun-thead"></thead><tbody id="pensiun-tbody"></tbody></table></div>
+            <div class="pg" id="pensiun-pg"></div>
           </div>
         </div>
 
