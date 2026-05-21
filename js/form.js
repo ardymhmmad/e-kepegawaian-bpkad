@@ -9,6 +9,7 @@ const formDefs={
     {id:'jabatan',l:'Jabatan',t:'text'},{id:'jk',l:'Jenis Kelamin',t:'select',opts:['Laki-laki','Perempuan']},
     {id:'tmt_pangkat',l:'TMT Pangkat',t:'date'},{id:'tmt_kgb',l:'TMT KGB',t:'date'},{id:'gaji',l:'Gaji Pokok (Rp)',t:'number'},
     {id:'no_hp',l:'No. HP / WhatsApp',t:'text'},{id:'email',l:'Email',t:'text'},
+    {id:'batas_usia_pensiun',l:'Batas Usia Pensiun (tahun)',t:'number'},
     {id:'_unit_sub',l:'',t:'unit_sub'}
   ],
   pppk:[
