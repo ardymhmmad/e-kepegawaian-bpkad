@@ -144,7 +144,7 @@ function renderPg2(type,total,filters){
   if(pg<pages)h+=`<button class="pg-btn" onclick="goPageKP('${type}',${pg+1})">›</button>`;
   el.innerHTML=h;
 }
-function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
+function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
 function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
 
 // ═══════════════════════════════════════════════════
@@ -179,4 +179,64 @@ function renderKGB(filters={}){
     </tr>`;
   }).join('')||`<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
   renderPg2('kgb',data.length,filters);
+}
+
+// ═══════════════════════════════════════════════════
+// PENSIUN TABLE
+// ═══════════════════════════════════════════════════
+function renderPensiun(filters={}){
+  const q      = (filters.q||'').toLowerCase();
+  const unit   = filters.unit||'';
+  const status = filters.status||'';
+
+  const heads = ['NIP','Nama ASN','Unit Kerja','Tgl Lahir','Usia (th)','Batas Usia','Tgl Pensiun','Sisa','Status','Keterangan'];
+  const th = document.getElementById('pensiun-thead');
+  if(th) th.innerHTML = '<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+
+  const data = DB.asn
+    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q))) && (!unit||a.unit===unit))
+    .filter(a => { if(!status) return true; return calcPensiun(a).status===status; })
+    .sort((a,b)=>{
+      const pa=calcPensiun(a), pb=calcPensiun(b);
+      // Urutkan: Sudah Pensiun dulu, lalu Segera, lalu Aktif; dalam grup sort by sisaHari
+      const rank={'Sudah Pensiun':0,'Segera Pensiun':1,'Aktif':2,'Data Tidak Valid':3};
+      const ra=rank[pa.status]??3, rb=rank[pb.status]??3;
+      if(ra!==rb) return ra-rb;
+      return (pa.sisaHari??9999)-(pb.sisaHari??9999);
+    });
+
+  const pg    = Math.min(pageNums['pensiun']||1, Math.ceil(data.length/PER_PAGE)||1);
+  pageNums['pensiun'] = pg;
+  const slice = data.slice((pg-1)*PER_PAGE, pg*PER_PAGE);
+
+  const tb = document.getElementById('pensiun-tbody');
+  if(!tb) return;
+
+  if(!slice.length){
+    tb.innerHTML = `<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
+    renderPg2('pensiun', 0, filters);
+    return;
+  }
+
+  tb.innerHTML = slice.map(a => {
+    const p = calcPensiun(a);
+    const sisaLabel = !p.valid ? '—'
+      : p.sisaHari < 0 ? `<span style="color:var(--red-tx)">Lewat ${Math.abs(p.sisaHari)} hari</span>`
+      : p.sisaHari <= 180 ? `<span style="color:#d97706;font-weight:700">${p.sisaHari} hari</span>`
+      : `${p.sisaBulan} bln`;
+    return `<tr>
+      <td class="td-mono">${a.nip}</td>
+      <td style="font-weight:600"><a href="#" onclick="showDetail('asn','${a.id}')" style="color:var(--primary);text-decoration:none">${a.nama}</a></td>
+      <td style="font-size:11px">${shortUnit(a.unit)}</td>
+      <td>${p.tglLahir ? fmtDate(p.tglLahir) : '—'}</td>
+      <td style="text-align:center">${p.usia??'—'}</td>
+      <td style="text-align:center">${p.batasUsia} th</td>
+      <td>${p.tglPensiun ? fmtDate(p.tglPensiun) : '—'}</td>
+      <td style="text-align:center">${sisaLabel}</td>
+      <td><span class="badge ${pensiunBadge(p.status)}">${p.status}</span></td>
+      <td style="font-size:11px;color:var(--tx2);max-width:200px">${p.keterangan}</td>
+    </tr>`;
+  }).join('');
+
+  renderPg2('pensiun', data.length, filters);
 }
