@@ -166,9 +166,10 @@ function generateNoSurat(tahun){
 }
 
 function updateCutiBadge(){
+  // Hanya cuti yang belum final admin (step1 = menunggu Kasubbag, step2 = menunggu Kabid)
   const n=DB.cuti.filter(c=>c.status==='step1'||c.status==='step2').length;
   const el=document.getElementById('cuti-badge');
-  if(el) el.textContent=n||0;
+  if(el){ el.textContent=n; el.style.display=n?'':'none'; }
 }
 
 // ═══════════════════════════════════════════════════════════════
