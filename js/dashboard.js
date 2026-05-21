@@ -53,29 +53,6 @@ function renderDashboard(){
   const kgbSoon=[...DB.asn].map(a=>({...a,...calcKGB(a)})).sort((a,b)=>a.daysToKGB-b.daysToKGB).slice(0,5);
   const kgbHtml=kgbSoon.length?kgbSoon.map(k=>`<div class="kgb-item"><div class="kgb-av">${initials(k.nama)}</div><div><div class="kgb-name">${shortName(k.nama)}</div><div class="kgb-unit">${k.unit||''}</div></div><div class="kgb-due ${k.daysToKGB<=14?'soon':'ok'}">${k.daysToKGB<0?'Lewat':k.daysToKGB+' hari'}</div></div>`).join(''):'<div style="font-size:12px;color:var(--tx3)">Tidak ada data</div>';
 
-  // KP — Memenuhi Syarat & Mengingatkan, urut paling dekat jatuh tempo
-  const kpSoon=[...DB.asn]
-    .map(a=>({...a,...calcKP(a)}))
-    .filter(a=>a.status==='Memenuhi Syarat'||a.status==='Mengingatkan')
-    .sort((a,b)=>a.daysToKP-b.daysToKP)
-    .slice(0,5);
-  const kpHtml=kpSoon.length?kpSoon.map(k=>{
-    const isMS  = k.status==='Memenuhi Syarat';
-    const label = isMS ? 'Memenuhi Syarat' : k.daysToKP+' hari';
-    const cls   = isMS ? 'soon' : k.daysToKP<=30?'soon':'ok';
-    return `<div class="kgb-item">
-      <div class="kgb-av" style="background:#eef2ff;color:#1649c8">${initials(k.nama)}</div>
-      <div style="flex:1;min-width:0">
-        <div class="kgb-name">${shortName(k.nama)}</div>
-        <div class="kgb-unit">${shortUnit(k.unit)||''}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div class="kgb-due ${cls}">${label}</div>
-        <div style="font-size:9px;color:var(--tx3);margin-top:2px">${k.pangkat} → ${k.nextPangkat}</div>
-      </div>
-    </div>`;
-  }).join(''):'<div style="font-size:12px;color:var(--tx3)">Tidak ada data</div>';
-
   document.getElementById('db-charts1').innerHTML=`
     <div class="cc fade-up">
       <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Rekap Jenis Kelamin Seluruh Pegawai </div>
@@ -84,10 +61,6 @@ function renderDashboard(){
     <div class="cc fade-up fade-up-1">
       <div class="cc-title"><span class="cc-title-dot" style="background:#92400e"></span>KGB Jatuh Tempo — Paling Dekat</div>
       ${kgbHtml}
-    </div>
-    <div class="cc fade-up fade-up-2">
-      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Kenaikan Pangkat — Segera & Memenuhi Syarat</div>
-      ${kpHtml}
     </div>`;
 
   // Edu, Rank, PJLP jobs
@@ -121,7 +94,7 @@ function renderDashboard(){
       <div style="text-align:center;padding:12px;background:var(--pur-bg);border-radius:8px"><div style="font-size:20px;font-weight:700;color:var(--pur-tx)">${DB.asn.filter(a=>calcKP(a).status==='Batas Pendidikan').length}</div><div style="font-size:10px;color:var(--pur-tx);margin-top:3px">Batas Pendidikan</div></div>
     </div>`;
 
-  document.getElementById('kp-badge').textContent=kpMS+kpIng;
+  document.getElementById('kp-badge').textContent=kpIng; // hanya Mengingatkan (≤4 bln)
   document.getElementById('kgb-badge').textContent=kgbAlert;
   updateCutiBadge();
 }
