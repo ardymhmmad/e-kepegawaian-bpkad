@@ -145,7 +145,7 @@ function renderPg2(type,total,filters){
   el.innerHTML=h;
 }
 function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
-function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
+function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
 
 // ═══════════════════════════════════════════════════
 // KGB TABLE
