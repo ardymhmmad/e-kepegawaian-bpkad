@@ -71,3 +71,64 @@ function calcKGB(asn){
   else status='Normal';
   return { due, daysToKGB, gajiSkrg, status };
 }
+
+// ═══════════════════════════════════════════════════
+// PENSIUN ENGINE
+// ═══════════════════════════════════════════════════
+
+// Ekstrak tanggal lahir dari NIP (8 digit pertama: YYYYMMDD)
+function tglLahirDariNIP(nip){
+  if(!nip || nip.length < 8) return null;
+  const s = String(nip).replace(/\s/g,'');
+  const y = parseInt(s.substring(0,4));
+  const m = parseInt(s.substring(4,6));
+  const d = parseInt(s.substring(6,8));
+  if(!y||!m||!d||m>12||d>31) return null;
+  return new Date(y, m-1, d, 0,0,0);
+}
+
+function calcPensiun(asn){
+  const tglLahir = tglLahirDariNIP(asn.nip);
+  const batasUsia = parseInt(asn.batas_usia_pensiun) || 58;
+  const today = new Date();
+
+  if(!tglLahir) return {
+    valid: false, tglLahir:null, tglPensiun:null, usia:null,
+    sisaHari:null, sisaBulan:null,
+    status:'Data Tidak Valid',
+    keterangan:'NIP tidak valid atau batas usia belum diisi',
+    batasUsia
+  };
+
+  const tglPensiun = new Date(tglLahir);
+  tglPensiun.setFullYear(tglPensiun.getFullYear() + batasUsia);
+
+  let usia = today.getFullYear() - tglLahir.getFullYear();
+  const bulanDiff = today.getMonth() - tglLahir.getMonth();
+  if(bulanDiff < 0 || (bulanDiff===0 && today.getDate() < tglLahir.getDate())) usia--;
+
+  const msPerHari = 1000*60*60*24;
+  const sisaHari  = Math.ceil((tglPensiun - today) / msPerHari);
+  const sisaBulan = Math.ceil(sisaHari / 30.44);
+
+  let status, keterangan;
+  if(sisaHari < 0){
+    status = 'Sudah Pensiun';
+    keterangan = 'Telah memasuki masa pensiun sejak '+fmtDate(tglPensiun)+'.';
+  } else if(sisaHari <= 180){
+    status = 'Segera Pensiun';
+    keterangan = 'Akan pensiun dalam '+sisaHari+' hari lagi ('+fmtDate(tglPensiun)+'). Siapkan berkas pensiun.';
+  } else {
+    status = 'Aktif';
+    keterangan = 'Pensiun pada '+fmtDate(tglPensiun)+' ('+sisaBulan+' bulan lagi).';
+  }
+
+  return { valid:true, tglLahir, tglPensiun, usia, sisaHari, sisaBulan, status, keterangan, batasUsia };
+}
+
+function pensiunBadge(status){
+  if(status==='Sudah Pensiun')  return 'b-red';
+  if(status==='Segera Pensiun') return 'b-amber';
+  if(status==='Aktif')          return 'b-green';
+  return 'b-gray';
+}
