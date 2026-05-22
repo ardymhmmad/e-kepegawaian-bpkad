@@ -575,6 +575,7 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
 @media print{
   body *{ visibility:hidden !important; }
   #print-surat, #print-surat *{ visibility:visible !important; }
+  #print-surat-kgb, #print-surat-kgb *{ visibility:visible !important; }
   #print-surat{
     display:block !important;
     position:fixed !important;
@@ -582,12 +583,25 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
     width:100%;
     background:white;
   }
+  #print-surat-kgb{
+    display:block !important;
+    position:fixed !important;
+    top:0; left:0;
+    width:100%;
+    background:white;
+    padding:10mm 15mm;
+    box-sizing:border-box;
+  }
   .surat-print{ padding:5mm 10mm; }
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
+  #sk-kgb-content table td,
+  #sk-kgb-content table tr,
+  #sk-kgb-content table{ border:none !important; }
 }
 #print-surat{ display:none }
+#print-surat-kgb{ display:none }
 
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
