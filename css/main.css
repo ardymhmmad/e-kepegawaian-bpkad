@@ -1,631 +1,358 @@
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --fm:'Outfit','Segoe UI',system-ui,sans-serif;
-  --fmo:'JetBrains Mono','Consolas',monospace;
+// ═══════════════════════════════════════════════════
+// SK KGB — Cetak Surat Keputusan Kenaikan Gaji Berkala
+// ═══════════════════════════════════════════════════
 
-  /* Sky-cloud blue palette */
-  --sky-50:#f0f9ff;--sky-100:#e0f2fe;--sky-200:#bae6fd;
-  --sky-300:#7dd3fc;--sky-400:#38bdf8;--sky-500:#0ea5e9;
-  --sky-600:#0284c7;--sky-700:#0369a1;--sky-800:#075985;--sky-900:#0c4a6e;
+// Tabel gaji pokok PNS (PP No.5/2024) — Golongan: [masa_kerja_0, masa_kerja_2, ... masa_kerja_32]
+// Format: GAJI_PNS[golongan][masa_kerja_tahun] = gaji_pokok
+const GAJI_PNS = {
+  'I/a':  {0:1685700,2:1736900,4:1789800,6:1844800,8:1901800,10:1960800,12:2022000,14:2085500,16:2151300,18:2219500,20:2290200,22:2363500,24:2439500,26:2518300,28:2599900,30:2684400,32:2771900},
+  'I/b':  {0:1840800,2:1897200,4:1955400,6:2015800,8:2078200,10:2143000,12:2210200,14:2279900,16:2352100,18:2427000,20:2504700,22:2585100,24:2668500,26:2754900,28:2844400,30:2937100,32:3033000},
+  'I/c':  {0:1918700,2:1976400,4:2036300,6:2098600,8:2163400,10:2230700,12:2300600,14:2373200,16:2448600,18:2526800,20:2607900,22:2692100,24:2779500,26:2870200,28:2964200,30:3061700,32:3162700},
+  'I/d':  {0:1999300,2:2059300,4:2121400,6:2185900,8:2252800,10:2322200,12:2394200,14:2468800,16:2546200,18:2626500,20:2709800,22:2796300,24:2886000,26:2979100,28:3075700,30:3175900,32:3279800},
+  'II/a': {0:2184000,2:2251200,4:2321000,6:2393300,8:2468300,10:2546000,12:2626600,14:2710200,16:2796800,18:2886600,20:2979700,22:3076200,24:3176200,26:3279800,28:3387200,30:3498500,32:3613900},
+  'II/b': {0:2385000,2:2458100,4:2533900,6:2612400,8:2693800,10:2778100,12:2865500,14:2956200,16:3050100,18:3147400,20:3248200,22:3352700,24:3461000,26:3573200,28:3689500,30:3810000,32:3934900},
+  'II/c': {0:2485600,2:2561600,4:2640400,6:2722000,8:2806800,10:2894700,12:2985900,14:3080700,16:3178900,18:3280900,20:3386700,22:3496600,24:3610600,26:3728900,28:3851500,30:3978900,32:4110600},
+  'II/d': {0:2591100,2:2670400,4:2752600,6:2837800,8:2926100,10:3017700,12:3112700,14:3211200,16:3313400,18:3419200,20:3529100,22:3643200,24:3761500,26:3884200,28:4011600,30:4143800,32:4281100},
+  'III/a':{0:2785700,2:2871500,4:2960300,6:3052100,8:3147200,10:3245600,12:3347400,14:3452800,16:3561900,18:3674700,20:3791600,22:3912600,24:4037900,26:4167700,28:4302200,30:4441700,32:4586200},
+  'III/b':{0:2903600,2:2993000,4:3085500,6:3181200,8:3280200,10:3382700,12:3488900,14:3598800,16:3712500,18:3830200,20:3952000,22:4078200,24:4208900,26:4344300,28:4484700,30:4630200,32:4781100},
+  'III/c':{0:3026100,2:3119900,4:3216900,6:3317200,8:3421000,10:3528400,12:3639600,14:3754700,16:3873900,18:3997300,20:4125100,22:4257500,24:4394700,26:4536800,28:4684100,30:4836800,32:4995200},
+  'III/d':{0:3154600,2:3252800,4:3354400,6:3459600,8:3568500,10:3681200,12:3797900,14:3918700,16:4043900,18:4173500,20:4307700,22:4446700,24:4590700,26:4739900,28:4894600,30:5054900,32:5221200},
+  'IV/a': {0:3287400,2:3390500,4:3497200,6:3607700,8:3722200,10:3840800,12:3963700,14:4091100,16:4223100,18:4359900,20:4501700,22:4648700,24:4801200,26:4959500,28:5123700,30:5294000,32:5470700},
+  'IV/b': {0:3425200,2:3533000,4:3644600,6:3760100,8:3879800,10:4003800,12:4132400,14:4265800,16:4404100,18:4547600,20:4696400,22:4850700,24:5010800,26:5177000,28:5349500,30:5528800,32:5714900},
+  'IV/c': {0:3568200,2:3681000,4:3797800,6:3918800,8:4044200,10:4174000,12:4308600,14:4448200,16:4593000,18:4743300,20:4899200,22:5061000,24:5229100,26:5403700,28:5585400,30:5773600,32:5968600},
+  'IV/d': {0:3716300,2:3834300,4:3956400,6:4082900,8:4213800,10:4349400,12:4490000,14:4635800,16:4787100,18:4944200,20:5107300,22:5276700,24:5452800,26:5635900,28:5826400,30:6024500,32:6230500},
+  'IV/e': {0:3870000,2:3993600,4:4121700,6:4254500,8:4392000,10:4534600,12:4682600,14:4836200,16:4995800,18:5161600,20:5334000,22:5513100,24:5699400,26:5893100,28:6094500,30:6304100,32:6521900},
+};
 
-  /* Glass surface vars */
-  --glass-bg:rgba(255,255,255,0.62);
-  --glass-border:rgba(255,255,255,0.75);
-  --glass-shadow:0 8px 32px rgba(14,165,233,0.12);
-  --glass-blur:blur(16px);
-
-  /* Background mesh */
-  --bg0:#dff0fc;
-  --bg1:rgba(255,255,255,0.75);
-  --bg2:rgba(240,249,255,0.8);
-  --bg3:#bae6fd;
-
-  /* Text */
-  --tx1:#0c2d48;--tx2:#2e6b8a;--tx3:#6ba3bc;
-
-  /* Brand */
-  --primary:#0284c7;--primary-bg:rgba(14,165,233,0.1);--primary-tx:#0369a1;
-  --primary-dark:#075985;--primary-glow:rgba(14,165,233,0.35);
-
-  /* Status */
-  --grn-bg:rgba(209,250,229,0.7);--grn-tx:#065f46;--grn-bd:#6ee7b7;
-  --amb-bg:rgba(254,243,199,0.7);--amb-tx:#92400e;--amb-bd:#fcd34d;
-  --red-bg:rgba(254,226,226,0.7);--red-tx:#991b1b;--red-bd:#fca5a5;
-  --pur-bg:rgba(237,233,254,0.7);--pur-tx:#5b21b6;
-
-  /* Borders */
-  --bd:rgba(186,230,253,0.6);
-  --bd2:rgba(125,211,252,0.7);
-
-  /* Radius & shadow */
-  --r8:10px;--r12:14px;--r16:18px;
-  --shadow:0 2px 12px rgba(14,165,233,0.08),0 1px 3px rgba(14,165,233,0.05);
-  --shadow-md:0 8px 32px rgba(14,165,233,0.15);
-  --shadow-lg:0 20px 60px rgba(12,74,110,0.18);
-  --transition:.2s cubic-bezier(.4,0,.2,1);
+// Ambil golongan singkat dari pangkat (misal "Penata Tingkat I (III/d)" → "III/d")
+function getGolonganSingkat(pangkat){
+  if(!pangkat) return '';
+  const m = pangkat.match(/\(([IVX]+\/[a-e])\)/i);
+  return m ? m[1] : pangkat;
 }
 
-/* ── GLOBAL BACKGROUND MESH ── */
-body{
-  font-family:var(--fm);font-size:14px;color:var(--tx1);height:100vh;overflow:hidden;
-  background:
-    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(186,230,253,0.7) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 110%, rgba(14,165,233,0.15) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 60% 30%, rgba(224,242,254,0.5) 0%, transparent 50%),
-    linear-gradient(160deg, #dff0fc 0%, #e0f2fe 40%, #f0f9ff 100%);
+// Ambil gaji dari tabel berdasarkan golongan + masa kerja
+function getGajiPokok(pangkat, masa_kerja_tahun){
+  const gol = getGolonganSingkat(pangkat);
+  const tabel = GAJI_PNS[gol];
+  if(!tabel) return 0;
+  // Cari masa kerja yang cocok (kelipatan 2, ke bawah)
+  const mk = Math.floor((masa_kerja_tahun||0) / 2) * 2;
+  const key = Math.min(mk, 32);
+  return tabel[key] || tabel[0] || 0;
 }
 
-/* ── SKELETON LOADING ── */
-@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
-.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite;border-radius:6px}
-
-/* ── HOVER LIFT ── */
-.hover-lift{transition:transform var(--transition),box-shadow var(--transition)}
-.hover-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
-
-/* ── FADE IN ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{animation:fadeUp .35s ease both}
-.fade-up-1{animation-delay:.05s}.fade-up-2{animation-delay:.1s}.fade-up-3{animation-delay:.15s}.fade-up-4{animation-delay:.2s}
-
-/* ── PULSE DOT ── */
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
-.pulse-dot{width:7px;height:7px;border-radius:50%;display:inline-block;animation:pulse 1.8s ease infinite}
-
-/* ── MOBILE RESPONSIVE ── */
-@media(max-width:768px){
-  #sidebar{position:fixed;left:-240px;top:0;bottom:0;z-index:500;transition:left .25s ease;box-shadow:none}
-  #sidebar.open{left:0;box-shadow:4px 0 20px rgba(0,0,0,.15)}
-  .app-body{flex-direction:column}
-  #main{width:100%}
-  .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .charts-row{grid-template-columns:1fr!important}
-  .charts-row3{grid-template-columns:1fr!important}
-  .detail-grid{grid-template-columns:1fr!important}
-  .form-grid{grid-template-columns:1fr!important}
-  .fg.full{grid-column:span 1!important}
-  .app-topbar-sub{display:none}
-  .hamburger{display:flex!important}
-  table{font-size:11px}
-  thead th{padding:6px 8px}
-  tbody td{padding:7px 8px}
-  .mobile-hide{display:none!important}
-}
-@media(max-width:480px){
-  .stats-grid{grid-template-columns:1fr!important}
-  .login-card{width:92vw;padding:28px 20px}
+// Format tanggal Indonesia lengkap
+function fmtTglIndo(d){
+  if(!d) return '...........';
+  const dt = d instanceof Date ? d : new Date(d+'T00:00:00');
+  const bln=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return `${dt.getDate()} ${bln[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
-/* ── LOGIN — glassmorphism sky ── */
-@keyframes floatOrb{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.05)}}
-@keyframes loginFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
-
-#login-screen{
-  position:fixed;inset:0;
-  background:linear-gradient(135deg,#0c4a6e 0%,#075985 30%,#0284c7 65%,#38bdf8 100%);
-  display:flex;align-items:center;justify-content:center;z-index:9999;overflow:hidden
-}
-#login-screen::before{
-  content:'';position:absolute;inset:0;
-  background:
-    radial-gradient(circle 600px at 20% 30%,rgba(186,230,253,.25) 0%,transparent 70%),
-    radial-gradient(circle 400px at 80% 70%,rgba(255,255,255,.12) 0%,transparent 60%);
-}
-/* Floating orbs */
-#login-screen::after{
-  content:'';position:absolute;width:500px;height:500px;border-radius:50%;
-  background:radial-gradient(circle,rgba(186,230,253,.18) 0%,transparent 70%);
-  top:-120px;right:-80px;animation:floatOrb 8s ease-in-out infinite;
-}
-.login-orb2{
-  position:absolute;width:300px;height:300px;border-radius:50%;
-  background:radial-gradient(circle,rgba(14,165,233,.15) 0%,transparent 70%);
-  bottom:-60px;left:-40px;animation:floatOrb 10s ease-in-out infinite .5s;
-  z-index:0;pointer-events:none;
-}
-.login-wrap{
-  display:flex;width:100%;max-width:880px;min-height:510px;
-  border-radius:24px;overflow:hidden;
-  box-shadow:0 40px 100px rgba(7,89,133,.45),0 0 0 1px rgba(255,255,255,.15);
-  position:relative;z-index:1;animation:loginFadeIn .5s ease both;
-}
-.login-side{
-  flex:1;
-  background:linear-gradient(160deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.06) 100%);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  padding:48px 40px;display:flex;flex-direction:column;justify-content:center;
-  border-right:1px solid rgba(255,255,255,.2);
-}
-.login-side-seal{width:80px;height:80px;margin-bottom:20px;filter:drop-shadow(0 4px 12px rgba(186,230,253,.5))}
-.login-side-title{font-size:30px;font-weight:700;color:#fff;line-height:1.15;letter-spacing:-.03em;text-shadow:0 2px 20px rgba(14,165,233,.4)}
-.login-side-sub{font-size:13px;color:rgba(255,255,255,.72);margin-top:10px;line-height:1.7}
-.login-side-badges{display:flex;gap:7px;margin-top:22px;flex-wrap:wrap}
-.login-badge{
-  font-size:10px;font-weight:600;padding:4px 11px;border-radius:20px;
-  background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);letter-spacing:.04em;
-  border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px);
-}
-.login-card{
-  width:370px;flex-shrink:0;padding:40px 34px;display:flex;flex-direction:column;justify-content:center;
-  background:rgba(255,255,255,.72);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-}
-.login-logo{text-align:center;margin-bottom:24px}
-.login-logo-icon{
-  width:50px;height:50px;
-  background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(2,132,199,.1));
-  border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;
-  box-shadow:0 4px 16px rgba(14,165,233,.2),inset 0 1px 0 rgba(255,255,255,.8);
-  border:1px solid rgba(14,165,233,.2);
-}
-.login-logo-icon svg{width:24px;height:24px}
-.login-title{font-size:21px;font-weight:700;color:var(--tx1);letter-spacing:-.03em}
-.login-title-inst{font-size:11px;color:var(--tx2);margin-top:4px;line-height:1.5;font-weight:400}
-.login-title-prov{font-size:10px;font-weight:700;color:var(--primary);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
-.login-divider{height:1px;background:linear-gradient(90deg,transparent,var(--bd2),transparent);margin:16px 0}
-.login-form{display:flex;flex-direction:column;gap:13px}
-.lf-group label{display:block;font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em}
-.lf-group{position:relative}
-.lf-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none;margin-top:11px}
-.lf-group input{
-  width:100%;padding:10px 12px 10px 36px;border-radius:var(--r8);
-  border:1.5px solid var(--bd2);
-  background:rgba(240,249,255,0.7);
-  backdrop-filter:blur(8px);
-  font-family:var(--fm);font-size:13px;color:var(--tx1);outline:none;transition:all .2s;
-}
-.lf-group input:focus{
-  border-color:var(--primary);background:rgba(255,255,255,.9);
-  box-shadow:0 0 0 3px rgba(14,165,233,.12);
-}
-.login-btn{
-  background:linear-gradient(135deg,var(--sky-500),var(--sky-700));
-  color:#fff;border:none;border-radius:var(--r8);padding:12px;
-  font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fm);
-  margin-top:4px;transition:all .2s;letter-spacing:.02em;
-  box-shadow:0 4px 16px rgba(14,165,233,.4);
-  position:relative;overflow:hidden;
-}
-.login-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);border-radius:inherit}
-.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(14,165,233,.5)}
-.login-btn:active{transform:translateY(0)}
-.login-error{font-size:12px;color:var(--red-tx);background:rgba(254,226,226,.8);border:1px solid var(--red-bd);border-radius:8px;padding:8px 12px;display:none;animation:fadeUp .2s ease;backdrop-filter:blur(8px)}
-.login-accounts{font-size:10.5px;color:var(--tx2);margin-top:14px;text-align:center;padding:9px 12px;background:rgba(224,242,254,.6);border-radius:9px;line-height:1.8;border:1px solid var(--bd2);backdrop-filter:blur(8px)}
-@media(max-width:768px){.login-wrap{flex-direction:column;max-width:92vw;min-height:auto}.login-side{display:none}.login-card{width:100%;padding:32px 24px}}
-
-/* ── APP ── */
-#app{display:none;height:100vh;flex-direction:column}
-#app.visible{display:flex}
-
-/* ── TOPBAR — glass ── */
-.app-topbar{
-  background:rgba(7,89,133,.85);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(186,230,253,.25);
-  color:#fff;padding:0 18px;height:54px;display:flex;align-items:center;gap:12px;flex-shrink:0;
-  box-shadow:0 4px 24px rgba(7,89,133,.3);
-  position:relative;z-index:100;
-}
-.app-topbar::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(186,230,253,.08) 0%,transparent 60%);pointer-events:none}
-.hamburger{width:32px;height:32px;border:none;background:rgba(255,255,255,.1);border-radius:8px;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:7px;border:1px solid rgba(255,255,255,.15)}
-.hamburger span{width:16px;height:1.5px;background:#fff;border-radius:2px;transition:.2s}
-.app-topbar-seal{width:32px;height:32px;object-fit:contain;opacity:.92;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(186,230,253,.4))}
-.tb-brand{display:flex;flex-direction:column}
-.app-topbar-logo{font-size:14px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
-.app-topbar-sub{font-size:10px;opacity:.65;letter-spacing:.02em}
-.app-topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-.user-chip{
-  display:flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,.1);
-  border-radius:22px;padding:4px 12px 4px 4px;font-size:12px;
-  border:1px solid rgba(255,255,255,.18);
-  backdrop-filter:blur(12px);transition:background .18s;cursor:default;
-}
-.user-chip:hover{background:rgba(255,255,255,.18)}
-.user-av{
-  width:26px;height:26px;border-radius:50%;
-  background:linear-gradient(135deg,var(--sky-300),var(--sky-500));
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-  flex-shrink:0;box-shadow:0 2px 8px rgba(14,165,233,.4);
-}
-.user-info{display:flex;flex-direction:column;gap:1px}
-.user-name{font-weight:600;font-size:12px;line-height:1}
-.user-role{font-size:9px;opacity:.65;text-transform:uppercase;letter-spacing:.07em}
-.logout-btn{
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
-  color:#fff;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;
-  cursor:pointer;font-family:var(--fm);transition:all .18s;letter-spacing:.02em;
-  backdrop-filter:blur(8px);
-}
-.logout-btn:hover{background:rgba(255,255,255,.2);transform:translateY(-1px)}
-
-/* ── BODY LAYOUT ── */
-.app-body{flex:1;display:flex;overflow:hidden}
-
-/* ── SIDEBAR — glass panel ── */
-#sidebar{
-  width:232px;min-width:232px;
-  background:rgba(255,255,255,.6);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-right:1px solid rgba(186,230,253,.5);
-  display:flex;flex-direction:column;overflow:hidden;
-  box-shadow:4px 0 24px rgba(14,165,233,.06);
-}
-nav{flex:1;padding:10px 8px;overflow-y:auto}
-.nl{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;padding:12px 10px 4px;opacity:.8}
-.ni{
-  display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:10px;
-  cursor:pointer;margin-bottom:2px;font-size:12.5px;color:var(--tx2);
-  border:none;background:none;width:100%;text-align:left;font-family:var(--fm);
-  transition:all .18s;position:relative;
-}
-.ni::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:var(--primary);opacity:0;transition:opacity .18s}
-.ni:hover{background:rgba(14,165,233,.08);color:var(--tx1);padding-left:15px}
-.ni.active{
-  background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(2,132,199,.08));
-  color:var(--primary);font-weight:600;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
-}
-.ni.active::before{opacity:1}
-.ni svg{width:15px;height:15px;flex-shrink:0}
-.nbadge{margin-left:auto;font-size:10px;font-weight:700;background:rgba(254,226,226,.8);color:var(--red-tx);border-radius:10px;padding:1px 6px;backdrop-filter:blur(4px)}
-.nbadge.warn{background:rgba(254,243,199,.8);color:var(--amb-tx)}
-.s-foot{padding:10px 14px;border-top:1px solid var(--bd);font-size:10px;color:var(--tx3);line-height:1.6}
-
-/* ── MAIN CONTENT ── */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.page-topbar{
-  background:rgba(255,255,255,.55);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border-bottom:1px solid rgba(186,230,253,.5);
-  padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;
-}
-.pt-title{font-size:14px;font-weight:700;color:var(--tx1)}
-.pt-sub{font-size:11px;color:var(--tx2);margin-top:1px}
-.pt-right{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-
-.content{flex:1;overflow-y:auto;padding:18px}
-.page{display:none}.page.active{display:block}
-
-/* ── BUTTONS ── */
-.btn{
-  font-size:12px;padding:6px 13px;border-radius:8px;cursor:pointer;
-  border:1px solid var(--bd2);
-  background:rgba(255,255,255,.7);
-  backdrop-filter:blur(8px);
-  color:var(--tx1);font-family:var(--fm);display:inline-flex;align-items:center;
-  gap:5px;transition:all .18s;white-space:nowrap;font-weight:500;
-}
-.btn:hover{background:rgba(255,255,255,.9);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,165,233,.12)}
-.btn:active{transform:translateY(0);box-shadow:none}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.btn-primary{
-  background:linear-gradient(135deg,var(--sky-500),var(--sky-700));
-  color:#fff;border-color:transparent;
-  box-shadow:0 2px 10px rgba(14,165,233,.3);
-}
-.btn-primary:hover{box-shadow:0 4px 18px rgba(14,165,233,.45);opacity:1}
-.btn-success{background:rgba(209,250,229,.8);color:var(--grn-tx);border-color:var(--grn-bd);backdrop-filter:blur(8px)}.btn-success:hover{opacity:.85}
-.btn-danger{background:rgba(254,226,226,.8);color:var(--red-tx);border-color:var(--red-bd);backdrop-filter:blur(8px)}.btn-danger:hover{opacity:.85}
-.btn-amber{background:rgba(254,243,199,.8);color:var(--amb-tx);border-color:var(--amb-bd)}
-.btn-sm{font-size:11px;padding:4px 9px;border-radius:6px}
-
-/* ── STAT CARDS — glass ── */
-.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.sc{
-  background:rgba(255,255,255,.65);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.8);
-  border-radius:var(--r16);padding:18px 20px;
-  box-shadow:var(--glass-shadow);
-  transition:transform var(--transition),box-shadow var(--transition);
-  cursor:default;position:relative;overflow:hidden;
-}
-.sc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.4) 0%,transparent 60%);pointer-events:none}
-.sc::after{content:'';position:absolute;top:0;right:0;bottom:0;width:4px;border-radius:0 var(--r16) var(--r16) 0;background:var(--sc-color,var(--primary));opacity:.7}
-.sc:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(14,165,233,.2)}
-.sc-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;backdrop-filter:blur(8px)}
-.sc-icon svg{width:18px;height:18px}
-.sc-lbl{font-size:10px;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
-.sc-val{font-size:30px;font-weight:700;line-height:1;color:var(--tx1);letter-spacing:-.03em}
-.sc-note{font-size:10px;margin-top:6px;font-weight:500;display:flex;align-items:center;gap:4px}
-.sc-note.up{color:var(--grn-tx)}.sc-note.warn{color:var(--amb-tx)}.sc-note.danger{color:var(--red-tx)}
-.sc-skel .sc-val{height:28px;width:60px;display:block}.sc-skel .sc-lbl{height:10px;width:80px;display:block;margin-bottom:8px}
-
-/* ── CHART CARDS — glass ── */
-.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
-.charts-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
-.cc{
-  background:rgba(255,255,255,.6);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.75);
-  border-radius:var(--r16);padding:16px;
-  box-shadow:var(--glass-shadow);
-  transition:box-shadow var(--transition);
-}
-.cc:hover{box-shadow:0 12px 36px rgba(14,165,233,.18)}
-.cc-title{font-size:12px;font-weight:700;color:var(--tx1);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.cc-title-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.bar-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}
-.bar-lbl{font-size:11px;color:var(--tx2);width:96px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{flex:1;height:7px;background:rgba(186,230,253,.4);border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
-.bar-val{font-size:11px;color:var(--tx2);width:22px;text-align:right;flex-shrink:0}
-
-/* ── ALERT BANNER ── */
-.alert-banner{background:rgba(254,243,199,.7);border:1px solid var(--amb-bd);border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:9px;font-size:11px;color:var(--amb-tx);backdrop-filter:blur(8px)}
-.alert-dot{width:7px;height:7px;border-radius:50%;background:var(--amb-tx);flex-shrink:0;margin-top:3px}
-
-/* ── KGB ── */
-.kgb-item{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd)}
-.kgb-item:last-child{border-bottom:none}
-.kgb-av{width:26px;height:26px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--primary-tx);flex-shrink:0}
-.kgb-name{font-size:12px;font-weight:600}.kgb-unit{font-size:10px;color:var(--tx2)}
-.kgb-due{margin-left:auto;font-size:11px}.kgb-due.soon{color:var(--red-tx);font-weight:700}.kgb-due.ok{color:var(--tx2)}
-
-/* ── TABLE CARD — glass ── */
-.tc{
-  background:rgba(255,255,255,.6);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.75);
-  border-radius:var(--r16);overflow:hidden;
-  box-shadow:var(--glass-shadow);
-}
-.tc-hdr{padding:13px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:rgba(240,249,255,.4)}
-.tc-title{font-size:13px;font-weight:700}
-.filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
-.search-box,.filter-sel{
-  padding:7px 11px;border-radius:9px;
-  border:1px solid var(--bd2);
-  background:rgba(255,255,255,.7);
-  backdrop-filter:blur(8px);
-  font-size:12px;color:var(--tx1);font-family:var(--fm);outline:none;
-  transition:border-color .18s,box-shadow .18s;
-}
-.search-box:focus,.filter-sel:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(14,165,233,.1)}
-.search-box{width:180px}.filter-sel{min-width:150px;max-width:220px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-thead th{
-  font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;
-  padding:9px 13px;border-bottom:1px solid var(--bd);text-align:left;
-  background:rgba(224,242,254,.5);white-space:nowrap;
-}
-tbody tr{border-bottom:1px solid rgba(186,230,253,.3);transition:background .15s}
-tbody tr:last-child{border-bottom:none}
-tbody tr:hover{background:rgba(224,242,254,.4)}
-tbody td{padding:10px 13px;vertical-align:middle}
-.td-mono{font-family:var(--fmo);font-size:10px;color:var(--tx2)}
-.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;backdrop-filter:blur(4px)}
-.b-blue{background:rgba(14,165,233,.12);color:var(--sky-700)}
-.b-green{background:rgba(209,250,229,.7);color:var(--grn-tx)}
-.b-amber{background:rgba(254,243,199,.7);color:var(--amb-tx)}
-.b-red{background:rgba(254,226,226,.7);color:var(--red-tx)}
-.b-purple{background:rgba(237,233,254,.7);color:var(--pur-tx)}
-.b-gray{background:rgba(224,242,254,.5);color:var(--tx2)}
-
-/* ── PAGINATION ── */
-.pg{display:flex;align-items:center;gap:4px;padding:10px 14px;border-top:1px solid var(--bd);justify-content:flex-end;background:rgba(240,249,255,.3)}
-.pg-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--bd);background:rgba(255,255,255,.6);cursor:pointer;font-size:12px;color:var(--tx2);display:flex;align-items:center;justify-content:center;font-family:var(--fm);backdrop-filter:blur(4px);transition:all .15s}
-.pg-btn:hover{background:rgba(14,165,233,.1);color:var(--primary)}
-.pg-btn.active{background:linear-gradient(135deg,var(--sky-500),var(--sky-600));color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(14,165,233,.3)}
-.pg-info{font-size:11px;color:var(--tx2);margin-right:8px}
-
-/* ── MODAL — glass ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(12,74,110,.35);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:2000;padding:20px}
-.modal{
-  background:rgba(255,255,255,.85);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,.9);
-  border-radius:20px;width:100%;max-width:660px;max-height:92vh;overflow-y:auto;
-  box-shadow:0 24px 80px rgba(7,89,133,.25);
-}
-.modal-hdr{
-  padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;
-  justify-content:space-between;position:sticky;top:0;
-  background:rgba(255,255,255,.85);backdrop-filter:blur(16px);z-index:1;border-radius:20px 20px 0 0;
-}
-.modal-title{font-size:14px;font-weight:700;color:var(--tx1)}
-.modal-close{width:28px;height:28px;border-radius:7px;border:none;background:rgba(14,165,233,.08);cursor:pointer;color:var(--tx2);font-size:18px;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.modal-close:hover{background:rgba(14,165,233,.15)}
-.modal-body{padding:22px}
-.modal-footer{
-  padding:14px 22px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end;
-  position:sticky;bottom:0;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);
-  border-radius:0 0 20px 20px;
+function fmtTglIndoStr(str){
+  if(!str) return '...........';
+  const [y,m,d] = str.split('-').map(Number);
+  return fmtTglIndo(new Date(y,m-1,d));
 }
 
-/* ── FORM — glass ── */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.fg{display:flex;flex-direction:column;gap:5px}
-.fg.full{grid-column:span 2}
-.fg label{font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em}
-.fg input,.fg select,.fg textarea{
-  padding:8px 11px;border-radius:9px;
-  border:1.5px solid rgba(186,230,253,.7);
-  background:rgba(255,255,255,.65);
-  backdrop-filter:blur(8px);
-  color:var(--tx1);font-family:var(--fm);font-size:12px;outline:none;transition:all .18s;
+// ── Dialog konfirmasi sebelum cetak ─────────────────────
+function cetakSKKGB(id){
+  const a = DB.asn.find(x=>x.id===id);
+  if(!a){ showToast('Data ASN tidak ditemukan','error'); return; }
+
+  const k = calcKGB(a);
+  const tglLahir = tglLahirDariNIP(a.nip);
+  const tglLahirStr = tglLahir ? fmtTglIndo(tglLahir) : '...........';
+  const gol = getGolonganSingkat(a.pangkat);
+
+  // Masa kerja lama dari DB
+  const mkLamaTh = parseInt(a.masa_kerja_tahun)||0;
+  const mkLamaBl = parseInt(a.masa_kerja_bulan)||0;
+
+  // Masa kerja baru = +2 tahun
+  let mkBaruTh = mkLamaTh + 2;
+  let mkBaruBl = mkLamaBl;
+  if(mkBaruBl >= 12){ mkBaruTh++; mkBaruBl -= 12; }
+
+  // Gaji lama & baru
+  const gajiLama = parseInt(a.gaji)||0;
+  const gajiBaru = getGajiPokok(a.pangkat, mkBaruTh);
+
+  // Tanggal penetapan = TMT KGB berikutnya
+  const tglPenetapan = a.tmt_kgb ? (()=>{
+    const [y,m,d] = a.tmt_kgb.split('-').map(Number);
+    const next = new Date(y+2,m-1,d);
+    return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
+  })() : '';
+
+  // KGB berikutnya = +2 tahun dari penetapan
+  const tglKGBBerikutnya = tglPenetapan ? (()=>{
+    const [y,m,d] = tglPenetapan.split('-').map(Number);
+    const next = new Date(y+2,m-1,d);
+    return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
+  })() : '';
+
+  // Tanggal surat = hari ini
+  const today = new Date();
+  const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  document.getElementById('modal-title').textContent = '🖨 Konfirmasi Data SK KGB';
+  document.getElementById('modal-box').style.maxWidth = '560px';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px;background:var(--primary-bg);padding:10px 12px;border-radius:8px">
+      <strong>${a.nama}</strong> — ${a.nip}<br>
+      <span style="font-size:11px">${a.pangkat} · ${a.unit}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg">
+        <label>Tanggal Surat</label>
+        <input type="date" id="sk-tgl-surat" value="${todayStr}">
+      </div>
+      <div class="fg">
+        <label>Nomor Surat</label>
+        <input type="text" id="sk-nomor" placeholder="cth: 145" style="font-family:monospace">
+        <div style="font-size:10px;color:var(--tx3)">800.1.1.1.13/<strong>NOMOR</strong>//BPKAD/${today.getFullYear()}</div>
+      </div>
+      <div class="fg">
+        <label>Tanggal/Nomor SK Sebelumnya</label>
+        <input type="text" id="sk-tgl-nomor-sblm" placeholder="cth: 01 Januari 2023 / No.XXX">
+      </div>
+      <div class="fg">
+        <label>TMT KGB Sebelumnya</label>
+        <input type="date" id="sk-tmt-sblm" value="${a.tmt_kgb||''}">
+      </div>
+      <div class="fg">
+        <label>Masa Kerja Sebelumnya</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="sk-mk-lama-th" value="${mkLamaTh}" min="0" max="40" style="width:70px"> <span style="padding-top:8px;font-size:12px">Thn</span>
+          <input type="number" id="sk-mk-lama-bl" value="${mkLamaBl}" min="0" max="11" style="width:70px"> <span style="padding-top:8px;font-size:12px">Bln</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Gaji Pokok Lama (Rp)</label>
+        <input type="number" id="sk-gaji-lama" value="${gajiLama}">
+      </div>
+      <div class="fg">
+        <label>Masa Kerja Baru</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="sk-mk-baru-th" value="${mkBaruTh}" min="0" max="40" style="width:70px"> <span style="padding-top:8px;font-size:12px">Thn</span>
+          <input type="number" id="sk-mk-baru-bl" value="${mkBaruBl}" min="0" max="11" style="width:70px"> <span style="padding-top:8px;font-size:12px">Bln</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Gaji Pokok Baru (Rp) <span style="font-size:10px;color:var(--tx3)">otomatis</span></label>
+        <input type="number" id="sk-gaji-baru" value="${gajiBaru}">
+        <div style="font-size:10px;color:var(--tx3)">Tabel BKN: Gol ${gol}, MK ${mkBaruTh} th</div>
+      </div>
+      <div class="fg">
+        <label>Tanggal Penetapan (TMT berlaku)</label>
+        <input type="date" id="sk-tgl-penetapan" value="${tglPenetapan}">
+      </div>
+      <div class="fg">
+        <label>KGB Berikutnya</label>
+        <input type="date" id="sk-tgl-berikutnya" value="${tglKGBBerikutnya}">
+      </div>
+    </div>`;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="eksekusiCetakSKKGB('${id}')">🖨 Cetak SK</button>`;
+  document.getElementById('modal').style.display='flex';
+
+  // Sinkron gaji baru saat masa kerja baru berubah
+  ['sk-mk-baru-th','sk-mk-baru-bl'].forEach(elId=>{
+    document.getElementById(elId)?.addEventListener('input', ()=>{
+      const mth = parseInt(document.getElementById('sk-mk-baru-th')?.value)||0;
+      const gb  = getGajiPokok(a.pangkat, mth);
+      const el  = document.getElementById('sk-gaji-baru');
+      if(el) el.value = gb;
+    });
+  });
 }
-.fg input:focus,.fg select:focus,.fg textarea:focus{
-  border-color:var(--sky-400);background:rgba(255,255,255,.9);
-  box-shadow:0 0 0 3px rgba(56,189,248,.15);
-}
-.fg select option{background:#fff;color:var(--tx1)}
 
-/* ── DETAIL — glass ── */
-.detail-wrap{max-width:800px}
-.detail-hdr{
-  background:rgba(255,255,255,.65);backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.8);border-radius:var(--r16);
-  padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;
-  box-shadow:var(--glass-shadow);
-}
-.av-lg{
-  width:56px;height:56px;border-radius:50%;
-  background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(2,132,199,.1));
-  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
-  color:var(--primary);flex-shrink:0;
-  border:2px solid rgba(14,165,233,.25);
-  box-shadow:0 4px 16px rgba(14,165,233,.2);
-}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.dc{
-  background:rgba(255,255,255,.6);backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.75);border-radius:var(--r12);padding:15px;
-  box-shadow:var(--glass-shadow);
-}
-.dc-title{font-size:10px;font-weight:700;color:var(--sky-700);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
-.dr{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(186,230,253,.3);font-size:12px}
-.dr:last-child{border-bottom:none}
-.dr-l{color:var(--tx2)}.dr-v{color:var(--tx1);font-weight:600;text-align:right;max-width:60%}
+function eksekusiCetakSKKGB(id){
+  const a = DB.asn.find(x=>x.id===id);
+  if(!a) return;
 
-/* IMPORT */
-.import-zone{border:2px dashed rgba(14,165,233,.4);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(224,242,254,.4);backdrop-filter:blur(8px)}
-.import-zone:hover,.import-zone.drag{border-color:var(--sky-400);background:rgba(14,165,233,.08)}
-.import-zone svg{width:40px;height:40px;color:var(--tx3);margin-bottom:10px}
-.import-zone .iz-title{font-size:14px;font-weight:600;color:var(--tx1);margin-bottom:4px}
-.import-zone .iz-sub{font-size:12px;color:var(--tx2)}
-.import-progress{background:var(--bg2);border-radius:8px;overflow:hidden;height:6px;margin-top:10px}
-.import-progress-fill{height:100%;background:var(--primary);border-radius:8px;transition:width .3s}
-.validation-table{width:100%;font-size:11px;border-collapse:collapse;margin-top:10px}
-.validation-table th{padding:5px 8px;background:var(--bg2);text-align:left;font-size:10px;font-weight:700;color:var(--tx2);border:1px solid var(--bd)}
-.validation-table td{padding:5px 8px;border:1px solid var(--bd)}
-.vt-ok{color:var(--grn-tx)}.vt-err{color:var(--red-tx);font-weight:600}
+  const tglSurat     = document.getElementById('sk-tgl-surat')?.value||'';
+  const nomor        = (document.getElementById('sk-nomor')?.value||'').trim();
+  const tglNomorSblm = (document.getElementById('sk-tgl-nomor-sblm')?.value||'').trim();
+  const tmtSblm      = document.getElementById('sk-tmt-sblm')?.value||'';
+  const mkLamaTh     = parseInt(document.getElementById('sk-mk-lama-th')?.value)||0;
+  const mkLamaBl     = parseInt(document.getElementById('sk-mk-lama-bl')?.value)||0;
+  const gajiLama     = parseInt(document.getElementById('sk-gaji-lama')?.value)||0;
+  const mkBaruTh     = parseInt(document.getElementById('sk-mk-baru-th')?.value)||0;
+  const mkBaruBl     = parseInt(document.getElementById('sk-mk-baru-bl')?.value)||0;
+  const gajiBaru     = parseInt(document.getElementById('sk-gaji-baru')?.value)||0;
+  const tglPenetapan = document.getElementById('sk-tgl-penetapan')?.value||'';
+  const tglBerikutnya= document.getElementById('sk-tgl-berikutnya')?.value||'';
 
-/* TOAST */
-/* TABLE PHOTO AVATAR */
-.emp-av{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--bg3);background:var(--primary-bg);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary-tx);flex-shrink:0;overflow:hidden;vertical-align:middle}
-.emp-av-wrap{display:flex;align-items:center;gap:8px}
-.emp-av-name{font-weight:600;font-size:12px}
-.emp-av-nip{font-size:10px;color:var(--tx3);font-family:var(--fmo)}
-/* SIDEBAR BRAND */
-.s-brand{padding:14px 16px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;background:rgba(224,242,254,.3)}
-.s-brand-icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(2,132,199,.1));display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(14,165,233,.2)}
-.s-brand-icon svg{width:17px;height:17px}
-.s-brand-name{font-size:12px;font-weight:700;color:var(--tx1);line-height:1.2}
-.s-brand-sub{font-size:9.5px;color:var(--tx3)}
-/* OVERLAY for mobile */
-#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:499}
-#sidebar-overlay.show{display:block}
+  if(!nomor){ showToast('Nomor surat wajib diisi','error'); return; }
 
-.toast{
-  position:fixed;bottom:24px;right:24px;
-  background:rgba(12,45,72,.88);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border:1px solid rgba(186,230,253,.2);
-  color:#f0f9ff;padding:12px 18px;border-radius:14px;font-size:12px;font-weight:500;
-  z-index:9999;opacity:0;transform:translateX(24px) scale(.95);
-  transition:all .3s cubic-bezier(.34,1.4,.64,1);pointer-events:none;
-  max-width:340px;display:flex;align-items:center;gap:9px;
-  box-shadow:0 12px 40px rgba(7,89,133,.3);
-}
-.toast.show{opacity:1;transform:translateX(0) scale(1)}
-.toast.success{background:rgba(5,80,60,.88);border-color:rgba(110,231,183,.25)}
-.toast.error{background:rgba(120,20,20,.88);border-color:rgba(252,165,165,.25)}
-.toast::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.8}
+  const tglLahir  = tglLahirDariNIP(a.nip);
+  const gol       = getGolonganSingkat(a.pangkat);
+  const [y]       = (tglSurat||new Date().toISOString().slice(0,10)).split('-');
 
-/* CONFIRM DIALOG */
-.confirm-box{background:rgba(255,255,255,.88);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:28px;width:380px;box-shadow:0 24px 80px rgba(7,89,133,.25)}
-.confirm-title{font-size:15px;font-weight:700;margin-bottom:8px}
-.confirm-msg{font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:20px}
-.confirm-actions{display:flex;gap:8px;justify-content:flex-end}
+  const nomorFull = `800.1.1.1.13/${nomor}//BPKAD/${y}`;
+  const mkLamaStr = `${mkLamaTh} Tahun ${mkLamaBl} Bulan`;
+  const mkBaruStr = `${mkBaruTh} Tahun ${mkBaruBl} Bulan`;
 
-/* READ-ONLY mode */
-body.readonly .btn-primary:not(.always-allow),.readonly .btn-danger,.readonly .btn-success{pointer-events:none;opacity:.4}
-/* Sembunyikan elemen khusus admin saat mode readonly */
-body.readonly .admin-only{display:none!important}
-body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
+  closeModal();
 
+  // ── Render surat ke div print lalu panggil window.print() ──
+  const el = document.getElementById('print-surat-kgb');
+  if(!el){ showToast('Element print tidak ditemukan','error'); return; }
 
-/* ═══════════════════ CUTI MODULE ═══════════════════ */
-/* Timeline steps */
-.approval-timeline{display:flex;align-items:flex-start;gap:0;margin:16px 0;position:relative}
-.approval-timeline::before{content:'';position:absolute;top:16px;left:16px;right:16px;height:2px;background:var(--bg3);z-index:0}
-.atstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1}
-.atstep-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid var(--bd2);background:var(--bg1);transition:all .2s}
-.atstep-dot.done{background:var(--grn-tx);border-color:var(--grn-tx);color:#fff}
-.atstep-dot.active{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 4px var(--primary-bg)}
-.atstep-dot.rejected{background:var(--red-tx);border-color:var(--red-tx);color:#fff}
-.atstep-dot.pending{background:var(--bg2);border-color:var(--bd2);color:var(--tx3)}
-.atstep-label{font-size:10px;font-weight:600;color:var(--tx2);text-align:center;max-width:80px}
-.atstep-sub{font-size:9px;color:var(--tx3);text-align:center;max-width:80px}
-/* Leave balance bar */
-.leave-bar-wrap{display:flex;flex-direction:column;gap:3px}
-.leave-bar-track{height:6px;border-radius:3px;background:var(--bg3);overflow:hidden}
-.leave-bar-fill{height:100%;border-radius:3px;transition:width .4s}
-.leave-bal-num{font-size:10px;font-weight:700}
-/* Calendar picker styles */
-.cuti-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px}
-.cuti-cal-head{font-size:9px;font-weight:700;text-align:center;color:var(--tx3);padding:3px 0}
-.cuti-cal-day{font-size:11px;text-align:center;padding:4px;border-radius:5px;cursor:pointer;transition:background .1s;min-height:26px;display:flex;align-items:center;justify-content:center}
-.cuti-cal-day:hover{background:var(--primary-bg);color:var(--primary)}
-.cuti-cal-day.selected{background:var(--primary);color:#fff;font-weight:700}
-.cuti-cal-day.in-range{background:var(--primary-bg)}
-.cuti-cal-day.weekend{color:var(--red-tx);opacity:.7}
-.cuti-cal-day.holiday{background:var(--red-bg);color:var(--red-tx)}
-.cuti-cal-day.other-month{opacity:.3}
-.cuti-cal-day.disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
-/* Status badges */
-.b-draft{background:#f1f5f9;color:#475569}
-.b-step1{background:#dbeafe;color:#1e40af}
-.b-step2{background:#e0e7ff;color:#3730a3}
-.b-approved{background:var(--grn-bg);color:var(--grn-tx)}
-.b-rejected{background:var(--red-bg);color:var(--red-tx)}
-.b-cancelled{background:var(--bg3);color:var(--tx3)}
-/* Print surat */
-@media print{
-  body *{ visibility:hidden !important; }
-  #print-surat, #print-surat *{ visibility:visible !important; }
-  #print-surat-kgb, #print-surat-kgb *{ visibility:visible !important; }
-  #print-surat{
-    display:block !important;
-    position:fixed !important;
-    top:0; left:0;
-    width:100%;
-    background:white;
-  }
-  #print-surat-kgb{
-    display:block !important;
-    position:fixed !important;
-    top:0; left:0;
-    width:100%;
-    background:white;
-    padding:10mm 15mm;
-    box-sizing:border-box;
-  }
-  .surat-print{ padding:5mm 10mm; }
-  .surat-print table td,
-  .surat-print table tr,
-  .surat-print table{ border:none !important; }
-  #sk-kgb-content table td,
-  #sk-kgb-content table tr,
-  #sk-kgb-content table{ border:none !important; }
-}
-#print-surat{ display:none }
-#print-surat-kgb{ display:none }
+  // Sembunyikan print-surat biasa agar tidak bentrok
+  const elSurat = document.getElementById('print-surat');
+  if(elSurat) elSurat.innerHTML = '';
 
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(14,165,233,.25);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:rgba(14,165,233,.4)}
+  el.innerHTML = `
+  <div class="sk-kgb-print" id="sk-kgb-content" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000">
 
-/* ── PHOTO UPLOAD ── */
-.photo-upload-circle{width:100px;height:100px;border-radius:50%;overflow:hidden;border:3px solid rgba(14,165,233,.3);box-shadow:0 0 0 3px rgba(14,165,233,.2),0 8px 24px rgba(14,165,233,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .2s;flex-shrink:0}
-.photo-upload-circle:hover .photo-upload-overlay{opacity:1}
-.photo-upload-circle img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.photo-upload-overlay{position:absolute;inset:0;background:rgba(22,73,200,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;border-radius:50%}
-.photo-upload-overlay svg{color:#fff}
-.photo-upload-overlay span{font-size:9px;color:#fff;font-weight:600;margin-top:3px}
-.photo-crop-preview{width:120px;height:120px;border-radius:50%;overflow:hidden;border:3px solid var(--primary);margin:0 auto;display:flex;align-items:center;justify-content:center;background:var(--bg2)}
-.photo-size-bar{height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;margin-top:6px}
-.photo-size-fill{height:100%;border-radius:2px;background:var(--primary);transition:width .3s}
+    <!-- KOP SURAT -->
+    <table style="width:100%;border-bottom:3px solid #000;margin-bottom:8pt;border-collapse:collapse">
+      <tr>
+        <td style="width:70px;text-align:center;vertical-align:middle">
+          ${_logoData?`<img src="${_logoData}" style="width:60px;height:60px;object-fit:contain">`:'<div style="width:60px;height:60px;border:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt">LOGO</div>'}
+        </td>
+        <td style="text-align:center;vertical-align:middle">
+          <div style="font-size:12pt;font-weight:bold">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div style="font-size:14pt;font-weight:bold">BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH</div>
+          <div style="font-size:9pt">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan (Kawasan Perkantoran Pemerintah Provinsi Kalimantan Selatan)</div>
+          <div style="font-size:9pt">Laman : https://bpkad.kalselprov.go.id, Pos-el : bpkad@kalselprov.go.id</div>
+        </td>
+      </tr>
+    </table>
 
-/* ── Settings & Alokasi full width ─────────────────────── */
-#page-settings > div,
-#page-alokasi-cuti > div {
-  width: 100%;
-}
-#page-settings .cc,
-#page-alokasi-cuti .cc {
-  width: 100%;
-  box-sizing: border-box;
+    <!-- TANGGAL & NOMOR SURAT -->
+    <div style="text-align:right;margin-bottom:8pt">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</div>
+    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
+      <tr><td style="width:90px">Nomor</td><td style="width:10px">:</td><td>${nomorFull}</td></tr>
+      <tr><td>Sifat</td><td>:</td><td>Biasa</td></tr>
+      <tr><td>Lampiran</td><td>:</td><td>-</td></tr>
+      <tr><td>Hal</td><td>:</td><td>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td></tr>
+    </table>
+
+    <!-- TUJUAN -->
+    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
+      <tr>
+        <td style="width:30px;vertical-align:top">Yth.</td>
+        <td>Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+      </tr>
+      <tr><td></td><td>u.p. Kepala Bidang Perbendaharaan, Akuntansi dan Pelaporan Keuangan Daerah</td></tr>
+      <tr><td></td><td>di -</td></tr>
+      <tr><td></td><td>tempat</td></tr>
+    </table>
+
+    <!-- ISI -->
+    <p style="text-align:justify;margin-bottom:10pt">
+      Dengan ini diberitahukan, bahwa berhubung dengan telah dipenuhinya masa kerja dan syarat lainnya kepada :
+    </p>
+
+    <table style="width:100%;margin-bottom:10pt;border-collapse:collapse">
+      <tr>
+        <td style="width:20px;vertical-align:top">1.</td>
+        <td style="width:200px;vertical-align:top">Nama dan Tanggal Lahir</td>
+        <td style="width:10px;vertical-align:top">:</td>
+        <td><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
+      </tr>
+      <tr>
+        <td>2.</td><td>NIP</td><td>:</td><td>${a.nip}</td>
+      </tr>
+      <tr>
+        <td>3.</td><td>Pangkat (Gol.ruang) Jabatan</td><td>:</td>
+        <td>${a.pangkat} / ${a.jabatan||'...'}</td>
+      </tr>
+      <tr>
+        <td>4.</td><td>Kantor / Tempat</td><td>:</td>
+        <td>Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+      </tr>
+      <tr>
+        <td>5.</td><td>Gaji Pokok Lama</td><td>:</td>
+        <td>Rp ${num(gajiLama)},-</td>
+      </tr>
+    </table>
+
+    <p style="text-align:justify;margin-bottom:6pt">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
+
+    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
+      <tr>
+        <td style="width:20px">a.</td><td style="width:200px">Oleh Pejabat</td><td style="width:10px">:</td>
+        <td>Gubernur Kalimantan Selatan</td>
+      </tr>
+      <tr>
+        <td>b.</td><td>Tanggal / Nomor</td><td>:</td>
+        <td>${tglNomorSblm||'...........'}</td>
+      </tr>
+      <tr>
+        <td>c.</td><td>Terhitung mulai tanggal berlakunya gaji tersebut</td><td>:</td>
+        <td>${fmtTglIndoStr(tmtSblm)}</td>
+      </tr>
+      <tr>
+        <td>d.</td><td>Masa Kerja Golongan</td><td>:</td>
+        <td>${mkLamaStr}</td>
+      </tr>
+    </table>
+
+    <p style="margin-bottom:10pt">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
+
+    <table style="width:100%;margin-bottom:20pt;border-collapse:collapse">
+      <tr>
+        <td style="width:20px">6.</td><td style="width:200px">Gaji Pokok Baru</td><td style="width:10px">:</td>
+        <td><strong>Rp ${num(gajiBaru)},-</strong></td>
+      </tr>
+      <tr>
+        <td>7.</td><td>Berdasarkan Masa Kerja</td><td>:</td>
+        <td>${mkBaruStr}</td>
+      </tr>
+      <tr>
+        <td>8.</td><td>Dalam Golongan</td><td>:</td>
+        <td>${gol}</td>
+      </tr>
+      <tr>
+        <td>9.</td><td>Terhitung Mulai Tanggal</td><td>:</td>
+        <td>${fmtTglIndoStr(tglPenetapan)}</td>
+      </tr>
+      <tr>
+        <td>10.</td><td>Kenaikan Gaji Berkala Berikutnya</td><td>:</td>
+        <td>${fmtTglIndoStr(tglBerikutnya)}</td>
+      </tr>
+    </table>
+
+    <p style="text-align:justify;margin-bottom:20pt">
+      Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
+    </p>
+
+    <!-- TTD -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:40pt">
+      <tr>
+        <td style="width:60%"></td>
+        <td style="text-align:left">
+          <div>a.n. GUBERNUR KALIMANTAN SELATAN</div>
+          <div>KEPALA BADAN PENGELOLAAN KEUANGAN</div>
+          <div>DAN ASET DAERAH</div>
+          <div>PROVINSI KALIMANTAN SELATAN,</div>
+          <div style="margin-top:60pt">&nbsp;</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- TEMBUSAN -->
+    <div style="font-size:9pt">
+      <div>Tembusan :</div>
+      <div>1.&nbsp;&nbsp;Kepala Badan Kepegawaian Daerah Provisi Kalsel di Banjarbaru</div>
+      <div>2.&nbsp;&nbsp;Kepala Cabang PT. Taspen Banjarmasin di Banjarmasin</div>
+      <div>3.&nbsp;&nbsp;Bendaharawan Gaji PNS yang Bersangkutan</div>
+      <div>4.&nbsp;&nbsp;Sdr. ${a.nama}</div>
+    </div>
+  </div>`;
+
+  // Beri waktu browser render sebelum print
+  setTimeout(()=>{
+    window.print();
+    // Kosongkan setelah print
+    setTimeout(()=>{ el.innerHTML=''; }, 500);
+  }, 300);
 }
