@@ -209,7 +209,7 @@ function eksekusiCetakSKKGB(id){
   if(elSurat) elSurat.innerHTML = '';
 
   el.innerHTML = `
-  <div class="sk-kgb-print" id="sk-kgb-content" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000">
+  <div class="sk-kgb-print" id="sk-kgb-content" style="font-family:Arial,sans-serif;font-size:11pt;color:#000">
 
     <!-- KOP SURAT — sama persis dengan surat cuti -->
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
