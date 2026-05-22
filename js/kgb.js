@@ -209,7 +209,7 @@ function eksekusiCetakSKKGB(id){
   if(elSurat) elSurat.innerHTML = '';
 
   el.innerHTML = `
-  <div id="sk-kgb-content" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000;width:190mm;margin:0 auto;padding:0">
+  <div class="sk-kgb-print" id="sk-kgb-content" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000">
 
     <!-- KOP SURAT -->
     <table style="width:100%;border-bottom:3px solid #000;margin-bottom:8pt;border-collapse:collapse">
