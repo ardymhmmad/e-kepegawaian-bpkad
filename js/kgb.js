@@ -323,8 +323,10 @@ function eksekusiCetakSKKGB(id){
         <td style="border:none;padding:2px 0">${tglNomorSblm||'...........'}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">c.</td><td style="border:none;padding:2px 0">Terhitung mulai tanggal berlakunya gaji tersebut</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${fmtTglIndoStr(tmtSblm)}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">c.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Terhitung mulai tanggal<br>berlakunya gaji tersebut</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">${fmtTglIndoStr(tmtSblm)}</td>
       </tr>
       <tr>
         <td style="border:none;padding:2px 0">d.</td><td style="border:none;padding:2px 0">Masa Kerja Golongan</td><td style="border:none;padding:2px 0">:</td>
