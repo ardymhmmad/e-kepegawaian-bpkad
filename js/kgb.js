@@ -236,7 +236,7 @@ function eksekusiCetakSKKGB(id){
     <div style="text-align:right;margin-bottom:6pt">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</div>
 
     <!-- NOMOR & HAL -->
-    <table style="width:60%;border-collapse:collapse;border:none;margin-bottom:10pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:10pt">
       <tr>
         <td style="width:90px;border:none;padding:2px 0">Nomor</td>
         <td style="width:12px;border:none;padding:2px 0">:</td>
