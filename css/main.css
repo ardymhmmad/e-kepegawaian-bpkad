@@ -592,6 +592,15 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
   }
   .surat-print{ padding:5mm 10mm; }
   .sk-kgb-print{ padding:5mm 10mm; }
+  #sk-kgb-content, #sk-kgb-content *{
+    font-family: Arial, sans-serif !important;
+    font-size: 11pt !important;
+    color: #000 !important;
+  }
+  #sk-kgb-content .kop-instansi-1{ font-size:14pt !important; }
+  #sk-kgb-content .kop-instansi-2{ font-size:18pt !important; }
+  #sk-kgb-content .kop-alamat{ font-size:10pt !important; }
+  #sk-kgb-content .tembusan-text{ font-size:9pt !important; }
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
