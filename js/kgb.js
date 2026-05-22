@@ -220,12 +220,12 @@ function eksekusiCetakSKKGB(id){
             : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`}
         </td>
         <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
-          <div style="font-size:14pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
-          <div style="font-size:18pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
-          <div style="font-size:18pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
-          <div style="font-size:10pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
-          <div style="font-size:10pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
-          <div style="font-size:10pt;color:#000">Laman : https://bpkad.kalselprov.go.id,&nbsp; Pos-el : bpkad@kalselprov.go.id</div>
+          <div class="kop-instansi-1" style="font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div class="kop-instansi-2" style="font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div class="kop-instansi-2" style="font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div class="kop-alamat" style="color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div class="kop-alamat" style="color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div class="kop-alamat" style="color:#000">Laman : https://bpkad.kalselprov.go.id,&nbsp; Pos-el : bpkad@kalselprov.go.id</div>
         </td>
       </tr>
     </table>
@@ -380,7 +380,7 @@ function eksekusiCetakSKKGB(id){
     </table>
 
     <!-- TEMBUSAN -->
-    <div style="font-size:9pt;margin-top:8pt">
+    <div class="tembusan-text" style="margin-top:8pt">
       <div style="margin-bottom:3pt">Tembusan :</div>
       <div>1.&nbsp;&nbsp;Kepala Badan Kepegawaian Daerah Provisi Kalsel di Banjarbaru</div>
       <div>2.&nbsp;&nbsp;Kepala Cabang PT. Taspen Banjarmasin di Banjarmasin</div>
