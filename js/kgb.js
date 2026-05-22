@@ -234,21 +234,47 @@ function eksekusiCetakSKKGB(id){
 
     <!-- NOMOR & TANGGAL -->
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:10pt">
-      <tr><td style="width:110px;border:none;padding:2px 0">Nomor</td><td style="width:14px;border:none">:</td><td style="border:none">${nomorFull}</td><td style="border:none;text-align:right">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</td></tr>
-      <tr><td style="border:none;padding:2px 0">Sifat</td><td style="border:none">:</td><td style="border:none">Biasa</td><td style="border:none"></td></tr>
-      <tr><td style="border:none;padding:2px 0">Lampiran</td><td style="border:none">:</td><td style="border:none">-</td><td style="border:none"></td></tr>
-      <tr><td style="border:none;padding:2px 0">Hal</td><td style="border:none">:</td><td style="border:none"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td><td style="border:none"></td></tr>
+      <tr>
+        <td style="width:80px;border:none;padding:2px 0;vertical-align:top">Nomor</td>
+        <td style="width:12px;border:none;vertical-align:top">:</td>
+        <td style="border:none;vertical-align:top">${nomorFull}</td>
+        <td style="border:none;text-align:right;vertical-align:top;white-space:nowrap">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">Sifat</td>
+        <td style="border:none">:</td>
+        <td style="border:none" colspan="2">Biasa</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">Lampiran</td>
+        <td style="border:none">:</td>
+        <td style="border:none" colspan="2">-</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
+        <td style="border:none;vertical-align:top">:</td>
+        <td style="border:none" colspan="2"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
+      </tr>
     </table>
 
     <!-- TUJUAN -->
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
-        <td style="width:34px;vertical-align:top;border:none">Yth.</td>
-        <td style="border:none">Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+        <td style="width:30px;vertical-align:top;border:none;padding:2px 0">Yth.</td>
+        <td style="border:none;padding:2px 0">Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
       </tr>
-      <tr><td style="border:none"></td><td style="border:none">u.p. Kepala Bidang Perbendaharaan, Akuntansi dan Pelaporan Keuangan Daerah</td></tr>
-      <tr><td style="border:none"></td><td style="border:none">di -</td></tr>
-      <tr><td style="border:none"></td><td style="border:none"><u>tempat</u></td></tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0">u.p. Kepala Bidang Perbendaharaan, Akuntansi dan Pelaporan Keuangan Daerah</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0">di -</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0"><u>tempat</u></td>
+      </tr>
     </table>
 
     <!-- ISI -->
@@ -259,7 +285,7 @@ function eksekusiCetakSKKGB(id){
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8pt">
       <tr>
         <td style="width:24px;vertical-align:top;border:none;padding:2px 0">1.</td>
-        <td style="width:220px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
+        <td style="width:200px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
         <td style="width:14px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="border:none;padding:2px 0"><strong>${a.nama}</strong>&nbsp;&nbsp;(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
       </tr>
@@ -286,7 +312,7 @@ function eksekusiCetakSKKGB(id){
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
         <td style="width:24px;border:none;padding:2px 0">a.</td>
-        <td style="width:220px;border:none;padding:2px 0">Oleh Pejabat</td>
+        <td style="width:200px;border:none;padding:2px 0">Oleh Pejabat</td>
         <td style="width:14px;border:none;padding:2px 0">:</td>
         <td style="border:none;padding:2px 0">Gubernur Kalimantan Selatan</td>
       </tr>
@@ -309,7 +335,7 @@ function eksekusiCetakSKKGB(id){
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
       <tr>
         <td style="width:24px;border:none;padding:2px 0">6.</td>
-        <td style="width:220px;border:none;padding:2px 0">Gaji Pokok Baru</td>
+        <td style="width:200px;border:none;padding:2px 0">Gaji Pokok Baru</td>
         <td style="width:14px;border:none;padding:2px 0">:</td>
         <td style="border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
       </tr>
