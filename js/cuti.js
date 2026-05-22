@@ -1262,12 +1262,25 @@ function _doCetakSurat(id, nomorSuratOverride){
 
 function terbilang(n){
   if(!n||n<=0) return 'nol';
-  const s=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan','sepuluh',
-           'sebelas','dua belas','tiga belas','empat belas','lima belas','enam belas',
-           'tujuh belas','delapan belas','sembilan belas','dua puluh'];
-  if(n<=20) return s[n];
-  if(n<30) return 'dua puluh '+s[n-20];
-  if(n<40) return 'tiga puluh'+(n%10?' '+s[n%10]:'');
-  if(n<50) return 'empat puluh'+(n%10?' '+s[n%10]:'');
+  const sat=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan'];
+  const bls=['','sepuluh','dua puluh','tiga puluh','empat puluh','lima puluh',
+             'enam puluh','tujuh puluh','delapan puluh','sembilan puluh'];
+  const bls11=['sebelas','dua belas','tiga belas','empat belas','lima belas',
+               'enam belas','tujuh belas','delapan belas','sembilan belas'];
+  if(n<=9)   return sat[n];
+  if(n===10) return 'sepuluh';
+  if(n<=19)  return bls11[n-11];
+  if(n<100){
+    const p=Math.floor(n/10), s=n%10;
+    return bls[p]+(s?' '+sat[s]:'');
+  }
+  if(n<200){
+    const s=n%100;
+    return 'seratus'+(s?' '+terbilang(s):'');
+  }
+  if(n<1000){
+    const p=Math.floor(n/100), s=n%100;
+    return sat[p]+' ratus'+(s?' '+terbilang(s):'');
+  }
   return String(n);
 }
