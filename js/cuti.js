@@ -538,7 +538,12 @@ function onCaJenisChange(){
     if(mulaiEl?.value){
       const s=mulaiEl.value;
       const [y,m,d]=s.split('-').map(Number);
-      const end=new Date(y, m+2, d); // +3 bulan dari tgl mulai
+      // +3 bulan: bulan ke-(m+3), hari sama, lalu mundur 1 hari
+      // Contoh: 21 Apr → 21 Jul - 1 hari = 20 Jul? Tidak.
+      // Aturan: mulai 21 Apr → selesai 20 Jul (tepat 3 bulan kalender = 90/91 hari)
+      // Atau: mulai 21 Apr → selesai 21 Jul - 1 = 20 Jul
+      // Sesuai permintaan: mulai 21 Apr → selesai 21 Jul (tanggal sama bulan+3)
+      const end=new Date(y, m-1+3, d); // bulan JS 0-based, jadi m-1+3
       const endStr=end.getFullYear()+'-'+String(end.getMonth()+1).padStart(2,'0')+'-'+String(end.getDate()).padStart(2,'0');
       const selesaiEl=document.getElementById('ca-selesai');
       if(selesaiEl){ selesaiEl.value=endStr; }
