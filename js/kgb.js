@@ -238,7 +238,7 @@ function eksekusiCetakSKKGB(id){
         <td style="border:none;text-align:right;vertical-align:top;white-space:nowrap">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">Nomor</td>
+        <td style="border:none;padding:1px 0">Nomor</td>
         <td style="border:none;padding:2px 0">:</td>
         <td style="border:none;padding:2px 0">${nomorFull}</td>
       </tr>
