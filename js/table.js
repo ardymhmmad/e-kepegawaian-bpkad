@@ -145,7 +145,7 @@ function renderPg2(type,total,filters){
   el.innerHTML=h;
 }
 function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
-function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
+function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
 
 // ═══════════════════════════════════════════════════
 // KGB TABLE
@@ -154,7 +154,7 @@ function renderKGB(filters={}){
   const q=(filters.q||'').toLowerCase();
   const unit=filters.unit||'';
   const status=filters.status||'';
-  const heads=['NIP','Nama ASN','Unit Kerja','Gol','TMT KGB','Gaji Saat Ini','Tgl KGB Berikut','Status','Keterangan'];
+  const heads=['NIP','Nama ASN','Unit Kerja','Gol','TMT KGB','Gaji Saat Ini','Tgl KGB Berikut','Status','Keterangan','Aksi'];
   const th=document.getElementById('kgb-thead');
   if(th) th.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
   const data=DB.asn
@@ -176,6 +176,7 @@ function renderKGB(filters={}){
       <td>${fmtDate(k.due)}</td>
       <td><span class="badge ${kgbBadge(k.status)}">${k.status}</span></td>
       <td style="font-size:11px;color:var(--tx2)">KGB berikutnya ${fmtDate(k.due)}${k.daysToKGB>0?' ('+k.daysToKGB+' hari lagi)':' (Lewat jatuh tempo)'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-sm btn-primary" onclick="cetakSKKGB('${a.id}')">🖨 Cetak SK</button></td>
     </tr>`;
   }).join('')||`<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
   renderPg2('kgb',data.length,filters);
@@ -194,7 +195,7 @@ function renderPensiun(filters={}){
   if(th) th.innerHTML = '<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
 
   const data = DB.asn
-    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||(a.nip||'').includes(q))) && (!unit||a.unit===unit))
+    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q))) && (!unit||a.unit===unit))
     .filter(a => { if(!status) return true; return calcPensiun(a).status===status; })
     .sort((a,b)=>{
       const pa=calcPensiun(a), pb=calcPensiun(b);
