@@ -232,14 +232,14 @@ function eksekusiCetakSKKGB(id){
     <hr style="border:none;border-top:3px solid #000;margin:2px 0">
     <hr style="border:none;border-top:1px solid #000;margin:2px 0 10px">
 
-    <!-- NOMOR & TANGGAL -->
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
+    <!-- TANGGAL rata kanan -->
+    <div style="text-align:right;margin-bottom:6pt">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</div>
+
+    <!-- NOMOR & HAL -->
+    <table style="width:60%;border-collapse:collapse;border:none;margin-bottom:10pt">
       <tr>
-        <td style="border:none;text-align:right;vertical-align:top;white-space:nowrap">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</td>
-      </tr>
-      <tr>
-        <td style="border:none;padding:2px 0">Nomor</td>
-        <td style="border:none;padding:2px 0">:</td>
+        <td style="width:90px;border:none;padding:2px 0">Nomor</td>
+        <td style="width:12px;border:none;padding:2px 0">:</td>
         <td style="border:none;padding:2px 0">${nomorFull}</td>
       </tr>
       <tr>
@@ -253,8 +253,8 @@ function eksekusiCetakSKKGB(id){
         <td style="border:none;padding:2px 0">-</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">Hal</td>
-        <td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
         <td style="border:none;padding:2px 0"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
       </tr>
     </table>
