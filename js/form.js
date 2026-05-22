@@ -10,6 +10,7 @@ const formDefs={
     {id:'tmt_pangkat',l:'TMT Pangkat',t:'date'},{id:'tmt_kgb',l:'TMT KGB',t:'date'},{id:'gaji',l:'Gaji Pokok (Rp)',t:'number'},
     {id:'no_hp',l:'No. HP / WhatsApp',t:'text'},{id:'email',l:'Email',t:'text'},
     {id:'batas_usia_pensiun',l:'Batas Usia Pensiun (tahun)',t:'number'},
+    {id:'masa_kerja_tahun',l:'Masa Kerja Golongan (Tahun)',t:'number'},{id:'masa_kerja_bulan',l:'Masa Kerja Golongan (Bulan)',t:'number'},
     {id:'_unit_sub',l:'',t:'unit_sub'}
   ],
   pppk:[
@@ -155,6 +156,7 @@ function showDetail(type,id){
       </div>
       <div class="dc"><div class="dc-title">KGB — Gaji Berkala</div>
         ${dr('TMT KGB',fmt(r.tmt_kgb))}
+        ${dr('Masa Kerja Golongan',r.masa_kerja_tahun!=null?(r.masa_kerja_tahun+' Tahun '+(r.masa_kerja_bulan||0)+' Bulan'):'—')}
         ${dr('Gaji Saat Ini','Rp '+num(kg.gajiSkrg))}
         ${dr('Jatuh Tempo KGB',fmtDate(kg.due))}
         ${dr('Status KGB','<span class="badge '+kgbBadge(kg.status)+'">'+kg.status+'</span>')}
@@ -403,7 +405,7 @@ function exportExcel(type){
     data=DB.asn.map(a=>{ const k=calcKGB(a); return {NIP:a.nip,'Nama ASN':a.nama,'Unit Kerja':a.unit,'Golongan':a.pangkat,'TMT KGB':a.tmt_kgb,'Gaji Saat Ini':k.gajiSkrg,'Tgl KGB Berikutnya':fmtDate(k.due),'Status':k.status}; });
     name='KGB';
   } else if(type==='asn'){
-    data=DB.asn.map(r=>({NIP:r.nip,'Nama Lengkap':r.nama,'Pangkat/Golongan':r.pangkat,Pendidikan:r.pendidikan,Jabatan:r.jabatan,'Jenis Kelamin':r.jk,'Unit Kerja':r.unit,'Sub Unit':r.subunit,'TMT Pangkat':r.tmt_pangkat,'TMT KGB':r.tmt_kgb,'Gaji Pokok':r.gaji}));
+    data=DB.asn.map(r=>({NIP:r.nip,'Nama Lengkap':r.nama,'Pangkat/Golongan':r.pangkat,Pendidikan:r.pendidikan,Jabatan:r.jabatan,'Jenis Kelamin':r.jk,'Unit Kerja':r.unit,'Sub Unit':r.subunit,'TMT Pangkat':r.tmt_pangkat,'TMT KGB':r.tmt_kgb,'Gaji Pokok':r.gaji,'Masa Kerja Tahun':r.masa_kerja_tahun||0,'Masa Kerja Bulan':r.masa_kerja_bulan||0}));
     name='ASN';
   } else if(type==='pppk'){
     data=DB.pppk.map(r=>({'NIPPPK PW':r.nipppk,'Nama Lengkap':r.nama,Pendidikan:r.pendidikan,Jabatan:r.jabatan,'Jenis Kelamin':r.jk,'Unit Kerja':r.unit,'Sub Unit':r.subunit,'Akhir Kontrak':r.akhir_kontrak}));
