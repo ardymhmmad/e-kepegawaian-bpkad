@@ -406,7 +406,7 @@ function eksekusiCetakSKKGB(id){
     <!-- TTD -->
     <table style="width:100%;border-collapse:collapse;border:none">
       <tr>
-        <td style="width:50%;border:none"></td>
+        <td style="width:40%;border:none"></td>
         <td style="border:none;vertical-align:top">
           <div style="display:flex;gap:0">
             <span style="min-width:40px">a.n.</span>
