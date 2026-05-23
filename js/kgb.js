@@ -96,10 +96,12 @@ function cetakSKKGB(id){
   // Data SK sebelumnya dari ASN
   const noSkSblm  = a.no_sk_kgb_sebelumnya  || '';
   const tglSkSblm = a.tgl_sk_kgb_sebelumnya || '';
-  // Format gabung untuk tampil di form: "01 Januari 2023 / No.XXX"
-  const tglNomorSblmDefault = tglSkSblm && noSkSblm
-    ? tglSkSblm + ' / ' + noSkSblm
-    : tglSkSblm || noSkSblm || '';
+  // Konversi YYYY-MM-DD → "1 Januari 2023"
+  const tglSkSblmIndo = tglSkSblm ? fmtTglIndoStr(tglSkSblm) : '';
+  // Format gabung untuk tampil di form: "1 Januari 2023 / No.XXX"
+  const tglNomorSblmDefault = tglSkSblmIndo && noSkSblm
+    ? tglSkSblmIndo + ' / ' + noSkSblm
+    : tglSkSblmIndo || noSkSblm || '';
 
   // Tanggal surat = hari ini
   const today = new Date();
