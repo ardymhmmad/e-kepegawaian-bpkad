@@ -125,8 +125,12 @@ function cetakSKKGB(id){
         <div style="font-size:10px;color:var(--tx3)">800.1.1.1.13/<strong>NOMOR</strong>//BPKAD/${today.getFullYear()}</div>
       </div>
       <div class="fg">
-        <label>Tanggal/Nomor SK Sebelumnya</label>
-        <input type="text" id="sk-tgl-nomor-sblm" value="${tglNomorSblmDefault}" placeholder="cth: 01 Januari 2023 / No.XXX">
+        <label>Tanggal SK Sebelumnya</label>
+        <input type="date" id="sk-tgl-sblm-date" value="${tglSkSblm||''}">
+      </div>
+      <div class="fg">
+        <label>Nomor SK Sebelumnya</label>
+        <input type="text" id="sk-no-sblm" value="${noSkSblm}" placeholder="cth: 800.1.1.1.13/045//BPKAD/2023">
       </div>
       <div class="fg">
         <label>TMT KGB Sebelumnya</label>
@@ -187,7 +191,11 @@ function eksekusiCetakSKKGB(id){
 
   const tglSurat     = document.getElementById('sk-tgl-surat')?.value||'';
   const nomor        = (document.getElementById('sk-nomor')?.value||'').trim();
-  const tglNomorSblm = (document.getElementById('sk-tgl-nomor-sblm')?.value||'').trim();
+  const _tglSblmDate = document.getElementById('sk-tgl-sblm-date')?.value||'';
+  const _noSblm      = (document.getElementById('sk-no-sblm')?.value||'').trim();
+  const tglNomorSblm = (_tglSblmDate ? fmtTglIndoStr(_tglSblmDate) : '')
+    + (_tglSblmDate && _noSblm ? ' / ' : '')
+    + (_noSblm ? 'No. '+_noSblm : '');
   const tmtSblm      = document.getElementById('sk-tmt-sblm')?.value||'';
   const mkLamaTh     = parseInt(document.getElementById('sk-mk-lama-th')?.value)||0;
   const mkLamaBl     = parseInt(document.getElementById('sk-mk-lama-bl')?.value)||0;
