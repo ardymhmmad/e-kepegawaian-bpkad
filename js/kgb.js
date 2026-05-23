@@ -371,7 +371,7 @@ function eksekusiCetakSKKGB(id){
 
     <p style="margin-bottom:10pt;line-height:1.5;text-indent:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:10pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:7pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
