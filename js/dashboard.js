@@ -14,9 +14,9 @@ function renderDashboard(){
   const expPJLP=DB.pjlp.filter(j=>daysUntil(j.akhir_kontrak)<=30&&daysUntil(j.akhir_kontrak)>=0).length;
   const statCards=[
     {color:'#1649c8',bg:'#eef2ff',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',lbl:'Total Pegawai',val:totalN,note:'ASN + PPPK PW + PJLP',noteClass:'up',delay:'fade-up-1'},
-    {color:'#1649c8',bg:'#eef2ff',icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',lbl:'ASN',val:asnN,note:'Aparatur Sipil Negara',noteClass:'up',delay:'fade-up-2'},
-    {color:'#065f46',bg:'#ecfdf5',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',lbl:'PPPK Paruh Waktu',val:pppkN,note:'Pegawai kontrak PPPK',noteClass:'up',delay:'fade-up-3'},
-    {color:'#92400e',bg:'#fffbeb',icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',lbl:'PJLP',val:pjlpN,note:expPJLP?`${expPJLP} kontrak segera berakhir`:'Semua kontrak aktif',noteClass:expPJLP?'warn':'up',delay:'fade-up-4'},
+    {color:'#1649c8',bg:'#eef2ff',icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',lbl:'Aparatur Sipil Negara',val:asnN,note:'Total Aparatur Sipil Negara',noteClass:'up',delay:'fade-up-2'},
+    {color:'#065f46',bg:'#ecfdf5',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',lbl:'PPPK Paruh Waktu',val:pppkN,note:'Total PPPK Paruh Waktu',noteClass:'up',delay:'fade-up-3'},
+    {color:'#92400e',bg:'#fffbeb',icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',lbl:'PJLP',val:pjlpN,note:expPJLP?`${expPJLP} kontrak segera berakhir`:'Total PJLP',noteClass:expPJLP?'warn':'up',delay:'fade-up-4'},
   ];
   document.getElementById('db-stats').innerHTML=statCards.map(s=>`
     <div class="sc fade-up ${s.delay}" style="--sc-color:${s.color}">
@@ -55,7 +55,7 @@ function renderDashboard(){
 
   document.getElementById('db-charts1').innerHTML=`
     <div class="cc fade-up">
-      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Jenis Kelamin per Jenis Pegawai</div>
+      <div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Rekap Jenis Kelamin Seluruh Pegawai </div>
       ${gHtml}
     </div>
     <div class="cc fade-up fade-up-1">
@@ -74,7 +74,7 @@ function renderDashboard(){
   const rankHtml=GOL_LIST.filter(r=>rankMap[r]).map(r=>`<div class="bar-row"><div class="bar-lbl">${r}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(rankMap[r]/maxR*100)}%;background:#1a56db"></div></div><div class="bar-val">${rankMap[r]}</div></div>`).join('');
   const jpHtml=Object.entries(jpMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxJ*100)}%;background:#92400e"></div></div><div class="bar-val">${v}</div></div>`).join('');
   document.getElementById('db-charts2').innerHTML=`
-    <div class="cc fade-up"><div class="cc-title"><span class="cc-title-dot" style="background:#065f46"></span>Pendidikan ASN</div>${eduHtml||noData()}</div>
+    <div class="cc fade-up"><div class="cc-title"><span class="cc-title-dot" style="background:#065f46"></span>Rekap Pendidikan ASN</div>${eduHtml||noData()}</div>
     <div class="cc fade-up fade-up-1"><div class="cc-title"><span class="cc-title-dot" style="background:#1649c8"></span>Pangkat / Golongan ASN</div>${rankHtml||noData()}</div>
     <div class="cc fade-up fade-up-2"><div class="cc-title"><span class="cc-title-dot" style="background:#92400e"></span>Jenis Pekerjaan PJLP</div>${jpHtml||noData()}</div>`;
 
@@ -94,7 +94,7 @@ function renderDashboard(){
       <div style="text-align:center;padding:12px;background:var(--pur-bg);border-radius:8px"><div style="font-size:20px;font-weight:700;color:var(--pur-tx)">${DB.asn.filter(a=>calcKP(a).status==='Batas Pendidikan').length}</div><div style="font-size:10px;color:var(--pur-tx);margin-top:3px">Batas Pendidikan</div></div>
     </div>`;
 
-  document.getElementById('kp-badge').textContent=kpMS+kpIng;
+  document.getElementById('kp-badge').textContent=kpIng; // hanya Mengingatkan (≤4 bln)
   document.getElementById('kgb-badge').textContent=kgbAlert;
   updateCutiBadge();
 }
