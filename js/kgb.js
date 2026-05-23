@@ -404,7 +404,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">
+    <p style="text-align:justify;margin-bottom:3pt;line-height:1;text-indent:30px">
       Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
     </p>
 
