@@ -209,144 +209,193 @@ function eksekusiCetakSKKGB(id){
   if(elSurat) elSurat.innerHTML = '';
 
   el.innerHTML = `
-  <div id="sk-kgb-content" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000;width:190mm;margin:0 auto;padding:0">
+  <div class="sk-kgb-print" id="sk-kgb-content" style="font-family:Arial,sans-serif;font-size:11pt;color:#000">
 
-    <!-- KOP SURAT -->
-    <table style="width:100%;border-bottom:3px solid #000;margin-bottom:8pt;border-collapse:collapse">
-      <tr>
-        <td style="width:70px;text-align:center;vertical-align:middle">
-          ${_logoData?`<img src="${_logoData}" style="width:60px;height:60px;object-fit:contain">`:'<div style="width:60px;height:60px;border:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt">LOGO</div>'}
+    <!-- KOP SURAT — sama persis dengan surat cuti -->
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
+      <tr style="border:none">
+        <td style="width:130px;text-align:center;vertical-align:middle;border:none">
+          ${_logoData
+            ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
+            : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`}
         </td>
-        <td style="text-align:center;vertical-align:middle">
-          <div style="font-size:12pt;font-weight:bold">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
-          <div style="font-size:14pt;font-weight:bold">BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH</div>
-          <div style="font-size:9pt">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan (Kawasan Perkantoran Pemerintah Provinsi Kalimantan Selatan)</div>
-          <div style="font-size:9pt">Laman : https://bpkad.kalselprov.go.id, Pos-el : bpkad@kalselprov.go.id</div>
+        <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
+          <div class="kop-instansi-1" style="font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div class="kop-instansi-2" style="font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div class="kop-instansi-2" style="font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div class="kop-alamat" style="color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div class="kop-alamat" style="color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div class="kop-alamat" style="color:#000">Laman : https://bpkad.kalselprov.go.id,&nbsp; Pos-el : bpkad@kalselprov.go.id</div>
         </td>
       </tr>
     </table>
+    <hr style="border:none;border-top:3px solid #000;margin:2px 0">
+    <hr style="border:none;border-top:1px solid #000;margin:2px 0 10px">
 
-    <!-- TANGGAL & NOMOR SURAT -->
-    <div style="text-align:right;margin-bottom:8pt">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</div>
-    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
-      <tr><td style="width:90px">Nomor</td><td style="width:10px">:</td><td>${nomorFull}</td></tr>
-      <tr><td>Sifat</td><td>:</td><td>Biasa</td></tr>
-      <tr><td>Lampiran</td><td>:</td><td>-</td></tr>
-      <tr><td>Hal</td><td>:</td><td>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td></tr>
+    <!-- TANGGAL rata kanan -->
+    <div style="text-align:right;margin-bottom:6pt">Banjarbaru, ${fmtTglIndoStr(tglSurat)}</div>
+
+    <!-- NOMOR & HAL -->
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:10pt">
+      <tr>
+        <td style="width:90px;border:none;padding:2px 0">Nomor</td>
+        <td style="width:12px;border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${nomorFull}</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">Sifat</td>
+        <td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">Biasa</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">Lampiran</td>
+        <td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">-</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
+      </tr>
     </table>
 
     <!-- TUJUAN -->
-    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
-        <td style="width:30px;vertical-align:top">Yth.</td>
-        <td>Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+        <td style="width:30px;vertical-align:top;border:none;padding:2px 0">Yth.</td>
+        <td style="border:none;padding:2px 0">Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
       </tr>
-      <tr><td></td><td>u.p. Kepala Bidang Perbendaharaan, Akuntansi dan Pelaporan Keuangan Daerah</td></tr>
-      <tr><td></td><td>di -</td></tr>
-      <tr><td></td><td>tempat</td></tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0">u.p. Kepala Bidang Perbendaharaan, Akuntansi dan Pelaporan Keuangan Daerah</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0">di -</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0"></td>
+        <td style="border:none;padding:2px 0"><u>tempat</u></td>
+      </tr>
     </table>
 
     <!-- ISI -->
-    <p style="text-align:justify;margin-bottom:10pt">
+    <p style="text-align:justify;margin-bottom:10pt;line-height:1.5">
       Dengan ini diberitahukan, bahwa berhubung dengan telah dipenuhinya masa kerja dan syarat lainnya kepada :
     </p>
 
-    <table style="width:100%;margin-bottom:10pt;border-collapse:collapse">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8pt">
       <tr>
-        <td style="width:20px;vertical-align:top">1.</td>
-        <td style="width:200px;vertical-align:top">Nama dan Tanggal Lahir</td>
-        <td style="width:10px;vertical-align:top">:</td>
-        <td><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
+        <td style="width:20px;vertical-align:top;border:none;padding:2px 0">1.</td>
+        <td style="width:195px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
+        <td style="width:10px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0"><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
       </tr>
       <tr>
-        <td>2.</td><td>NIP</td><td>:</td><td>${a.nip}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">2.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">NIP</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0">${a.nip}</td>
       </tr>
       <tr>
-        <td>3.</td><td>Pangkat (Gol.ruang) Jabatan</td><td>:</td>
-        <td>${a.pangkat} / ${a.jabatan||'...'}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">3.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Pangkat (Gol.ruang) / Jabatan</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">${a.pangkat} / ${a.jabatan||'...'}</td>
       </tr>
       <tr>
-        <td>4.</td><td>Kantor / Tempat</td><td>:</td>
-        <td>Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">4.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Kantor / Tempat</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
       </tr>
       <tr>
-        <td>5.</td><td>Gaji Pokok Lama</td><td>:</td>
-        <td>Rp ${num(gajiLama)},-</td>
-      </tr>
-    </table>
-
-    <p style="text-align:justify;margin-bottom:6pt">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
-
-    <table style="width:100%;margin-bottom:14pt;border-collapse:collapse">
-      <tr>
-        <td style="width:20px">a.</td><td style="width:200px">Oleh Pejabat</td><td style="width:10px">:</td>
-        <td>Gubernur Kalimantan Selatan</td>
-      </tr>
-      <tr>
-        <td>b.</td><td>Tanggal / Nomor</td><td>:</td>
-        <td>${tglNomorSblm||'...........'}</td>
-      </tr>
-      <tr>
-        <td>c.</td><td>Terhitung mulai tanggal berlakunya gaji tersebut</td><td>:</td>
-        <td>${fmtTglIndoStr(tmtSblm)}</td>
-      </tr>
-      <tr>
-        <td>d.</td><td>Masa Kerja Golongan</td><td>:</td>
-        <td>${mkLamaStr}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">5.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Gaji Pokok Lama</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0">Rp ${num(gajiLama)},-</td>
       </tr>
     </table>
 
-    <p style="margin-bottom:10pt">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
+    <p style="text-align:justify;margin-bottom:6pt;line-height:1.5">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
-    <table style="width:100%;margin-bottom:20pt;border-collapse:collapse">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
-        <td style="width:20px">6.</td><td style="width:200px">Gaji Pokok Baru</td><td style="width:10px">:</td>
-        <td><strong>Rp ${num(gajiBaru)},-</strong></td>
+        <td style="width:24px;border:none;padding:2px 0">a.</td>
+        <td style="width:200px;border:none;padding:2px 0">Oleh Pejabat</td>
+        <td style="width:14px;border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">Gubernur Kalimantan Selatan</td>
       </tr>
       <tr>
-        <td>7.</td><td>Berdasarkan Masa Kerja</td><td>:</td>
-        <td>${mkBaruStr}</td>
+        <td style="border:none;padding:2px 0">b.</td><td style="border:none;padding:2px 0">Tanggal / Nomor</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${tglNomorSblm||'...........'}</td>
       </tr>
       <tr>
-        <td>8.</td><td>Dalam Golongan</td><td>:</td>
-        <td>${gol}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">c.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Terhitung mulai tanggal<br>berlakunya gaji tersebut</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">${fmtTglIndoStr(tmtSblm)}</td>
       </tr>
       <tr>
-        <td>9.</td><td>Terhitung Mulai Tanggal</td><td>:</td>
-        <td>${fmtTglIndoStr(tglPenetapan)}</td>
-      </tr>
-      <tr>
-        <td>10.</td><td>Kenaikan Gaji Berkala Berikutnya</td><td>:</td>
-        <td>${fmtTglIndoStr(tglBerikutnya)}</td>
+        <td style="border:none;padding:2px 0">d.</td><td style="border:none;padding:2px 0">Masa Kerja Golongan</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${mkLamaStr}</td>
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:20pt">
+    <p style="margin-bottom:10pt;line-height:1.5">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
+
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
+      <tr>
+        <td style="width:24px;border:none;padding:2px 0">6.</td>
+        <td style="width:200px;border:none;padding:2px 0">Gaji Pokok Baru</td>
+        <td style="width:14px;border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">7.</td><td style="border:none;padding:2px 0">Berdasarkan Masa Kerja</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${mkBaruStr}</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">8.</td><td style="border:none;padding:2px 0">Dalam Golongan</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${gol}</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">9.</td><td style="border:none;padding:2px 0">Terhitung Mulai Tanggal</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${fmtTglIndoStr(tglPenetapan)}</td>
+      </tr>
+      <tr>
+        <td style="border:none;padding:2px 0">10.</td><td style="border:none;padding:2px 0">Kenaikan Gaji Berkala Berikutnya</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0">${fmtTglIndoStr(tglBerikutnya)}</td>
+      </tr>
+    </table>
+
+    <p style="text-align:justify;margin-bottom:20pt;line-height:1.5">
       Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
     </p>
 
     <!-- TTD -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:40pt">
+    <table style="width:100%;border-collapse:collapse;border:none">
       <tr>
-        <td style="width:60%"></td>
-        <td style="text-align:left">
+        <td style="width:55%;border:none"></td>
+        <td style="border:none;vertical-align:top">
           <div>a.n. GUBERNUR KALIMANTAN SELATAN</div>
           <div>KEPALA BADAN PENGELOLAAN KEUANGAN</div>
           <div>DAN ASET DAERAH</div>
           <div>PROVINSI KALIMANTAN SELATAN,</div>
-          <div style="margin-top:60pt">&nbsp;</div>
+          <div style="margin-top:55pt">&nbsp;</div>
         </td>
       </tr>
     </table>
 
     <!-- TEMBUSAN -->
-    <div style="font-size:9pt">
-      <div>Tembusan :</div>
+    <div class="tembusan-text" style="margin-top:8pt">
+      <div style="margin-bottom:3pt">Tembusan :</div>
       <div>1.&nbsp;&nbsp;Kepala Badan Kepegawaian Daerah Provisi Kalsel di Banjarbaru</div>
       <div>2.&nbsp;&nbsp;Kepala Cabang PT. Taspen Banjarmasin di Banjarmasin</div>
       <div>3.&nbsp;&nbsp;Bendaharawan Gaji PNS yang Bersangkutan</div>
       <div>4.&nbsp;&nbsp;Sdr. ${a.nama}</div>
     </div>
+
   </div>`;
 
   // Beri waktu browser render sebelum print
