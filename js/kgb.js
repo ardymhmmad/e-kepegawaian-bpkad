@@ -298,7 +298,7 @@ function eksekusiCetakSKKGB(id){
     </table>
 
     <!-- ISI -->
-    <p style="text-align:justify;margin-bottom:10pt;line-height:1.5;margin-left:30px">
+    <p style="text-align:justify;margin-bottom:10pt;line-height:1.5;text-indent:30px">
       Dengan ini diberitahukan, bahwa berhubung dengan telah dipenuhinya masa kerja dan syarat lainnya kepada :
     </p>
 
@@ -335,7 +335,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:6pt;line-height:1.5;margin-left:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
+    <p style="text-align:justify;margin-bottom:6pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
@@ -360,7 +360,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="margin-bottom:10pt;line-height:1.5;margin-left:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
+    <p style="margin-bottom:10pt;line-height:1.5;text-indent:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
       <tr>
@@ -387,7 +387,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:20pt;line-height:1.5;margin-left:30px">
+    <p style="text-align:justify;margin-bottom:20pt;line-height:1.5;text-indent:30px">
       Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
     </p>
 
