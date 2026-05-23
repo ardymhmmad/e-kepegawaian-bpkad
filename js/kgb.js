@@ -286,25 +286,33 @@ function eksekusiCetakSKKGB(id){
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8pt">
       <tr>
-        <td style="width:24px;vertical-align:top;border:none;padding:2px 0">1.</td>
-        <td style="width:200px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
-        <td style="width:14px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0"><strong>${a.nama}</strong>&nbsp;&nbsp;(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
+        <td style="width:20px;vertical-align:top;border:none;padding:2px 0">1.</td>
+        <td style="width:195px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
+        <td style="width:10px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0"><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">2.</td><td style="border:none;padding:2px 0">NIP</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">2.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">NIP</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
         <td style="border:none;padding:2px 0">${a.nip}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">3.</td><td style="border:none;padding:2px 0">Pangkat (Gol.ruang) / Jabatan</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${a.pangkat} / ${a.jabatan||'...'}</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">3.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Pangkat (Gol.ruang) / Jabatan</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">${a.pangkat} / ${a.jabatan||'...'}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">4.</td><td style="border:none;padding:2px 0">Kantor / Tempat</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">4.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Kantor / Tempat</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">5.</td><td style="border:none;padding:2px 0">Gaji Pokok Lama</td><td style="border:none;padding:2px 0">:</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">5.</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">Gaji Pokok Lama</td>
+        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
         <td style="border:none;padding:2px 0">Rp ${num(gajiLama)},-</td>
       </tr>
     </table>
