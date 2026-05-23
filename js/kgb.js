@@ -289,11 +289,11 @@ function eksekusiCetakSKKGB(id){
       </tr>
       <tr>
         <td style="border:none;padding:2px 0"></td>
-        <td style="border:none;padding:2px 0">di&nbsp;-</td>
+        <td style="border:none;padding:2px 0;padding-left:194px">di&nbsp;-</td>
       </tr>
       <tr>
         <td style="border:none;padding:2px 0"></td>
-        <td style="border:none;padding:4px 0"><u>tempat</u></td>
+        <td style="border:none;padding:0 0 8px 194px"><u>tempat</u></td>
       </tr>
     </table>
 
@@ -304,34 +304,34 @@ function eksekusiCetakSKKGB(id){
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8pt">
       <tr>
-        <td style="width:20px;vertical-align:top;border:none;padding:2px 0">1.</td>
-        <td style="width:195px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
-        <td style="width:10px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0"><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">1.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0"><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0;vertical-align:top">2.</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">NIP</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0">${a.nip}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">2.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">NIP</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${a.nip}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0;vertical-align:top">3.</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">Pangkat (Gol.ruang) / Jabatan</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">${a.pangkat} / ${a.jabatan||'...'}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">3.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Pangkat (Gol.ruang) / Jabatan</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${a.pangkat} / ${a.jabatan||'...'}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0;vertical-align:top">4.</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">Kantor / Tempat</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">4.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Kantor / Tempat</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Kalimantan Selatan</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0;vertical-align:top">5.</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">Gaji Pokok Lama</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0">Rp ${num(gajiLama)},-</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">5.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Lama</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">Rp ${num(gajiLama)},-</td>
       </tr>
     </table>
 
@@ -339,24 +339,28 @@ function eksekusiCetakSKKGB(id){
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
-        <td style="width:24px;border:none;padding:2px 0">a.</td>
-        <td style="width:200px;border:none;padding:2px 0">Oleh Pejabat</td>
-        <td style="width:14px;border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">Gubernur Kalimantan Selatan</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">a.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Oleh Pejabat</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">Gubernur Kalimantan Selatan</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">b.</td><td style="border:none;padding:2px 0">Tanggal / Nomor</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${tglNomorSblm||'...........'}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">b.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Tanggal / Nomor</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${tglNomorSblm||'...........'}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0;vertical-align:top">c.</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">Terhitung mulai tanggal<br>berlakunya gaji tersebut</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0;vertical-align:top">${fmtTglIndoStr(tmtSblm)}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">c.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Terhitung mulai tanggal berlakunya gaji tersebut</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${fmtTglIndoStr(tmtSblm)}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">d.</td><td style="border:none;padding:2px 0">Masa Kerja Golongan</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${mkLamaStr}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">d.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Masa Kerja Golongan</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${mkLamaStr}</td>
       </tr>
     </table>
 
@@ -364,26 +368,34 @@ function eksekusiCetakSKKGB(id){
 
     <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
       <tr>
-        <td style="width:24px;border:none;padding:2px 0">6.</td>
-        <td style="width:200px;border:none;padding:2px 0">Gaji Pokok Baru</td>
-        <td style="width:14px;border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">7.</td><td style="border:none;padding:2px 0">Berdasarkan Masa Kerja</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${mkBaruStr}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">7.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Berdasarkan Masa Kerja</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${mkBaruStr}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">8.</td><td style="border:none;padding:2px 0">Dalam Golongan</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${gol}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">8.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Dalam Golongan</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${gol}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">9.</td><td style="border:none;padding:2px 0">Terhitung Mulai Tanggal</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${fmtTglIndoStr(tglPenetapan)}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">9.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Terhitung Mulai Tanggal</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${fmtTglIndoStr(tglPenetapan)}</td>
       </tr>
       <tr>
-        <td style="border:none;padding:2px 0">10.</td><td style="border:none;padding:2px 0">Kenaikan Gaji Berkala Berikutnya</td><td style="border:none;padding:2px 0">:</td>
-        <td style="border:none;padding:2px 0">${fmtTglIndoStr(tglBerikutnya)}</td>
+        <td style="width:22px;vertical-align:top;border:none;padding:2px 0">10.</td>
+        <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Kenaikan Gaji Berkala Berikutnya</td>
+        <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${fmtTglIndoStr(tglBerikutnya)}</td>
       </tr>
     </table>
 
