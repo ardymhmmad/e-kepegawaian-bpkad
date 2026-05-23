@@ -340,9 +340,9 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:6pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
+    <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:5pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">a.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Oleh Pejabat</td>
@@ -404,7 +404,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:5pt;line-height:1.5;text-indent:30px">
+    <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">
       Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
     </p>
 
