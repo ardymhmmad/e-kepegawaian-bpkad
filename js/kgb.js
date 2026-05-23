@@ -273,7 +273,7 @@ function eksekusiCetakSKKGB(id){
       <tr>
         <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
         <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
+        <td style="border:none;padding:2px 0">Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td>
       </tr>
     </table>
 
@@ -309,7 +309,7 @@ function eksekusiCetakSKKGB(id){
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="vertical-align:top;border:none;padding:2px 0">
           <div style="display:flex;justify-content:space-between;gap:8px">
-            <strong>${a.nama}</strong>
+    
             <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
           </div>
         </td>
@@ -376,7 +376,7 @@ function eksekusiCetakSKKGB(id){
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
+        <td style="vertical-align:top;border:none;padding:2px 0">Rp ${num(gajiBaru)},-</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">7.</td>
