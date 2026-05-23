@@ -406,15 +406,26 @@ function eksekusiCetakSKKGB(id){
     <!-- TTD -->
     <table style="width:100%;border-collapse:collapse;border:none">
       <tr>
-        <td style="width:55%;border:none"></td>
-        <td style="border:none;vertical-align:top">
-          <div>a.n. GUBERNUR KALIMANTAN SELATAN</div>
-          <div>KEPALA BADAN PENGELOLAAN KEUANGAN</div>
-          <div>DAN ASET DAERAH</div>
-          <div>PROVINSI KALIMANTAN SELATAN,</div>
-          <div style="margin-top:55pt">&nbsp;</div>
-        </td>
+       <div style="display:flex;gap:0">
+        <span style="min-width:40px">a.n.</span>
+        <span>
+        GUBERNUR KALIMANTAN SELATAN<br>
+        KEPALA BADAN PENGELOLAAN<br>
+        KEUANGAN DAN ASET DAERAH<br>
+        PROVINSI KALIMANTAN SELATAN,<br>
+        </span>
+      </div>
       </tr>
+<div style="display:flex;gap:0">
+        <span style="min-width:40px">a.n.</span>
+        <span>
+        GUBERNUR KALIMANTAN SELATAN<br>
+        KEPALA BADAN PENGELOLAAN<br>
+        KEUANGAN DAN ASET DAERAH<br>
+        PROVINSI KALIMANTAN SELATAN,<br>
+        </span>
+      </div>
+      
     </table>
 
     <!-- TEMBUSAN -->
