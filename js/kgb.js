@@ -422,7 +422,7 @@ function eksekusiCetakSKKGB(id){
             PROVINSI KALIMANTAN SELATAN,
             </span>
           </div>
-          <div style="height:80px"></div>
+          <div style="height:100px"></div>
         </td>
       </tr>
     </table>
