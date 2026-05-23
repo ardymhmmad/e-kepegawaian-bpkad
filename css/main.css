@@ -332,7 +332,7 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
 .sc-skel .sc-val{height:28px;width:60px;display:block}.sc-skel .sc-lbl{height:10px;width:80px;display:block;margin-bottom:8px}
 
 /* ── CHART CARDS — glass ── */
-.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .charts-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
 .cc{
   background:rgba(255,255,255,.6);
@@ -575,7 +575,6 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
 @media print{
   body *{ visibility:hidden !important; }
   #print-surat, #print-surat *{ visibility:visible !important; }
-  #print-surat-kgb, #print-surat-kgb *{ visibility:visible !important; }
   #print-surat{
     display:block !important;
     position:fixed !important;
@@ -583,33 +582,36 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
     width:100%;
     background:white;
   }
-  #print-surat-kgb{
-    display:block !important;
-    position:fixed !important;
-    top:0; left:0;
-    width:100%;
-    background:white;
-  }
-  .surat-print{ padding:5mm 10mm; }
-  .sk-kgb-print{ padding:5mm 10mm; }
-  #sk-kgb-content, #sk-kgb-content *{
-    font-family: Arial, sans-serif !important;
-    font-size: 11pt !important;
-    color: #000 !important;
-  }
-  #sk-kgb-content .kop-instansi-1{ font-size:14pt !important; }
-  #sk-kgb-content .kop-instansi-2{ font-size:18pt !important; }
-  #sk-kgb-content .kop-alamat{ font-size:10pt !important; }
-  #sk-kgb-content .tembusan-text{ font-size:9pt !important; }
+  .surat-print{ padding:0; }
   .surat-print table td,
   .surat-print table tr,
   .surat-print table{ border:none !important; }
-  #sk-kgb-content table td,
-  #sk-kgb-content table tr,
-  #sk-kgb-content table{ border:none !important; }
+  .surat-print p,
+  .surat-print table,
+  .surat-print table tr,
+  .surat-print div{ page-break-inside:avoid; }
+  .surat-print td, .surat-print p, .surat-print div{
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+    word-wrap:normal !important;
+    hyphens:none !important;
+  }
+  @page {
+    size: A4 portrait;
+    margin-top:2cm;
+    margin-bottom:2cm;
+    margin-left:3cm;
+    margin-right:2.5cm;
+  }
+  .surat-print{ padding:0; font-size:11pt !important; width:100% !important; }
+  .surat-print *{ font-size:11pt !important; line-height:1.4 !important; box-sizing:border-box !important; }
+  .surat-print [style*="font-size:13pt"]{ font-size:12pt !important; }
+  .surat-print [style*="font-size:9pt"]{ font-size:9pt !important; }
+  .surat-print table{ margin-bottom:4px !important; width:100% !important; }
+  .surat-print td{ word-break:normal !important; overflow-wrap:normal !important; }
+  .surat-print div{ word-break:normal !important; overflow-wrap:break-word !important; }
 }
 #print-surat{ display:none }
-#print-surat-kgb{ display:none }
 
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -626,14 +628,3 @@ body.readonly .admin-only-input{pointer-events:none;opacity:.5;user-select:none}
 .photo-crop-preview{width:120px;height:120px;border-radius:50%;overflow:hidden;border:3px solid var(--primary);margin:0 auto;display:flex;align-items:center;justify-content:center;background:var(--bg2)}
 .photo-size-bar{height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;margin-top:6px}
 .photo-size-fill{height:100%;border-radius:2px;background:var(--primary);transition:width .3s}
-
-/* Settings & Alokasi full width */
-#page-settings > div,
-#page-alokasi-cuti > div {
-  width: 100%;
-}
-#page-settings .cc,
-#page-alokasi-cuti .cc {
-  width: 100%;
-  box-sizing: border-box;
-}

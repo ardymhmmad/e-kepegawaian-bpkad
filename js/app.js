@@ -1,41 +1,3 @@
-// ── Pensiun helpers ────────────────────────────────────────
-// getFilters ada di helpers.js (sudah di-extend untuk pensiun/kp/kgb)
-
-function refreshTablePensiun(){
-  pageNums['pensiun']=1;
-  renderPensiun(getFilters('pensiun'));
-}
-
-function filterPensiunStatus(status){
-  const sel = document.getElementById('pensiun-status');
-  if(sel) sel.value = status;
-  refreshTablePensiun();
-}
-
-
-function exportExcelPensiun(){
-  const data = (DB.asn||[]).map(a=>{
-    const p = calcPensiun(a);
-    return {
-      'NIP': a.nip,
-      'Nama ASN': a.nama,
-      'Unit Kerja': a.unit,
-      'Tgl Lahir': p.tglLahir ? fmtDate(p.tglLahir) : '—',
-      'Usia (th)': p.usia??'—',
-      'Batas Usia': p.batasUsia+' th',
-      'Tgl Pensiun': p.tglPensiun ? fmtDate(p.tglPensiun) : '—',
-      'Sisa Hari': p.sisaHari??'—',
-      'Status': p.status,
-      'Keterangan': p.keterangan
-    };
-  });
-  if(!data.length){ showToast('Tidak ada data','error'); return; }
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Monitoring Pensiun');
-  XLSX.writeFile(wb, 'monitoring_pensiun_'+new Date().getFullYear()+'.xlsx');
-}
-
 // ═══════════════════════════════════════════════════
 // SEED DATA
 // ═══════════════════════════════════════════════════
@@ -68,7 +30,6 @@ async function init(){
     if(cfg.carry_over_enabled) CARRY_OVER_ENABLED=cfg.carry_over_enabled==='1';
     if(cfg.carry_over_max)     CARRY_OVER_MAX=parseInt(cfg.carry_over_max)||999;
     if(cfg.fonnte_token)       FONNTE_TOKEN=cfg.fonnte_token;
-    if(cfg.no_urut_cuti)       NO_URUT_CUTI=parseInt(cfg.no_urut_cuti)||1;
   }
 
   // Cache cuti
@@ -88,11 +49,4 @@ async function init(){
   renderDashboard(); updateCutiBadge();
   // Load WA templates
   await loadWATemplates();
-
-  // Load libur nasional tahun ini & tahun depan (hybrid: DB → API → fallback)
-  const tahunIni = new Date().getFullYear();
-  await Promise.all([
-    loadLiburNasional(tahunIni),
-    loadLiburNasional(tahunIni + 1),
-  ]);
 }

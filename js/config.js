@@ -34,7 +34,7 @@ const UNITS = {
     'Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III',
     'Kepala Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III'
   ],
-  'Bidang Pengelolaan Barang Milik Daerah': [
+  'Bidang Pengelolaan Barang Daerah': [
     'Kepala Bidang Pengelolaan Barang Milik Daerah',
     'Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
     'Kepala Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
@@ -45,8 +45,8 @@ const UNITS = {
   ]
 };
 
-const GOL_LIST = ['Juru Muda (I/a)','Juru Muda Tingkat I (I/b)','Juru (I/c)','Juru Tingkat I (I/d)','Pengatur Muda (II/a)','Pengatur Muda Tingkat I (II/b)','Pengatur (II/c)','Pengatur Tingkat I (II/d)','Penata Muda (III/a)','Penata Muda Tingkat I (III/b)','Penata (III/c)','Penata Tingkat I (III/d)','Pembina (IV/a)','Pembina Tingkat I (IV/b)','Pembina Utama Muda (IV/c)','Pembina Utama Madya (IV/d)','Pembina Utama (IV/e)'];
-const EDU_MAX = { 'SMP':'Pengatur (II/c)', 'SMA/SMK':'III/b', 'D3':'Penata Muda Tingkat I (III/b)', 'D4':'Penata Tingkat I (III/d)', 'S1':'Penata Tingkat I (III/d)', 'S2':'Pembina Utama Muda (IV/c)', 'S3':'Pembina Utama (IV/e'};
+const GOL_LIST = ['I/a','I/b','I/c','I/d','II/a','II/b','II/c','II/d','III/a','III/b','III/c','III/d','IV/a','IV/b','IV/c','IV/d','IV/e'];
+const EDU_MAX = { 'SMP':'II/b', 'SMA/SMK':'III/b', 'D3':'III/b', 'D4':'III/d', 'S1':'III/d', 'S2':'IV/c', 'S3':'IV/e' };
 const EDU_LIST = ['SD','SMP','SMA/SMK','D1','D2','D3','D4','S1','S2','S3'];
 
 
@@ -59,8 +59,9 @@ let pageNums = {};
 // SUPABASE CONFIG — isi dengan nilai dari project Anda
 // Supabase Dashboard → Settings → API
 // ══════════════════════════════════════════════════════
-const SUPABASE_URL  = 'https://qyiaswmlnkqtldjtprub.supabase.co'; // ← GANTI
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWFzd21sbmtxdGxkanRwcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjUxMzAsImV4cCI6MjA5NDYwMTEzMH0.3kl65V5vQl8RVNRKiN9oILwOSjOyCI2AtnzbA9N0u_Q';  // ← GANTI
+const SUPABASE_URL  = 'https://kprvohhfcvltjettgxjb.supabase.co'; // ← GANTI
+const SUPABASE_ANON = 'sb_publishable_59mGro2f8YXZsrUFON8ncQ_i6iaEqCL';  // ← GANTI
+
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── FONNTE TOKEN — diisi otomatis dari tabel settings saat login ─
