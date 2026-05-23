@@ -11,6 +11,7 @@ const formDefs={
     {id:'no_hp',l:'No. HP / WhatsApp',t:'text'},{id:'email',l:'Email',t:'text'},
     {id:'batas_usia_pensiun',l:'Batas Usia Pensiun (tahun)',t:'number'},
     {id:'masa_kerja_tahun',l:'Masa Kerja Golongan (Tahun)',t:'number'},{id:'masa_kerja_bulan',l:'Masa Kerja Golongan (Bulan)',t:'number'},
+    {id:'tgl_sk_kgb_sebelumnya',l:'Tanggal SK KGB Sebelumnya',t:'text',placeholder:'cth: 1 Januari 2023'},{id:'no_sk_kgb_sebelumnya',l:'Nomor SK KGB Sebelumnya',t:'text',placeholder:'cth: 800.1.1.1.13/045//BPKAD/2023'},
     {id:'_unit_sub',l:'',t:'unit_sub'}
   ],
   pppk:[
