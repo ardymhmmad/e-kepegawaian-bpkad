@@ -417,9 +417,9 @@ function eksekusiCetakSKKGB(id){
             <span style="min-width:40px">a.n.</span>
             <span>
             GUBERNUR KALIMANTAN SELATAN<br>
-              KEPALA BADAN PENGELOLAAN<br>
-              KEUANGAN DAN ASET DAERAH<br>
-              PROVINSI KALIMANTAN SELATAN,<br>
+            KEPALA BADAN PENGELOLAAN<br>
+            KEUANGAN DAN ASET DAERAH<br>
+            PROVINSI KALIMANTAN SELATAN,
             </span>
           </div>
           <div style="height:80px"></div>
