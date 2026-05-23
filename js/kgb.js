@@ -309,7 +309,7 @@ function eksekusiCetakSKKGB(id){
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="vertical-align:top;border:none;padding:2px 0">
           <div style="display:flex;justify-content:space-between;gap:8px">
-    
+     <span> ${a.nama} </span>
             <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
           </div>
         </td>
