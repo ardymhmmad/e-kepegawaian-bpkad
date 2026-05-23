@@ -307,7 +307,12 @@ function eksekusiCetakSKKGB(id){
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">1.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0"><strong>${a.nama}</strong> (${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <strong>${a.nama}</strong>
+            <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
+          </div>
+        </td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">2.</td>
@@ -411,10 +416,10 @@ function eksekusiCetakSKKGB(id){
           <div style="display:flex;gap:0">
             <span style="min-width:40px">a.n.</span>
             <span>
-            GUBERNUR KALIMANTAN SELATAN<br>
               KEPALA BADAN PENGELOLAAN<br>
               KEUANGAN DAN ASET DAERAH<br>
               PROVINSI KALIMANTAN SELATAN,<br>
+              SEKRETARIS,
             </span>
           </div>
           <div style="height:80px"></div>
