@@ -93,6 +93,14 @@ function cetakSKKGB(id){
     return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
   })() : '';
 
+  // Data SK sebelumnya dari ASN
+  const noSkSblm  = a.no_sk_kgb_sebelumnya  || '';
+  const tglSkSblm = a.tgl_sk_kgb_sebelumnya || '';
+  // Format gabung untuk tampil di form: "01 Januari 2023 / No.XXX"
+  const tglNomorSblmDefault = tglSkSblm && noSkSblm
+    ? tglSkSblm + ' / ' + noSkSblm
+    : tglSkSblm || noSkSblm || '';
+
   // Tanggal surat = hari ini
   const today = new Date();
   const todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
@@ -116,7 +124,7 @@ function cetakSKKGB(id){
       </div>
       <div class="fg">
         <label>Tanggal/Nomor SK Sebelumnya</label>
-        <input type="text" id="sk-tgl-nomor-sblm" placeholder="cth: 01 Januari 2023 / No.XXX">
+        <input type="text" id="sk-tgl-nomor-sblm" value="${tglNomorSblmDefault}" placeholder="cth: 01 Januari 2023 / No.XXX">
       </div>
       <div class="fg">
         <label>TMT KGB Sebelumnya</label>
