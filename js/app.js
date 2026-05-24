@@ -88,6 +88,8 @@ async function init(){
   renderDashboard(); updateCutiBadge();
   // Load WA templates
   await loadWATemplates();
+  // Load tabel gaji PNS dari DB
+  if(typeof loadTabelGaji === 'function') await loadTabelGaji();
 
   // Load libur nasional tahun ini & tahun depan (hybrid: DB → API → fallback)
   const tahunIni = new Date().getFullYear();
