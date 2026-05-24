@@ -191,7 +191,7 @@ function generateNoSurat(tahun){
 }
 
 function updateCutiBadge(){
-  // Hanya cuti yang belum final admin (step1 = menunggu Atasan Langsung, step2 = menunggu Pejabat yang Berwenang Memberikan Cuti)
+  // Hanya cuti yang belum final admin (step1 = menunggu Kasubbag, step2 = menunggu Kabid)
   const n=DB.cuti.filter(c=>c.status==='step1'||c.status==='step2').length;
   const el=document.getElementById('cuti-badge');
   if(el) el.textContent=n;
@@ -330,7 +330,7 @@ function renderCutiTable(){
 }
 
 function cutiStatusBadge(s){
-  const m={draft:'<span class="badge b-draft">Draft</span>',step1:'<span class="badge b-step1">Menunggu Atasan Langsung</span>',step2:'<span class="badge b-step2">Menunggu Pejabat yang Berwenang Memberikan Cuti</span>',approved:'<span class="badge b-approved">Disetujui</span>',rejected:'<span class="badge b-rejected">Ditolak</span>',cancelled:'<span class="badge b-cancelled">Dibatalkan</span>'};
+  const m={draft:'<span class="badge b-draft">Draft</span>',step1:'<span class="badge b-step1">Menunggu Kasubbag</span>',step2:'<span class="badge b-step2">Menunggu Kabid</span>',approved:'<span class="badge b-approved">Disetujui</span>',rejected:'<span class="badge b-rejected">Ditolak</span>',cancelled:'<span class="badge b-cancelled">Dibatalkan</span>'};
   return m[s]||`<span class="badge b-gray">${s}</span>`;
 }
 function cutiApprovalMini(c){
@@ -340,9 +340,9 @@ function cutiApprovalMini(c){
   const s2=c.status==='approved'?'done':c.status==='step2'?'active':c.status==='rejected'&&c.step===2?'rejected':'pending';
   const s3=c.status==='approved'?'done':c.status==='rejected'&&c.step===3?'rejected':'pending';
   return `<div style="display:flex;gap:3px;align-items:center;font-size:10px;flex-wrap:wrap">
-    <span class="badge ${cls(s1)}" style="padding:1px 5px">${icon(s1)} Atasan Langsung</span>
+    <span class="badge ${cls(s1)}" style="padding:1px 5px">${icon(s1)} Kasubbag</span>
     <span style="color:var(--tx3)">›</span>
-    <span class="badge ${cls(s2)}" style="padding:1px 5px">${icon(s2)} Pejabat yang Berwenang Memberikan Cuti</span>
+    <span class="badge ${cls(s2)}" style="padding:1px 5px">${icon(s2)} Kabid</span>
     <span style="color:var(--tx3)">›</span>
     <span class="badge ${cls(s3)}" style="padding:1px 5px">${icon(s3)} Admin</span>
   </div>`;
@@ -422,11 +422,11 @@ function openAjukanCuti(editId=null){
               <input type="text" id="ca-wa-pegawai" value="${ex?.wa_pegawai||''}" placeholder="cth: 08123456789">
             </div>
             <div class="fg">
-              <label>No WA Atasan Langsung</label>
+              <label>No WA Kepala Subbagian</label>
               <input type="text" id="ca-wa-atasan1" value="${ex?.wa_atasan1||''}" placeholder="cth: 08123456789">
             </div>
             <div class="fg full">
-              <label>No WA Pejabat yang Berwenang Memberikan Cuti</label>
+              <label>No WA Kepala Bidang</label>
               <input type="text" id="ca-wa-atasan2" value="${ex?.wa_atasan2||''}" placeholder="cth: 08123456789">
             </div>
           </div>
@@ -655,8 +655,8 @@ function openCutiDetail(id){
   const isAdmin=session?.role==='admin';
 
   const steps=[
-    {label:'Atasan Langsung',by:c.step1_by,at:c.step1_at,note:c.step1_note},
-    {label:'Pejabat yang Berwenang Memberikan Cuti',   by:c.step2_by,at:c.step2_at,note:c.step2_note},
+    {label:'Kepala Subbagian',by:c.step1_by,at:c.step1_at,note:c.step1_note},
+    {label:'Kepala Bidang',   by:c.step2_by,at:c.step2_at,note:c.step2_note},
     {label:'Admin (Final)',   by:c.final_by,at:c.final_at,note:c.final_note},
   ];
   const stepState=(i)=>{
@@ -674,12 +674,12 @@ function openCutiDetail(id){
 
   const actionBtns=()=>{
     if(!isAdmin) return '';
-    if(c.status==='draft') return `<button class="btn btn-primary" onclick="ajukanStep1('${c.id}')">Ajukan ke Atasan Langsung</button>`;
+    if(c.status==='draft') return `<button class="btn btn-primary" onclick="ajukanStep1('${c.id}')">Ajukan ke Kepala Subbagian</button>`;
     if(c.status==='step1') return `
-      <button class="btn btn-success" onclick="approveStep('${c.id}',1)">✓ Setujui (Atasan Langsung)</button>
+      <button class="btn btn-success" onclick="approveStep('${c.id}',1)">✓ Setujui (Kasubbag)</button>
       <button class="btn btn-danger"  onclick="rejectStep('${c.id}',1)">✗ Tolak</button>`;
     if(c.status==='step2') return `
-      <button class="btn btn-success" onclick="approveStep('${c.id}',2)">✓ Setujui (Pejabat yang Berwenang Memberikan Cuti)</button>
+      <button class="btn btn-success" onclick="approveStep('${c.id}',2)">✓ Setujui (Kabid)</button>
       <button class="btn btn-danger"  onclick="rejectStep('${c.id}',2)">✗ Tolak</button>
       <button class="btn btn-primary" onclick="approveStep('${c.id}',3)">✓ Final Admin</button>`;
     if(c.status==='approved') return `<button class="btn btn-success" onclick="cetakSuratCuti('${c.id}')">🖨 Cetak Surat</button>`;
@@ -762,7 +762,7 @@ async function ajukanStep1(id){
     await kirimWA(c.wa_atasan1, pesan);
   }
   openCutiDetail(id); updateCutiBadge();
-  showToast('Diajukan ke Atasan Langsung','success');
+  showToast('Diajukan ke Kepala Subbagian','success');
 }
 
 async function approveStep(id,step){
@@ -786,12 +786,12 @@ async function approveStep(id,step){
     const d=getCutiData(c,{disetujui_oleh:who});
     if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, renderTemplate(WA_TEMPLATES.wa_tmpl_step1, d));
     if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step1_pegawai, d));
-    showToast('Disetujui Atasan Langsung — WA dikirim ke Pejabat yang Berwenang Memberikan Cuti & pegawai','success');
+    showToast('Disetujui Kasubbag — WA dikirim ke Kabid & pegawai','success');
 
   } else if(step===2){
     const d=getCutiData(c,{disetujui_oleh:who});
     if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step2, d));
-    showToast('Disetujui Pejabat yang Berwenang Memberikan Cuti — menunggu persetujuan final Admin','success');
+    showToast('Disetujui Kabid — menunggu persetujuan final Admin','success');
 
   } else if(step===3){
     const d=getCutiData(c,{disetujui_oleh:who});

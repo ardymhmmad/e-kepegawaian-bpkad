@@ -76,38 +76,6 @@ function calcKGB(asn){
 // PENSIUN ENGINE
 // ═══════════════════════════════════════════════════
 
-// ── Konfigurasi jenis cuti ─────────────────────────────────
-// kurangiTahunan : apakah mengurangi sisa cuti tahunan
-// bolehLebih     : apakah boleh melebihi jatah (tidak diblokir)
-// hariKalender   : hitung hari kalender bukan hari kerja
-const JENIS_CUTI_CONFIG = {
-  'Cuti Tahunan'                      : { kurangiTahunan:true,  bolehLebih:false, hariKalender:false },
-  'Cuti Sakit'                        : { kurangiTahunan:false, bolehLebih:true,  hariKalender:false },
-  'Cuti Melahirkan'                   : { kurangiTahunan:false, bolehLebih:true,  hariKalender:true  },
-  'Cuti Besar'                        : { kurangiTahunan:true,  bolehLebih:true,  hariKalender:false },
-  'Cuti Alasan Penting'               : { kurangiTahunan:true,  bolehLebih:true,  hariKalender:false },
-  'Cuti Di Luar Tanggungan Negara'    : { kurangiTahunan:false, bolehLebih:true,  hariKalender:false },
-};
-
-function hitungHariKalender(s, e){
-  if(!s||!e) return 0;
-  const parse = str => { const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d,0,0,0); };
-  const start=parse(s), end=parse(e);
-  if(end<start) return 0;
-  return Math.round((end-start)/(1000*60*60*24))+1;
-}
-
-function getCutiConfig(jenis){ return JENIS_CUTI_CONFIG[jenis] || JENIS_CUTI_CONFIG['Cuti Tahunan']; }
-
-// Hitung hari kalender (inklusif)
-function hitungHariKalender(s, e){
-  if(!s||!e) return 0;
-  const parse = str => { const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d,0,0,0); };
-  const start=parse(s), end=parse(e);
-  if(end<start) return 0;
-  return Math.round((end-start)/(1000*60*60*24))+1;
-}
-
 // Ekstrak tanggal lahir dari NIP (8 digit pertama: YYYYMMDD)
 function tglLahirDariNIP(nip){
   if(!nip || nip.length < 8) return null;
@@ -168,18 +136,3 @@ function pensiunBadge(status){
   if(status==='Aktif')          return 'b-green';
   return 'b-gray';
 }
-
-function terbilang(n){
-  if(!n||n<=0) return 'nol';
-  const sat=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan'];
-  const bls=['','sepuluh','dua puluh','tiga puluh','empat puluh','lima puluh',
-             'enam puluh','tujuh puluh','delapan puluh','sembilan puluh'];
-  const bls11=['sebelas','dua belas','tiga belas','empat belas','lima belas',
-               'enam belas','tujuh belas','delapan belas','sembilan belas'];
-  if(n<=9)   return sat[n];
-  if(n===10) return 'sepuluh';
-  if(n<=19)  return bls11[n-11];
-  if(n<100){
-    const p=Math.floor(n/10), s=n%10;
-    return bls[p]+(s?' '+sat[s]:'');
-  }
