@@ -403,7 +403,11 @@ const GOL_URUT = [
   'III/a','III/b','III/c','III/d',
   'IV/a','IV/b','IV/c','IV/d','IV/e'
 ];
-const MK_LIST = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+const MK_LIST     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];      // Gol I, III, IV
+const MK_LIST_II  = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];   // Gol II
+const GOL_II      = ['II/a','II/b','II/c','II/d'];
+
+function getMKList(gol){ return GOL_II.includes(gol) ? MK_LIST_II : MK_LIST; }
 
 // Load tabel gaji dari DB
 async function loadTabelGaji(){
@@ -423,9 +427,9 @@ async function saveTabelGaji(){
   // Ambil semua nilai dari input
   GOL_URUT.forEach(gol => {
     if(!TABEL_GAJI_PNS[gol]) TABEL_GAJI_PNS[gol] = {};
-    MK_LIST.forEach(mk => {
+    getMKList(gol).forEach(mk => {
       const el = document.getElementById(`gaji_${gol.replace('/','_')}_${mk}`);
-      if(el) TABEL_GAJI_PNS[gol][mk] = parseInt(el.value.replace(/\D/g,''))||0;
+      if(el) TABEL_GAJI_PNS[gol][mk] = parseInt(el.value.replace(/[^0-9]/g,''))||0;
     });
   });
   const val = JSON.stringify(TABEL_GAJI_PNS);
@@ -450,13 +454,20 @@ async function renderTabelGajiForm(){
   if(!TABEL_GAJI_PNS){
     // Inisialisasi kosong
     TABEL_GAJI_PNS = {};
-    GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; MK_LIST.forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+    GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   }
 
-  const thMK = MK_LIST.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
+  // Header gabungan semua kolom masa kerja (union)
+  const ALL_MK = [...new Set([...MK_LIST,...MK_LIST_II])].sort((a,b)=>a-b);
+  const thMK = ALL_MK.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
 
   const rows = GOL_URUT.map(gol => {
-    const cells = MK_LIST.map(mk => {
+    const mkForGol = getMKList(gol);
+    const cells = ALL_MK.map(mk => {
+      if(!mkForGol.includes(mk)){
+        // Kolom tidak berlaku untuk golongan ini — tampil abu-abu
+        return `<td style="padding:2px;background:var(--bg2);text-align:center;color:var(--tx3);font-size:10px">-</td>`;
+      }
       const id = `gaji_${gol.replace('/','_')}_${mk}`;
       const val = TABEL_GAJI_PNS[gol]?.[mk] || 0;
       return `<td style="padding:2px"><input type="text" id="${id}" value="${val?Number(val).toLocaleString('id-ID'):''}"
@@ -490,7 +501,7 @@ async function renderTabelGajiForm(){
 function resetTabelGaji(){
   if(!confirm('Reset semua nilai ke 0? Data yang belum disimpan akan hilang.')) return;
   TABEL_GAJI_PNS = {};
-  GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; MK_LIST.forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+  GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   renderTabelGajiForm();
   showToast('Tabel direset — silakan isi nilai gaji','info');
 }
