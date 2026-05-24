@@ -32,14 +32,21 @@ function getGolonganSingkat(pangkat){
 }
 
 // Ambil gaji dari tabel berdasarkan golongan + masa kerja
+// Prioritas: TABEL_GAJI_PNS (dari DB/Pengaturan) → GAJI_PNS (hardcode fallback)
 function getGajiPokok(pangkat, masa_kerja_tahun){
   const gol = getGolonganSingkat(pangkat);
+  const mk  = Math.min(Math.floor((masa_kerja_tahun||0) / 2) * 2, 32);
+
+  // 1. Coba dari DB (diisi di Pengaturan)
+  if(typeof TABEL_GAJI_PNS !== 'undefined' && TABEL_GAJI_PNS && TABEL_GAJI_PNS[gol]){
+    const val = TABEL_GAJI_PNS[gol][mk] || TABEL_GAJI_PNS[gol][0] || 0;
+    if(val > 0) return val;
+  }
+
+  // 2. Fallback ke hardcode GAJI_PNS
   const tabel = GAJI_PNS[gol];
   if(!tabel) return 0;
-  // Cari masa kerja yang cocok (kelipatan 2, ke bawah)
-  const mk = Math.floor((masa_kerja_tahun||0) / 2) * 2;
-  const key = Math.min(mk, 32);
-  return tabel[key] || tabel[0] || 0;
+  return tabel[mk] || tabel[0] || 0;
 }
 
 // Format tanggal Indonesia lengkap
@@ -273,7 +280,7 @@ function eksekusiCetakSKKGB(id){
       <tr>
         <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
         <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0">Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td>
+        <td style="border:none;padding:2px 0"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
       </tr>
     </table>
 
@@ -298,18 +305,18 @@ function eksekusiCetakSKKGB(id){
     </table>
 
     <!-- ISI -->
-    <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">
+    <p style="text-align:justify;margin-bottom:10pt;line-height:1.5;text-indent:30px">
       Dengan ini diberitahukan, bahwa berhubung dengan telah dipenuhinya masa kerja dan syarat lainnya kepada :
     </p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">1.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Nama dan Tanggal Lahir</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="vertical-align:top;border:none;padding:2px 0">
           <div style="display:flex;justify-content:space-between;gap:8px">
-     <span> ${a.nama} </span>
+            <strong>${a.nama}</strong>
             <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
           </div>
         </td>
@@ -340,9 +347,9 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
+    <p style="text-align:justify;margin-bottom:6pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">a.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Oleh Pejabat</td>
@@ -369,14 +376,14 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="margin-bottom:3pt;line-height:1.5;text-indent:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
+    <p style="margin-bottom:10pt;line-height:1.5;text-indent:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:5pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0">Rp ${num(gajiBaru)},-</td>
+        <td style="vertical-align:top;border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">7.</td>
@@ -404,25 +411,25 @@ function eksekusiCetakSKKGB(id){
       </tr>
     </table>
 
-    <p style="text-align:justify;margin-bottom:3pt;line-height:1,5;text-indent:30px">
+    <p style="text-align:justify;margin-bottom:20pt;line-height:1.5;text-indent:30px">
       Diharapkan agar sesuai dengan Peraturan Pemerintah yang berlaku dan Keputusan Presiden berikutnya, maka sesuai Anggaran Pendapatan dan Belanja Daerah tahun yang bersangkutan, kepada pegawai tersebut dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
     </p>
 
     <!-- TTD -->
     <table style="width:100%;border-collapse:collapse;border:none">
       <tr>
-        <td style="width:49%;border:none"></td>
+        <td style="width:55%;border:none"></td>
         <td style="border:none;vertical-align:top">
           <div style="display:flex;gap:0">
             <span style="min-width:40px">a.n.</span>
             <span>
-            GUBERNUR KALIMANTAN SELATAN<br>
-            KEPALA BADAN PENGELOLAAN<br>
-            KEUANGAN DAN ASET DAERAH<br>
-            PROVINSI KALIMANTAN SELATAN,
+              KEPALA BADAN PENGELOLAAN<br>
+              KEUANGAN DAN ASET DAERAH<br>
+              PROVINSI KALIMANTAN SELATAN,<br>
+              SEKRETARIS,
             </span>
           </div>
-          <div style="height:100px"></div>
+          <div style="height:80px"></div>
         </td>
       </tr>
     </table>
