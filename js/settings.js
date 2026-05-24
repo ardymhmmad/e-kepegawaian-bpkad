@@ -11,6 +11,7 @@ function renderSettings(){
   loadNoUrutCuti();
   renderWATemplatesForm();
   setTimeout(renderLiburNasional, 300); // tunggu DOM render
+  setTimeout(renderTabelGajiForm, 100);
   renderUserTable();
 }
 
@@ -389,6 +390,109 @@ async function resetLiburKeAPI(){
   await loadLiburNasional(yr);
   renderLiburNasional();
   showToast(`✅ Libur ${yr} direset dari API`,'success');
+}
+
+
+// ── Tabel Gaji PNS ────────────────────────────────────────
+// Cache tabel gaji dari DB
+let TABEL_GAJI_PNS = null;
+
+const GOL_URUT = [
+  'I/a','I/b','I/c','I/d',
+  'II/a','II/b','II/c','II/d',
+  'III/a','III/b','III/c','III/d',
+  'IV/a','IV/b','IV/c','IV/d','IV/e'
+];
+const MK_LIST = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+
+// Load tabel gaji dari DB
+async function loadTabelGaji(){
+  try {
+    const { data } = await supa.from('settings')
+      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
+    if(data?.setting_val){
+      TABEL_GAJI_PNS = JSON.parse(data.setting_val);
+      console.log('✅ Tabel gaji loaded dari DB');
+    }
+  } catch(e){ console.warn('loadTabelGaji:', e); }
+}
+
+// Simpan tabel gaji ke DB
+async function saveTabelGaji(){
+  if(!TABEL_GAJI_PNS){ showToast('Tidak ada data untuk disimpan','error'); return; }
+  // Ambil semua nilai dari input
+  GOL_URUT.forEach(gol => {
+    if(!TABEL_GAJI_PNS[gol]) TABEL_GAJI_PNS[gol] = {};
+    MK_LIST.forEach(mk => {
+      const el = document.getElementById(`gaji_${gol.replace('/','_')}_${mk}`);
+      if(el) TABEL_GAJI_PNS[gol][mk] = parseInt(el.value.replace(/\D/g,''))||0;
+    });
+  });
+  const val = JSON.stringify(TABEL_GAJI_PNS);
+  try {
+    const { data: ex } = await supa.from('settings').select('id').eq('setting_key','tabel_gaji_pns').maybeSingle();
+    if(ex){
+      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
+    } else {
+      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
+    }
+    showToast('✅ Tabel gaji berhasil disimpan','success');
+  } catch(e){ showToast('Gagal: '+e.message,'error'); }
+}
+
+// Render form tabel gaji di Pengaturan
+async function renderTabelGajiForm(){
+  const container = document.getElementById('tabel-gaji-container');
+  if(!container) return;
+
+  // Load dari DB dulu jika belum
+  if(!TABEL_GAJI_PNS) await loadTabelGaji();
+  if(!TABEL_GAJI_PNS){
+    // Inisialisasi kosong
+    TABEL_GAJI_PNS = {};
+    GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; MK_LIST.forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+  }
+
+  const thMK = MK_LIST.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
+
+  const rows = GOL_URUT.map(gol => {
+    const cells = MK_LIST.map(mk => {
+      const id = `gaji_${gol.replace('/','_')}_${mk}`;
+      const val = TABEL_GAJI_PNS[gol]?.[mk] || 0;
+      return `<td style="padding:2px"><input type="text" id="${id}" value="${val?Number(val).toLocaleString('id-ID'):''}"
+        style="width:88px;font-size:11px;text-align:right;padding:3px 4px"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+        onfocus="this.select()"></td>`;
+    }).join('');
+    return `<tr><td style="padding:4px 8px;font-weight:700;font-size:12px;white-space:nowrap;position:sticky;left:0;background:var(--bg1)">${gol}</td>${cells}</tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--bg2)">
+            <th style="padding:6px 8px;text-align:left;position:sticky;left:0;background:var(--bg2);min-width:60px">Gol.</th>
+            ${thMK}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="saveTabelGaji()">💾 Simpan Tabel Gaji</button>
+      <button class="btn" onclick="resetTabelGaji()">↺ Reset ke Default PP 5/2024</button>
+      <span style="font-size:11px;color:var(--tx3)">PP No. 5 Tahun 2024</span>
+    </div>`;
+}
+
+// Reset ke nilai default PP 5/2024 (kosong — user isi sendiri)
+function resetTabelGaji(){
+  if(!confirm('Reset semua nilai ke 0? Data yang belum disimpan akan hilang.')) return;
+  TABEL_GAJI_PNS = {};
+  GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; MK_LIST.forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+  renderTabelGajiForm();
+  showToast('Tabel direset — silakan isi nilai gaji','info');
 }
 
 async function loadNoUrutCuti(){
