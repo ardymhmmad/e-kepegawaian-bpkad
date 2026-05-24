@@ -32,10 +32,24 @@ function getGolonganSingkat(pangkat){
 }
 
 // Ambil gaji dari tabel berdasarkan golongan + masa kerja
-// Prioritas: TABEL_GAJI_PNS (dari DB/Pengaturan) → GAJI_PNS (hardcode fallback)
+// Gol II: MK 0,1,3,5,...33 | Gol lain: 0,2,4,6,...32
+const _GOL_II = ['II/a','II/b','II/c','II/d'];
+const _MK_II  = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
+const _MK_STD = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+
+function getNearestMK(gol, mk){
+  const list = _GOL_II.includes(gol) ? _MK_II : _MK_STD;
+  const maxMK = list[list.length-1];
+  const capped = Math.min(mk||0, maxMK);
+  // Cari nilai terdekat ke bawah dalam list
+  let nearest = list[0];
+  for(const m of list){ if(m <= capped) nearest = m; else break; }
+  return nearest;
+}
+
 function getGajiPokok(pangkat, masa_kerja_tahun){
   const gol = getGolonganSingkat(pangkat);
-  const mk  = Math.min(Math.floor((masa_kerja_tahun||0) / 2) * 2, 32);
+  const mk  = getNearestMK(gol, masa_kerja_tahun||0);
 
   // 1. Coba dari DB (diisi di Pengaturan)
   if(typeof TABEL_GAJI_PNS !== 'undefined' && TABEL_GAJI_PNS && TABEL_GAJI_PNS[gol]){
