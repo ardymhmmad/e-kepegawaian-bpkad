@@ -314,7 +314,7 @@ function eksekusiCetakSKKGB(id){
       </tr>
       <tr>
         <td style="border:none;padding:0 0 8px 0"></td>
-        <td style="border:none;padding:0 0 8px 30px"><u>tempat</u></td>
+        <td style="border:none;padding:0 0 8px 30px">tempat</td>
       </tr>
     </table>
 
