@@ -204,6 +204,7 @@ function cetakSKKGB(id, riwayatData=null){
   }
   // ── End Validasi ──────────────────────────────────────
 
+  try {
   const k = calcKGB(a);
   const tglLahir = tglLahirDariNIP(a.nip);
   const tglLahirStr = tglLahir ? fmtTglIndo(tglLahir) : '...........';
@@ -326,9 +327,14 @@ function cetakSKKGB(id, riwayatData=null){
       if(el) el.value = gb;
     });
   });
+  } catch(err){
+    console.error('cetakSKKGB error:', err);
+    showToast('Error membuka form cetak: '+err.message,'error');
+  }
 }
 
 function eksekusiCetakSKKGB(id){
+  try {
   const a = DB.asn.find(x=>x.id===id);
   if(!a) return;
 
@@ -588,6 +594,7 @@ function eksekusiCetakSKKGB(id){
   }, 300);
 
   // Update data ASN setelah cetak (TMT KGB, masa kerja, gaji)
+  } catch(err){ console.error('eksekusi error:',err); showToast('Error: '+err.message,'error'); return; }
   await updateASNSetelahKGB(id, tglPenetapan, mkBaruTh, mkBaruBl, gajiBaru);
 }
 
@@ -613,8 +620,8 @@ async function updateASNSetelahKGB(asnId, tglPenetapan, mkTh, mkBl, gajiBaru){
       DB.asn[idx].gaji              = gajiBaru;
     }
 
-    // Simpan riwayat SK KGB
-    await simpanRiwayatKGB(asnId, tglPenetapan, mkTh, mkBl, gajiBaru);
+    // Simpan riwayat SK KGB (silent — tidak blokir jika tabel belum ada)
+    simpanRiwayatKGB(asnId, tglPenetapan, mkTh, mkBl, gajiBaru).catch(e=>console.warn('riwayat:',e));
 
     showToast('✅ Data KGB pegawai berhasil diperbarui','success');
     renderKGB(getFilters('kgb'));
