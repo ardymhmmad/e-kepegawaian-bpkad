@@ -397,7 +397,7 @@ function eksekusiCetakSKKGB(id){
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0"><strong>Rp ${num(gajiBaru)},-</strong></td>
+        <td style="vertical-align:top;border:none;padding:2px 0">Rp ${num(gajiBaru)},-</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">7.</td>
