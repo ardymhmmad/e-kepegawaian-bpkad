@@ -403,11 +403,20 @@ const GOL_URUT = [
   'III/a','III/b','III/c','III/d',
   'IV/a','IV/b','IV/c','IV/d','IV/e'
 ];
-const MK_LIST     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];      // Gol I, III, IV
-const MK_LIST_II  = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];   // Gol II
-const GOL_II      = ['II/a','II/b','II/c','II/d,'];
+// Pola MKG sesuai tabel PP 5/2024
+const _S_MK_IA      = [0,2,4,6,8,10,12,14,16,18,20,22,24,26];
+const _S_MK_I_BCD   = [3,5,7,9,11,13,15,17,19,21,23,25,27];
+const _S_MK_IIA     = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
+const _S_MK_II_BCD  = [3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
+const _S_MK_STD     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
 
-function getMKList(gol){ return GOL_II.includes(gol) ? MK_LIST_II : MK_LIST; }
+function getMKList(gol){
+  if(gol === 'I/a')                          return _S_MK_IA;
+  if(['I/b','I/c','I/d'].includes(gol))      return _S_MK_I_BCD;
+  if(gol === 'II/a')                         return _S_MK_IIA;
+  if(['II/b','II/c','II/d'].includes(gol))   return _S_MK_II_BCD;
+  return _S_MK_STD;
+}
 
 // Load tabel gaji dari DB
 async function loadTabelGaji(){
@@ -419,6 +428,55 @@ async function loadTabelGaji(){
       console.log('✅ Tabel gaji loaded dari DB');
     }
   } catch(e){ console.warn('loadTabelGaji:', e); }
+}
+
+// Auto-seed: isi tabel gaji ke DB dari data hardcode GAJI_PNS (kgb.js)
+// Hanya berjalan jika tabel di DB masih kosong / belum pernah diisi
+async function seedTabelGajiFromHardcode(){
+  try {
+    // Cek apakah sudah ada data di DB
+    const { data: existing } = await supa.from('settings')
+      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
+
+    if(existing?.setting_val){
+      // Sudah ada — cek apakah semua nilai 0 (belum pernah diisi)
+      const parsed = JSON.parse(existing.setting_val);
+      const hasValue = Object.values(parsed).some(mkObj =>
+        Object.values(mkObj).some(v => v > 0)
+      );
+      if(hasValue){
+        console.log('ℹ️ Tabel gaji DB sudah berisi data, seed dilewati.');
+        return;
+      }
+    }
+
+    // DB kosong atau semua 0 — seed dari GAJI_PNS (hardcode kgb.js)
+    if(typeof GAJI_PNS === 'undefined'){
+      console.warn('seedTabelGaji: GAJI_PNS tidak ditemukan');
+      return;
+    }
+
+    const seedData = {};
+    GOL_URUT.forEach(gol => {
+      seedData[gol] = {};
+      getMKList(gol).forEach(mk => {
+        seedData[gol][mk] = GAJI_PNS[gol]?.[mk] || 0;
+      });
+    });
+
+    const val = JSON.stringify(seedData);
+    if(existing){
+      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
+    } else {
+      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
+    }
+
+    // Update cache lokal juga
+    TABEL_GAJI_PNS = seedData;
+    console.log('✅ Tabel gaji berhasil di-seed otomatis ke DB dari data hardcode PP 5/2024');
+  } catch(e){
+    console.warn('seedTabelGajiFromHardcode error:', e);
+  }
 }
 
 // Simpan tabel gaji ke DB
@@ -497,13 +555,19 @@ async function renderTabelGajiForm(){
     </div>`;
 }
 
-// Reset ke nilai default PP 5/2024 (kosong — user isi sendiri)
+// Reset ke nilai default PP 5/2024 dari data hardcode GAJI_PNS
 function resetTabelGaji(){
-  if(!confirm('Reset semua nilai ke 0? Data yang belum disimpan akan hilang.')) return;
+  if(!confirm('Reset tabel gaji ke data default PP 5/2024? Perubahan yang belum disimpan akan hilang.')) return;
+  if(typeof GAJI_PNS === 'undefined'){
+    showToast('Data default tidak ditemukan','error'); return;
+  }
   TABEL_GAJI_PNS = {};
-  GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+  GOL_URUT.forEach(g => {
+    TABEL_GAJI_PNS[g] = {};
+    getMKList(g).forEach(mk => { TABEL_GAJI_PNS[g][mk] = GAJI_PNS[g]?.[mk] || 0; });
+  });
   renderTabelGajiForm();
-  showToast('Tabel direset — silakan isi nilai gaji','info');
+  showToast('✅ Tabel direset ke data PP 5/2024 — klik Simpan untuk menyimpan','info');
 }
 
 async function loadNoUrutCuti(){
