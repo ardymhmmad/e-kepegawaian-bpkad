@@ -66,8 +66,8 @@ const AUDIT_BADGE = {
  */
 async function logAudit(action, entity, entityId, description, oldData=null, newData=null){
   try {
-    if(!session) return; // Jangan log jika belum login
-    await supa.from('activity_log').insert({
+    if(!session) { console.warn('logAudit: session belum ada, log dilewati'); return; }
+    const { error } = await supa.from('activity_log').insert({
       user_email  : session.email  || '–',
       user_label  : session.label  || session.email || '–',
       action,
@@ -77,8 +77,14 @@ async function logAudit(action, entity, entityId, description, oldData=null, new
       old_data    : oldData  ? oldData  : null,
       new_data    : newData  ? newData  : null,
     });
+    if(error){
+      // Tampilkan error jelas — kemungkinan tabel belum dibuat
+      console.error(`logAudit GAGAL [${action}/${entity}]:`, error.message);
+      if(error.message.includes('does not exist') || error.code === '42P01'){
+        console.error('⚠️ Tabel activity_log belum dibuat di Supabase! Jalankan SQL di README.');
+      }
+    }
   } catch(e){
-    // Audit log tidak boleh menghentikan aksi utama
     console.warn('logAudit error:', e.message);
   }
 }

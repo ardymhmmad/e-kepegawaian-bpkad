@@ -636,6 +636,15 @@ async function simpanCuti(editId=null){
       error=res.error; if(res.data) newId=res.data.id;
     }
     if(error) throw new Error(error.message);
+    await logAudit(
+      editId ? AUDIT_ACTION.EDIT : AUDIT_ACTION.TAMBAH,
+      'cuti', newId,
+      editId
+        ? `Edit pengajuan cuti — ${asn?.nama||''} (${jenis_cuti})`
+        : `Ajukan cuti baru — ${asn?.nama||''} (${jenis_cuti}, ${hari} hari)`,
+      null,
+      {asn_id:asn?.id,nama:asn?.nama,jenis_cuti,tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari}
+    );
     await loadCutiFromServer(); closeModal(); renderCutiTable(); updateCutiBadge();
     showToast(editId?'Pengajuan diperbarui':'Pengajuan cuti dibuat','success');
   }catch(e){ showToast('Error: '+e.message,'error'); }
@@ -757,6 +766,8 @@ async function ajukanStep1(id){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
+    `Ajukan ke Kepala Subbagian — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, {status:'step1',step:1});
   if(c?.wa_atasan1){
     const pesan=renderTemplate(WA_TEMPLATES.wa_tmpl_pengajuan, getCutiData(c));
     await kirimWA(c.wa_atasan1, pesan);
@@ -862,8 +873,27 @@ function hapusCutiTerpilih(){
   const ids=[...document.querySelectorAll('.cuti-chk:checked')].map(el=>el.value);
   if(!ids.length){ showToast('Pilih riwayat terlebih dahulu','error'); return; }
   showConfirm('Hapus Riwayat Terpilih',`Hapus permanen <strong>${ids.length} riwayat</strong>?`,async()=>{
+    // Simpan data sebelum dihapus untuk audit
+    const oldRecs = ids.map(id => DB.cuti.find(x=>x.id===id||x.id===parseInt(id))).filter(Boolean);
     const {error}=await supa.from('cuti').delete().in('id',ids);
-    if(!error){ await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast(`${ids.length} riwayat dihapus`,'success'); }
+    if(!error){
+      // Log satu per satu agar setiap riwayat tercatat
+      for(const rec of oldRecs){
+        await logAudit(AUDIT_ACTION.HAPUS, 'cuti', rec.id,
+          `Hapus riwayat cuti — ${rec.nama||rec.id} (${rec.jenis_cuti||''})`, rec, null);
+      }
+      // Jika ada id yang tidak ketemu di cache, log generic
+      if(oldRecs.length < ids.length){
+        const loggedIds = oldRecs.map(r=>String(r.id));
+        for(const id of ids){
+          if(!loggedIds.includes(String(id))){
+            await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id, `Hapus riwayat cuti — id: ${id}`, null, null);
+          }
+        }
+      }
+      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge();
+      showToast(`${ids.length} riwayat dihapus`,'success');
+    }
     else showToast(error.message,'error');
   });
 }

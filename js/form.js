@@ -396,6 +396,9 @@ async function finalizeImport(valid, type){
     if(toInsert.length){
       const {error}=await supa.from(type).insert(toInsert);
       if(error) throw new Error(error.message);
+      await logAudit(AUDIT_ACTION.TAMBAH, type, null,
+        `Import Excel ${type.toUpperCase()} — ${toInsert.length} data baru ditambahkan${skipped?`, ${skipped} duplikat dilewati`:''}`,
+        null, { jumlah: toInsert.length, skipped });
     }
     await reloadType(type); refreshTable(type); renderDashboard();
     res.innerHTML=`<div style="color:var(--grn-tx);font-size:13px;font-weight:700;background:var(--grn-bg);border:1px solid var(--grn-bd);border-radius:8px;padding:12px">✓ Import berhasil — ${toInsert.length} data disimpan${skipped?`, ${skipped} duplikat dilewati`:''}.</div>`;

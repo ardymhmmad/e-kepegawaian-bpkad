@@ -204,6 +204,9 @@ async function simpanTambahUser(){
   // Pulihkan session admin
   await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
 
+  await logAudit(AUDIT_ACTION.TAMBAH, 'user', data.user.id,
+    `Tambah pengguna baru — ${label} (${email}) role: ${role}`, null, { email, label, role });
+
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
 }
@@ -295,6 +298,8 @@ async function simpanEditUser(uid){
   }
 
   closeModal(); renderUserTable();
+  await logAudit(AUDIT_ACTION.EDIT, 'user', uid,
+    `Edit pengguna — ${label} (role: ${role})${pw?' + ganti password':''}`, null, { uid, label, role });
   showToast(`Pengguna "${label}" diperbarui`, 'success');
 }
 
@@ -304,7 +309,11 @@ function hapusUser(uid, label){
   showConfirm('Hapus Pengguna', `Hapus pengguna <strong>${label}</strong>? Tindakan ini tidak dapat dibatalkan.`, async ()=>{
     // Hapus dari profiles — auth.users akan cascade delete via FK
     const { error } = await supa.from('profiles').delete().eq('id', uid);
-    if(!error){ renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success'); }
+    if(!error){
+      await logAudit(AUDIT_ACTION.HAPUS, 'user', uid,
+        `Hapus pengguna — ${label}`, { uid, label }, null);
+      renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success');
+    }
     else showToast(error.message, 'error');
   });
 }
@@ -499,6 +508,8 @@ async function saveTabelGaji(){
       await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
     }
     showToast('✅ Tabel gaji berhasil disimpan','success');
+    await logAudit(AUDIT_ACTION.SETTING, 'settings', null,
+      'Update tabel gaji pokok PNS', null, null);
   } catch(e){ showToast('Gagal: '+e.message,'error'); }
 }
 
