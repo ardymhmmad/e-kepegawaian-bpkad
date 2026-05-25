@@ -363,7 +363,7 @@ function eksekusiCetakSKKGB(id){
 
     <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt;text-indent:30px">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">a.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Oleh Pejabat</td>
