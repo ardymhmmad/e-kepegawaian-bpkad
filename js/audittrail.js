@@ -243,27 +243,117 @@ function showAuditDetail(logId){
   const log = (window._auditData||[]).find(l=>l.id===logId);
   if(!log) return;
 
-  const fmtJSON = obj => obj
-    ? `<pre style="font-size:11px;background:var(--bg2);padding:10px;border-radius:6px;overflow:auto;max-height:220px;margin:0">${JSON.stringify(obj,null,2)}</pre>`
-    : `<div style="font-size:11px;color:var(--tx3);padding:6px 0">–</div>`;
+  const badge  = AUDIT_BADGE[log.action] || { bg:'#f3f4f6', tx:'#6b7280' };
+  const entity = AUDIT_ENTITY_LABEL[log.entity] || log.entity || '–';
+  const tgl    = log.created_at ? new Date(log.created_at).toLocaleString('id-ID',{
+    weekday:'long', day:'2-digit', month:'long', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  }) : '–';
 
-  document.getElementById('modal-title').textContent = 'Detail Perubahan Data';
-  document.getElementById('modal-body').innerHTML = `
-    <div style="font-size:12px;margin-bottom:12px">
-      <strong>Aksi:</strong> ${log.action} &nbsp;|&nbsp;
-      <strong>Modul:</strong> ${AUDIT_ENTITY_LABEL[log.entity]||log.entity} &nbsp;|&nbsp;
-      <strong>Oleh:</strong> ${log.user_label}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:6px">DATA SEBELUM</div>
-        ${fmtJSON(log.old_data)}
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:6px">DATA SESUDAH</div>
-        ${fmtJSON(log.new_data)}
-      </div>
+  // Inisial pengguna
+  const inisial = (log.user_label||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  // Render baris detail (pakai style .dr seperti detail pegawai)
+  const dr = (l,v) => `
+    <div class="dr">
+      <span class="dr-l">${l}</span>
+      <span class="dr-v">${v||'—'}</span>
     </div>`;
+
+  // Render JSON sebagai tabel baris per field (lebih rapi dari pre)
+  const renderDataTable = (obj) => {
+    if(!obj || typeof obj !== 'object') return `<div style="font-size:11px;color:var(--tx3);padding:6px 0">Tidak ada data</div>`;
+    const entries = Object.entries(obj).filter(([,v]) => v !== null && v !== undefined && v !== '');
+    if(!entries.length) return `<div style="font-size:11px;color:var(--tx3);padding:6px 0">—</div>`;
+    return entries.map(([k,v]) => {
+      const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      const display = val.length > 60 ? `<span title="${val}">${val.slice(0,60)}…</span>` : val;
+      return `<div class="dr">
+        <span class="dr-l" style="color:var(--tx3);font-size:11px">${k}</span>
+        <span class="dr-v" style="font-size:11px;max-width:65%;word-break:break-word">${display}</span>
+      </div>`;
+    }).join('');
+  };
+
+  // Tentukan apakah ada perubahan untuk ditampilkan diff
+  const hasOld = log.old_data && Object.keys(log.old_data).length > 0;
+  const hasNew = log.new_data && Object.keys(log.new_data).length > 0;
+
+  // Highlight field yang berubah antara old dan new
+  const renderDiff = (oldObj, newObj) => {
+    if(!oldObj || !newObj) return null;
+    const allKeys = [...new Set([...Object.keys(oldObj), ...Object.keys(newObj)])];
+    const changed = allKeys.filter(k => JSON.stringify(oldObj[k]) !== JSON.stringify(newObj[k]));
+    if(!changed.length) return null;
+    return `
+      <div class="dc" style="margin-top:12px">
+        <div class="dc-title">🔄 Field yang Berubah</div>
+        ${changed.map(k => {
+          const ov = oldObj[k]!=null ? String(oldObj[k]) : '—';
+          const nv = newObj[k]!=null ? String(newObj[k]) : '—';
+          return `<div class="dr">
+            <span class="dr-l">${k}</span>
+            <span class="dr-v" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <span style="font-size:10px;color:var(--red-tx);text-decoration:line-through">${ov.length>40?ov.slice(0,40)+'…':ov}</span>
+              <span style="font-size:11px;color:var(--grn-tx)">${nv.length>40?nv.slice(0,40)+'…':nv}</span>
+            </span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  };
+
+  const diffHtml = renderDiff(log.old_data, log.new_data) || '';
+
+  document.getElementById('modal-title').textContent = 'Detail Aktivitas';
+  document.getElementById('modal-body').innerHTML = `
+    <!-- Header seperti detail pegawai -->
+    <div class="detail-hdr" style="margin-bottom:12px">
+      <div class="av-lg" style="background:linear-gradient(135deg,${badge.bg},${badge.bg});color:${badge.tx};border:2px solid ${badge.tx}30;font-size:13px">
+        ${inisial}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:var(--tx1)">${log.user_label||'–'}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${log.user_email||'–'}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${badge.bg};color:${badge.tx}">${log.action}</span>
+          <span class="badge b-gray">${entity}</span>
+          ${log.entity_id ? `<span style="font-size:10px;color:var(--tx3)">ID: ${log.entity_id}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Info waktu & deskripsi -->
+    <div class="dc" style="margin-bottom:12px">
+      <div class="dc-title">Informasi Aktivitas</div>
+      ${dr('Waktu', tgl)}
+      ${dr('Modul', entity)}
+      ${dr('Aksi', `<span style="padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;background:${badge.bg};color:${badge.tx}">${log.action}</span>`)}
+      ${dr('Keterangan', `<span style="text-align:right;line-height:1.5">${log.description||'–'}</span>`)}
+    </div>
+
+    <!-- Diff field berubah (jika EDIT) -->
+    ${diffHtml}
+
+    <!-- Data sebelum & sesudah -->
+    <div class="detail-grid" style="margin-top:0">
+      ${hasOld ? `
+      <div class="dc">
+        <div class="dc-title" style="color:var(--red-tx)">📋 Data Sebelum</div>
+        ${renderDataTable(log.old_data)}
+      </div>` : ''}
+      ${hasNew ? `
+      <div class="dc" style="${!hasOld?'grid-column:1/-1':''}">
+        <div class="dc-title" style="color:var(--grn-tx)">✅ Data Sesudah</div>
+        ${renderDataTable(log.new_data)}
+      </div>` : ''}
+      ${!hasOld && !hasNew ? `
+      <div class="dc" style="grid-column:1/-1">
+        <div class="dc-title">Data</div>
+        <div style="font-size:12px;color:var(--tx3);padding:8px 0">Tidak ada detail data yang dicatat untuk aktivitas ini.</div>
+      </div>` : ''}
+    </div>`;
+
   document.getElementById('modal-footer').innerHTML = `<button class="btn" onclick="closeModal()">Tutup</button>`;
   document.getElementById('modal').style.display = 'flex';
 }
