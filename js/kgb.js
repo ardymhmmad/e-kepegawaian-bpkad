@@ -179,11 +179,11 @@ function cetakSKKGB(id, riwayatData=null){
 
   // ── Validasi data sebelum cetak ───────────────────────
   const validasi = [];
-  if(!a.tmt_kgb)                                    validasi.push('TMT KGB belum diisi');
-  if(a.masa_kerja_tahun===null||a.masa_kerja_tahun===undefined) validasi.push('Masa kerja golongan belum diisi');
-  if(!a.gaji || a.gaji<=0)                          validasi.push('Gaji pokok belum diisi');
-  if(!a.pangkat)                                    validasi.push('Pangkat/golongan belum diisi');
-  if(!a.jabatan)                                    validasi.push('Jabatan belum diisi');
+  if(!a.tmt_kgb)                validasi.push('TMT KGB belum diisi');
+  if(!a.gaji || a.gaji <= 0)    validasi.push('Gaji pokok belum diisi');
+  if(!a.pangkat)                validasi.push('Pangkat/golongan belum diisi');
+  if(!a.jabatan)                validasi.push('Jabatan belum diisi');
+  // masa_kerja boleh 0 — tidak divalidasi wajib
 
   if(validasi.length){
     document.getElementById('modal-title').textContent = '⚠️ Data Belum Lengkap';
