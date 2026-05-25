@@ -398,14 +398,14 @@ async function resetLiburKeAPI(){
 let TABEL_GAJI_PNS = null;
 
 const GOL_URUT = [
-  'I/a',
+  'I/a','I/b','I/c','I/d',
   'II/a','II/b','II/c','II/d',
   'III/a','III/b','III/c','III/d',
   'IV/a','IV/b','IV/c','IV/d','IV/e'
 ];
 const MK_LIST     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];      // Gol I, III, IV
 const MK_LIST_II  = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];   // Gol II
-const GOL_II      = ['II/a','II/b','II/c','II/d,'I/b','I/c','I/d','];
+const GOL_II      = ['II/a','II/b','II/c','II/d,'];
 
 function getMKList(gol){ return GOL_II.includes(gol) ? MK_LIST_II : MK_LIST; }
 
