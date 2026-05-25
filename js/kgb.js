@@ -294,7 +294,7 @@ function eksekusiCetakSKKGB(id){
       <tr>
         <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
         <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0"><strong>Kenaikan Gaji Berkala PNS a.n. ${a.nama}</strong></td>
+        <td style="border:none;padding:2px 0">Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td>
       </tr>
     </table>
 
