@@ -444,6 +444,11 @@ function eksekusiCetakSKKGB(id){
             </span>
           </div>
           <div style="height:80px"></div>
+          <span>
+              H. Fatkhan, S.E., M.M<br>
+              Pembina Tingkat I (IV/b) <br>
+              NIP. 197505182010011001
+            </span>
         </td>
       </tr>
     </table>
