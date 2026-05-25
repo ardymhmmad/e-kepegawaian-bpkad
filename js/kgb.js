@@ -442,13 +442,13 @@ function eksekusiCetakSKKGB(id){
               KEUANGAN DAN ASET DAERAH<br>
               PROVINSI KALIMANTAN SELATAN,
             </span>
-          </div>
-          <div style="height:80px"></div>
-          <span>
+            <span>
               H. Fatkhan, S.E., M.M<br>
               Pembina Tingkat I (IV/b) <br>
               NIP. 197505182010011001
             </span>
+          </div>
+          <div style="height:80px"></div>
         </td>
       </tr>
     </table>
