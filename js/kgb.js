@@ -363,7 +363,7 @@ function eksekusiCetakSKKGB(id){
 
     <p style="text-align:justify;margin-bottom:3pt;line-height:1.5;text-indent:30px">(atas dasar surat/keputusan terakhir tentang gaji/pangkat yang ditetapkan)</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">a.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Oleh Pejabat</td>
@@ -392,7 +392,7 @@ function eksekusiCetakSKKGB(id){
 
     <p style="margin-bottom:3pt;line-height:1.5;text-indent:30px">Diberikan kenaikan gaji berkala hingga memperoleh :</p>
 
-    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:16pt">
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3pt">
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">6.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Gaji Pokok Baru</td>
