@@ -780,6 +780,8 @@ async function approveStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
+    `Approve cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, upd);
 
   // ── Notifikasi WA sesuai step ──────────────────────
   if(step===1){
@@ -816,6 +818,8 @@ async function rejectStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.REJECT, 'cuti', id,
+    `Tolak cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''}) — Alasan: ${note.trim()}`, null, upd);
   const d=getCutiData(c,{disetujui_oleh:who, alasan:note.trim()});
   const pesanTolak=renderTemplate(WA_TEMPLATES.wa_tmpl_rejected, d);
   if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanTolak);
@@ -827,8 +831,13 @@ async function rejectStep(id,step){
 
 function batalkanCuti(id){
   showConfirm('Batalkan Cuti','Batalkan pengajuan cuti ini?',async()=>{
+    const oldRec = DB.cuti.find(x=>x.id===id);
     const {error}=await supa.from('cuti').update({status:'cancelled'}).eq('id',id);
-    if(!error){ await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success'); }
+    if(!error){
+      await logAudit(AUDIT_ACTION.CANCEL, 'cuti', id,
+        `Batalkan cuti — ${oldRec?.nama||id} (${oldRec?.jenis_cuti||''})`, oldRec, null);
+      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success');
+    }
     else showToast(error.message,'error');
   });
 }
@@ -839,6 +848,8 @@ function hapusCuti(id,dariDetail=false){
   showConfirm('Hapus Riwayat Cuti',`Hapus permanen riwayat ini?${warn}`,async()=>{
     const {error}=await supa.from('cuti').delete().eq('id',id);
     if(!error){
+      await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id,
+        `Hapus riwayat cuti — ${c?.nama||id} (${c?.jenis_cuti||''})`, c, null);
       await loadCutiFromServer();
       if(dariDetail) showPage('cuti',document.querySelector('.ni.active'));
       else renderCutiTable();

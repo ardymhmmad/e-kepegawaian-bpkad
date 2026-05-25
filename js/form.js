@@ -74,8 +74,11 @@ async function saveAdd(type){
   const btn=document.querySelector('#modal-footer .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
-    const {error}=await supa.from(type).insert(obj);
+    const {data:inserted,error}=await supa.from(type).insert(obj).select().single();
     if(error) throw new Error(error.message);
+    await logAudit(AUDIT_ACTION.TAMBAH, type, inserted?.id,
+      `Tambah data ${type.toUpperCase()}: ${obj.nama||obj.nip||inserted?.id||''}`,
+      null, inserted||obj);
     await reloadType(type); closeModal(); refreshTable(type); renderDashboard();
     showToast('Data berhasil ditambahkan','success');
   }catch(e){ showToast('Error: '+e.message,'error'); }
@@ -95,8 +98,12 @@ async function saveEdit(type,id){
   const btn=document.querySelector('#modal-footer .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
+    const oldRec = DB[type]?.find(r=>r.id===id) || null;
     const {error}=await supa.from(type).update(obj).eq('id',id);
     if(error) throw new Error(error.message);
+    await logAudit(AUDIT_ACTION.EDIT, type, id,
+      `Edit data ${type.toUpperCase()}: ${obj.nama||obj.nip||id}`,
+      oldRec, obj);
     await reloadType(type); closeModal();
     if(currentPage==='detail') showDetail(type,id); else refreshTable(type);
     renderDashboard(); showToast('Data berhasil diperbarui','success');
@@ -106,8 +113,14 @@ async function saveEdit(type,id){
 function deleteRec(type,id){
   if(session?.role!=='admin'){ showToast('Hak akses tidak cukup','error'); return; }
   showConfirm('Hapus Data','Apakah Anda yakin ingin menghapus data ini?',async()=>{
+    const oldRec = DB[type]?.find(r=>r.id===id) || null;
     const {error}=await supa.from(type).delete().eq('id',id);
-    if(!error){ await reloadType(type); refreshTable(type); renderDashboard(); showToast('Data berhasil dihapus','success'); }
+    if(!error){
+      await logAudit(AUDIT_ACTION.HAPUS, type, id,
+        `Hapus data ${type.toUpperCase()}: ${oldRec?.nama||oldRec?.nip||id}`,
+        oldRec, null);
+      await reloadType(type); refreshTable(type); renderDashboard(); showToast('Data berhasil dihapus','success');
+    }
     else showToast(error.message,'error');
   });
 }
