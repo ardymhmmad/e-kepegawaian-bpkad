@@ -77,10 +77,132 @@ function fmtTglIndoStr(str){
   return fmtTglIndo(new Date(y,m-1,d));
 }
 
+
+// ── Riwayat SK KGB ────────────────────────────────────────
+
+// Simpan riwayat SK KGB ke tabel sk_kgb
+async function simpanRiwayatKGB(asnId, tglBerlaku, mkTh, mkBl, gajiBaru){
+  try {
+    const a = DB.asn.find(x=>x.id===asnId);
+    if(!a) return;
+    await supa.from('sk_kgb').insert({
+      asn_id:      asnId,
+      nip:         a.nip,
+      nama:        a.nama,
+      tgl_berlaku: tglBerlaku,
+      gaji_baru:   gajiBaru,
+      mk_tahun:    mkTh,
+      mk_bulan:    mkBl,
+      pangkat:     a.pangkat,
+      jabatan:     a.jabatan,
+      created_at:  new Date().toISOString(),
+    });
+  } catch(e){ console.warn('simpanRiwayatKGB:', e); }
+}
+
+// Tampilkan riwayat SK KGB pegawai di modal
+async function lihatRiwayatKGB(asnId){
+  const a = DB.asn.find(x=>x.id===asnId);
+  if(!a){ showToast('Data tidak ditemukan','error'); return; }
+
+  document.getElementById('modal-title').textContent = `📋 Riwayat SK KGB — ${a.nama}`;
+  document.getElementById('modal-box').style.maxWidth = '600px';
+  document.getElementById('modal-body').innerHTML = `<div style="text-align:center;padding:20px;color:var(--tx3)">Memuat riwayat...</div>`;
+  document.getElementById('modal-footer').innerHTML = `<button class="btn" onclick="closeModal()">Tutup</button>`;
+  document.getElementById('modal').style.display = 'flex';
+
+  try {
+    const { data, error } = await supa.from('sk_kgb')
+      .select('*').eq('asn_id', asnId).order('tgl_berlaku', { ascending: false });
+
+    if(error) throw error;
+
+    if(!data || !data.length){
+      document.getElementById('modal-body').innerHTML = `
+        <div style="text-align:center;padding:30px;color:var(--tx3)">
+          Belum ada riwayat SK KGB untuk pegawai ini.
+        </div>`;
+      return;
+    }
+
+    const rows = data.map((r,i) => `
+      <tr>
+        <td style="padding:6px 8px;text-align:center">${i+1}</td>
+        <td style="padding:6px 8px">${fmtTglIndoStr(r.tgl_berlaku)}</td>
+        <td style="padding:6px 8px">${r.mk_tahun} Thn ${r.mk_bulan} Bln</td>
+        <td style="padding:6px 8px">${r.pangkat||'—'}</td>
+        <td style="padding:6px 8px;text-align:right">Rp ${num(r.gaji_baru)},-</td>
+        <td style="padding:6px 8px;text-align:center">
+          <button class="btn btn-sm btn-primary" onclick="cetakUlangSKKGB('${r.id}','${asnId}')">🖨 Cetak</button>
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('modal-body').innerHTML = `
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">
+        <strong>${a.nama}</strong> — ${a.nip}
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:var(--bg2)">
+              <th style="padding:6px 8px;text-align:center">#</th>
+              <th style="padding:6px 8px;text-align:left">TMT Berlaku</th>
+              <th style="padding:6px 8px;text-align:left">Masa Kerja</th>
+              <th style="padding:6px 8px;text-align:left">Pangkat</th>
+              <th style="padding:6px 8px;text-align:right">Gaji Baru</th>
+              <th style="padding:6px 8px;text-align:center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch(e){
+    document.getElementById('modal-body').innerHTML = `<div style="color:var(--red-tx);padding:12px">Error: ${e.message}</div>`;
+  }
+}
+
+// Cetak ulang SK KGB dari riwayat
+async function cetakUlangSKKGB(riwayatId, asnId){
+  try {
+    const { data, error } = await supa.from('sk_kgb').select('*').eq('id', riwayatId).single();
+    if(error || !data) throw error || new Error('Data tidak ditemukan');
+    // Panggil cetakSKKGB dengan data dari riwayat
+    closeModal();
+    cetakSKKGB(asnId, data);
+  } catch(e){ showToast('Gagal cetak ulang: '+e.message,'error'); }
+}
+
 // ── Dialog konfirmasi sebelum cetak ─────────────────────
-function cetakSKKGB(id){
+function cetakSKKGB(id, riwayatData=null){
   const a = DB.asn.find(x=>x.id===id);
   if(!a){ showToast('Data ASN tidak ditemukan','error'); return; }
+
+  // ── Validasi data sebelum cetak ───────────────────────
+  const validasi = [];
+  if(!a.tmt_kgb)                                    validasi.push('TMT KGB belum diisi');
+  if(a.masa_kerja_tahun===null||a.masa_kerja_tahun===undefined) validasi.push('Masa kerja golongan belum diisi');
+  if(!a.gaji || a.gaji<=0)                          validasi.push('Gaji pokok belum diisi');
+  if(!a.pangkat)                                    validasi.push('Pangkat/golongan belum diisi');
+  if(!a.jabatan)                                    validasi.push('Jabatan belum diisi');
+
+  if(validasi.length){
+    document.getElementById('modal-title').textContent = '⚠️ Data Belum Lengkap';
+    document.getElementById('modal-box').style.maxWidth = '440px';
+    document.getElementById('modal-body').innerHTML = `
+      <div style="margin-bottom:12px;font-size:13px;color:var(--tx2)">
+        Data <strong>${a.nama}</strong> perlu dilengkapi sebelum cetak SK KGB:
+      </div>
+      <div style="background:#fef3c7;border-radius:8px;padding:12px 14px">
+        ${validasi.map(v=>`<div style="font-size:12px;color:#92400e;margin-bottom:4px">⚠️ ${v}</div>`).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--tx3)">Lengkapi data melalui menu Edit di halaman Data ASN.</div>`;
+    document.getElementById('modal-footer').innerHTML = `
+      <button class="btn" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-primary" onclick="closeModal();openEditForm('asn','${a.id}')">✏️ Edit Data ASN</button>`;
+    document.getElementById('modal').style.display='flex';
+    return;
+  }
+  // ── End Validasi ──────────────────────────────────────
 
   const k = calcKGB(a);
   const tglLahir = tglLahirDariNIP(a.nip);
@@ -114,9 +236,9 @@ function cetakSKKGB(id){
     return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
   })() : '';
 
-  // Data SK sebelumnya dari ASN
-  const noSkSblm  = a.no_sk_kgb_sebelumnya  || '';
-  const tglSkSblm = a.tgl_sk_kgb_sebelumnya || '';
+  // Data SK sebelumnya — dari riwayat (cetak ulang) atau dari ASN
+  const noSkSblm  = riwayatData ? (a.no_sk_kgb_sebelumnya||'') : (a.no_sk_kgb_sebelumnya||'');
+  const tglSkSblm = riwayatData ? (a.tgl_sk_kgb_sebelumnya||'') : (a.tgl_sk_kgb_sebelumnya||'');
   // Konversi YYYY-MM-DD → "1 Januari 2023"
   const tglSkSblmIndo = tglSkSblm ? fmtTglIndoStr(tglSkSblm) : '';
   // Format gabung untuk tampil di form: "1 Januari 2023 / No.XXX"
@@ -462,7 +584,42 @@ function eksekusiCetakSKKGB(id){
   // Beri waktu browser render sebelum print
   setTimeout(()=>{
     window.print();
-    // Kosongkan setelah print
     setTimeout(()=>{ el.innerHTML=''; }, 500);
   }, 300);
+
+  // Update data ASN setelah cetak (TMT KGB, masa kerja, gaji)
+  await updateASNSetelahKGB(id, tglPenetapan, mkBaruTh, mkBaruBl, gajiBaru);
+}
+
+// ── Update TMT KGB + Masa Kerja + Gaji di DB setelah cetak SK ──
+async function updateASNSetelahKGB(asnId, tglPenetapan, mkTh, mkBl, gajiBaru){
+  if(!tglPenetapan){ showToast('TMT KGB tidak diupdate — tanggal penetapan kosong','error'); return; }
+  try {
+    const { error } = await supa.from('asn').update({
+      tmt_kgb:           tglPenetapan,
+      masa_kerja_tahun:  mkTh,
+      masa_kerja_bulan:  mkBl,
+      gaji:              gajiBaru,
+    }).eq('id', asnId);
+
+    if(error) throw error;
+
+    // Update cache lokal
+    const idx = DB.asn.findIndex(a => a.id === asnId);
+    if(idx >= 0){
+      DB.asn[idx].tmt_kgb          = tglPenetapan;
+      DB.asn[idx].masa_kerja_tahun  = mkTh;
+      DB.asn[idx].masa_kerja_bulan  = mkBl;
+      DB.asn[idx].gaji              = gajiBaru;
+    }
+
+    // Simpan riwayat SK KGB
+    await simpanRiwayatKGB(asnId, tglPenetapan, mkTh, mkBl, gajiBaru);
+
+    showToast('✅ Data KGB pegawai berhasil diperbarui','success');
+    renderKGB(getFilters('kgb'));
+  } catch(e){
+    showToast('Gagal update data KGB: '+e.message,'error');
+    console.error('updateASNSetelahKGB:', e);
+  }
 }
