@@ -515,8 +515,12 @@ async function renderTabelGajiForm(){
     GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   }
 
-  // Header gabungan semua kolom masa kerja (union)
-  const ALL_MK = [...new Set([...MK_LIST,...MK_LIST_II])].sort((a,b)=>a-b);
+  // Header gabungan semua kolom masa kerja (union dari semua pola MKG)
+  const ALL_MK = [...new Set([
+    ..._S_MK_IA, ..._S_MK_I_BCD,
+    ..._S_MK_IIA, ..._S_MK_II_BCD,
+    ..._S_MK_STD
+  ])].sort((a,b)=>a-b);
   const thMK = ALL_MK.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
 
   const rows = GOL_URUT.map(gol => {
