@@ -176,10 +176,7 @@ function renderKGB(filters={}){
       <td>${fmtDate(k.due)}</td>
       <td><span class="badge ${kgbBadge(k.status)}">${k.status}</span></td>
       <td style="font-size:11px;color:var(--tx2)">KGB berikutnya ${fmtDate(k.due)}${k.daysToKGB>0?' ('+k.daysToKGB+' hari lagi)':' (Lewat jatuh tempo)'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-sm btn-primary" onclick="cetakSKKGB('${a.id}')">🖨 Cetak SK</button>
-        <button class="btn btn-sm" onclick="lihatRiwayatKGB('${a.id}')">📋 Riwayat</button>
-      </td>
+      <td style="white-space:nowrap"><button class="btn btn-sm btn-primary" onclick="cetakSKKGB('${a.id}')">🖨 Cetak SK</button></td>
     </tr>`;
   }).join('')||`<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
   renderPg2('kgb',data.length,filters);
