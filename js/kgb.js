@@ -494,9 +494,9 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   // Beri waktu browser render sebelum eksekusi
   setTimeout(async ()=>{
     if(mode === 'tte'){
-      // ── Mode TTE: kirim pesan WA ke Admin TTE ──
-      let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
-      if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+      // ── Mode TTE: generate PDF → kirim ke Admin TTE via WA dengan lampiran ──
+      let nomorWA = WA_ADMIN_TTE.replace(/\D/g,'');
+      if(nomorWA.startsWith('0')) nomorWA = '62'+nomorWA.slice(1);
 
       const pesan =
 `📋 *PERMOHONAN TTE — SK KGB*
@@ -504,26 +504,79 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
 Kepada Yth. Admin TTE
 Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
 
-👤 *Nama    :* ${a.nama}
-🪪 *NIP     :* ${a.nip}
-📂 *Pangkat :* ${a.pangkat}
-🏢 *Unit    :* ${a.unit}
-📄 *Nomor SK:* ${nomorFull}
-📅 *Tgl SK  :* ${fmtTglIndoStr(tglSurat)}
+👤 *Nama     :* ${a.nama}
+🪪 *NIP      :* ${a.nip}
+📂 *Pangkat  :* ${a.pangkat}
+🏢 *Unit     :* ${a.unit}
+📄 *Nomor SK :* ${nomorFull}
+📅 *Tgl SK   :* ${fmtTglIndoStr(tglSurat)}
 💰 *Gaji Baru:* Rp ${num(gajiBaru)}
 
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-      await kirimWA(nomor, pesan);
-      el.innerHTML = '';
-      showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
-      await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
-        `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+      showToast('⏳ Membuat PDF SK KGB...', 'info');
+
+      try {
+        // 1. Generate PDF dari elemen HTML SK KGB
+        const elContent = document.getElementById('sk-kgb-content');
+        if(!elContent) throw new Error('Elemen SK tidak ditemukan');
+
+        const canvas = await html2canvas(elContent, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const imgData   = canvas.toDataURL('image/jpeg', 0.92);
+        const pdfW      = pdf.internal.pageSize.getWidth();
+        const pdfH      = pdf.internal.pageSize.getHeight();
+        const imgAspect = canvas.height / canvas.width;
+        const imgH      = pdfW * imgAspect;
+
+        // Jika konten lebih dari 1 halaman, bagi per halaman
+        let posY = 0;
+        while(posY < imgH) {
+          if(posY > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
+          posY += pdfH;
+        }
+
+        // 2. Convert PDF ke base64
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        const namaFile  = `SK_KGB_${a.nip}_${nomorFull.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+
+        // 3. Kirim ke Fonnte dengan lampiran PDF
+        const ok = await kirimWADenganFile(nomorWA, pesan, pdfBase64, namaFile);
+
+        el.innerHTML = '';
+        if(ok){
+          showToast('✅ SK KGB + PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
+        } else {
+          // Fallback: kirim pesan teks saja jika file gagal
+          await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dilampirkan, mohon cetak manual._');
+          showToast('⚠️ PDF gagal dilampirkan, pesan teks tetap terkirim','warning');
+        }
+
+        await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
+          `Kirim SK KGB + PDF ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+
+      } catch(err) {
+        console.error('Generate PDF TTE error:', err);
+        el.innerHTML = '';
+        // Fallback kirim teks saja
+        await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
+        showToast('⚠️ PDF gagal dibuat, pesan teks tetap terkirim','warning');
+      }
+
     } else {
       // ── Mode TTD Biasa: cetak langsung ──
       window.print();
       setTimeout(()=>{ el.innerHTML=''; }, 500);
     }
-  }, 300);
+  }, 600);
 }

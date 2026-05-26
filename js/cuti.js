@@ -249,6 +249,41 @@ async function kirimWA(target, pesan){
   } catch(e){ console.error('WA error:',e); return false; }
 }
 
+// Kirim WA dengan lampiran file (base64) via Fonnte
+async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
+  if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
+  if(!target) return false;
+  let nomor = target.replace(/\D/g,'');
+  if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
+  try{
+    const formData = new FormData();
+    formData.append('target', nomor);
+    formData.append('message', pesan);
+    formData.append('countryCode', '62');
+
+    // Convert base64 ke Blob lalu lampirkan sebagai file
+    const byteChars   = atob(fileBase64);
+    const byteArrays  = [];
+    for(let i=0; i<byteChars.length; i+=512){
+      const slice = byteChars.slice(i, i+512);
+      const bytes = new Uint8Array(slice.length);
+      for(let j=0; j<slice.length; j++) bytes[j] = slice.charCodeAt(j);
+      byteArrays.push(bytes);
+    }
+    const blob = new Blob(byteArrays, { type: 'application/pdf' });
+    formData.append('file', blob, namaFile);
+
+    const res = await fetch('https://api.fonnte.com/send',{
+      method:'POST',
+      headers:{ 'Authorization': FONNTE_TOKEN },
+      body: formData
+    });
+    const data = await res.json();
+    console.log('Fonnte file response:', data);
+    return data.status === true;
+  } catch(e){ console.error('WA file error:',e); return false; }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // RENDER TABLE
 // ═══════════════════════════════════════════════════════════════
