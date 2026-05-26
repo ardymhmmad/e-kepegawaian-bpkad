@@ -249,85 +249,6 @@ async function kirimWA(target, pesan){
   } catch(e){ console.error('WA error:',e); return false; }
 }
 
-// Kirim WA dengan link download PDF via Fonnte
-// Strategi: upload PDF ke Supabase Storage → dapat URL publik → sisipkan link di pesan WA
-async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
-  if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi','error'); return false; }
-  if(!target) return false;
-  let nomor = target.replace(/\D/g,'');
-  if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
-
-  try{
-    // 1. Convert base64 ke Blob
-    const byteChars  = atob(fileBase64);
-    const byteArrays = [];
-    for(let i=0; i<byteChars.length; i+=512){
-      const slice = byteChars.slice(i, i+512);
-      const bytes = new Uint8Array(slice.length);
-      for(let j=0; j<slice.length; j++) bytes[j] = slice.charCodeAt(j);
-      byteArrays.push(bytes);
-    }
-    const blob = new Blob(byteArrays, { type: 'application/pdf' });
-    console.log('[TTE] PDF blob size:', blob.size, 'bytes');
-
-    // 2. Upload ke Supabase Storage bucket 'sk-kgb'
-    showToast('⏳ Mengupload PDF ke storage...', 'info');
-    const pathStorage = `kgb/${Date.now()}_${namaFile}`;
-    const { data: upData, error: upError } = await supa.storage
-      .from('sk-kgb')
-      .upload(pathStorage, blob, { contentType: 'application/pdf', upsert: true });
-
-    if(upError){
-      console.error('[TTE] Upload Supabase GAGAL:', upError);
-      showToast('❌ Upload storage gagal: ' + upError.message, 'error');
-      return false;
-    }
-    console.log('[TTE] Upload berhasil:', upData);
-
-    // 3. Ambil URL publik
-    const { data: urlData } = supa.storage.from('sk-kgb').getPublicUrl(pathStorage);
-    const publicUrl = urlData?.publicUrl;
-    console.log('[TTE] Public URL:', publicUrl);
-    if(!publicUrl){
-      showToast('❌ Gagal ambil URL publik dari storage', 'error');
-      return false;
-    }
-
-    // 4. Sisipkan link download di pesan (tanpa lampiran — kompatibel paket Free)
-    showToast('⏳ Mengirim WA ke Admin TTE...', 'info');
-    const pesanDenganLink = pesan + `\n\n📎 *Download PDF:*\n${publicUrl}`;
-
-    const res = await fetch('https://api.fonnte.com/send',{
-      method:'POST',
-      headers:{ 'Authorization': FONNTE_TOKEN },
-      body: new URLSearchParams({
-        target: nomor,
-        message: pesanDenganLink,
-        countryCode: '62'
-      })
-    });
-    const data = await res.json();
-    console.log('[TTE] Fonnte response:', JSON.stringify(data));
-
-    if(data.status !== true){
-      showToast('❌ Fonnte gagal: ' + (data.reason || data.message || JSON.stringify(data)), 'error');
-      return false;
-    }
-
-    // 5. Hapus file dari storage setelah 24 jam (cukup waktu untuk diunduh)
-    setTimeout(async ()=>{
-      await supa.storage.from('sk-kgb').remove([pathStorage]);
-      console.log('[TTE] File storage dihapus:', pathStorage);
-    }, 24 * 60 * 60 * 1000);
-
-    return true;
-  } catch(e){
-    console.error('[TTE] WA file error:', e);
-    showToast('❌ Error: ' + e.message, 'error');
-    return false;
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════
 // RENDER TABLE
 // ═══════════════════════════════════════════════════════════════
@@ -1040,11 +961,9 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   closeModal();
 
   if(mode==='tte'){
-    // ── Mode TTE: generate PDF → upload Supabase → kirim WA + PDF ke Admin TTE ──
+    // ── Mode TTE: kirim WA ke Admin TTE ──
     const c = DB.cuti.find(x=>x.id===id);
-    let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
-    if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
-
+    // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
     const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
     const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
 
@@ -1066,99 +985,23 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    // Render surat dulu ke DOM lalu generate PDF
-    showToast('⏳ Membuat PDF Surat Cuti...', 'info');
-    _doCetakSurat(id, nomorSuratInput, true); // render HTML ke #print-surat tanpa print
-
-    setTimeout(async ()=>{
-      try {
-        const elSurat = document.getElementById('print-surat');
-        if(!elSurat || !elSurat.innerHTML.trim()) throw new Error('Elemen surat tidak ditemukan');
-
-        // Tampilkan di viewport (visible) tapi tidak mengganggu UI
-        const prevStyle = elSurat.getAttribute('style') || '';
-        elSurat.style.cssText = `
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 794px !important;
-          min-height: 1123px !important;
-          background: #fff !important;
-          z-index: -1 !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-          display: block !important;
-          overflow: visible !important;
-        `;
-
-        // Tunggu browser selesai render
-        await new Promise(r => setTimeout(r, 300));
-
-        const canvas = await html2canvas(elSurat, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          width: 794,
-          windowWidth: 794,
-        });
-
-        // Kembalikan style semula
-        elSurat.setAttribute('style', prevStyle);
-        elSurat.style.display = 'none';
-
-        console.log('[TTE] Canvas cuti size:', canvas.width, 'x', canvas.height);
-
-        const { jsPDF } = window.jspdf;
-        const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdfW    = pdf.internal.pageSize.getWidth();   // 210mm
-        const pdfH    = pdf.internal.pageSize.getHeight();  // 297mm
-        const ratio   = canvas.height / canvas.width;
-        const imgH    = pdfW * ratio;
-
-        // Potong per halaman A4
-        let posY = 0;
-        while(posY < imgH){
-          if(posY > 0) pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
-          posY += pdfH;
-        }
-
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
-
-        const ok = await kirimWADenganFile(nomor, pesan, pdfBase64, namaFile);
-        if(ok){
-          showToast('✅ Surat Cuti + link PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
-        } else {
-          await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
-          showToast('⚠️ PDF gagal dikirim, pesan teks tetap terkirim','warning');
-        }
-      } catch(err){
-        console.error('Generate PDF cuti TTE error:', err);
-        document.getElementById('print-surat').style.display = 'none';
-        await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
-        showToast('⚠️ PDF gagal dibuat, pesan teks tetap terkirim','warning');
-      }
-
-      await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
-        `Kirim Surat Cuti + PDF ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
-    }, 500);
-
+    await kirimWA(WA_ADMIN_TTE, pesan);
+    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
+    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
+      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
-    _doCetakSurat(id, nomorSuratInput);
+    _doCetakSurat(id, nomorSuratInput, 'ttd');
   }
 }
 
-function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
+function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-  
+
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
@@ -1169,6 +1012,11 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
   const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
+
+  // Untuk TTE: nama, NIP, pangkat dikosongkan
+  const _nama    = mode==='tte' ? '' : c.nama;
+  const _nip     = mode==='tte' ? '' : c.nip;
+  const _pangkat = mode==='tte' ? '' : (asn?.pangkat || '_______________');
 
   const logoHtml = _logoData
     ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
@@ -1267,7 +1115,7 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
         color:#000;
       ">
         <span style="font-weight:normal">
-  ${c.nama}
+  ${_nama}
 </span>
       </td>
     </tr>
@@ -1302,7 +1150,7 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
         font-size:12pt;
         color:#000;
       ">
-        ${c.nip}
+        ${_nip}
       </td>
     </tr>
 
@@ -1336,7 +1184,7 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
         font-size:12pt;
         color:#000;
       ">
-        ${asn?.pangkat || '_______________'}
+        ${_pangkat}
       </td>
     </tr>
 
@@ -1442,7 +1290,7 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
 
 </div>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8px">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3px">
         <tr style="border:none">
           <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
           <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
@@ -1475,10 +1323,17 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
           KEUANGAN DAN ASET DAERAH<br>
           PROVINSI KALIMANTAN SELATAN,<br>
           SEKRETARIS,
+          <div style="height:50px"></div>
+
+          H. Fatkhan, S.E., M.M<br>
+          Pembina Tingkat I (IV/b)<br>
+          NIP. 197505182010011001
         </span>
+        
+        
       </div>
 
-      <div style="height:80px"></div>
+      <div style="height:30px"></div>
     </td>
   </tr>
 </table>
@@ -1493,7 +1348,7 @@ function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
   </div>`;
 
   document.getElementById('print-surat').style.display='block';
-  if(!skipPrint) window.print();
+  window.print();
   setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
 }
 

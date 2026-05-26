@@ -264,6 +264,13 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   const mkLamaStr = `${mkLamaTh} Tahun ${mkLamaBl} Bulan`;
   const mkBaruStr = `${mkBaruTh} Tahun ${mkBaruBl} Bulan`;
 
+  // Untuk TTE: nama, NIP, pangkat dikosongkan
+  const _nama    = mode==='tte' ? '' : a.nama;
+  const _nip     = mode==='tte' ? '' : a.nip;
+  const _pangkat = mode==='tte' ? '' : `${a.pangkat} / ${a.jabatan||'...'}`;
+  const _hal     = mode==='tte' ? 'Kenaikan Gaji Berkala PNS' : `Kenaikan Gaji Berkala PNS a.n. ${a.nama}`;
+  const _tembusan4 = mode==='tte' ? 'Sdr.' : `Sdr. ${a.nama}`;
+
   closeModal();
 
   // ── Render surat ke div print lalu panggil window.print() ──
@@ -321,7 +328,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
       <tr>
         <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
         <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0">Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td>
+        <td style="border:none;padding:2px 0">${_hal}</td>
       </tr>
     </table>
 
@@ -357,7 +364,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="vertical-align:top;border:none;padding:2px 0">
           <div style="display:flex;justify-content:space-between;gap:8px">
-            <p>${a.nama}</p>
+            <p>${_nama}</p>
             <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
           </div>
         </td>
@@ -366,13 +373,13 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">2.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">NIP</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0">${a.nip}</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${_nip}</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">3.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Pangkat (Gol.ruang) / Jabatan</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0">${a.pangkat} / ${a.jabatan||'...'}</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${_pangkat}</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">4.</td>
@@ -486,7 +493,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
       <div>1.&nbsp;&nbsp;Kepala Badan Kepegawaian Daerah Provisi Kalsel di Banjarbaru</div>
       <div>2.&nbsp;&nbsp;Kepala Cabang PT. Taspen Banjarmasin di Banjarmasin</div>
       <div>3.&nbsp;&nbsp;Bendaharawan Gaji PNS yang Bersangkutan</div>
-      <div>4.&nbsp;&nbsp;Sdr. ${a.nama}</div>
+      <div>4.&nbsp;&nbsp;${_tembusan4}</div>
     </div>
 
   </div>`;
@@ -494,113 +501,34 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   // Beri waktu browser render sebelum eksekusi
   setTimeout(async ()=>{
     if(mode === 'tte'){
-      // ── Mode TTE: generate PDF → kirim ke Admin TTE via WA dengan lampiran ──
-      let nomorWA = WA_ADMIN_TTE.replace(/\D/g,'');
-      if(nomorWA.startsWith('0')) nomorWA = '62'+nomorWA.slice(1);
-
+      // ── Mode TTE: kirim pesan WA ke Admin TTE ──
+      // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
       const pesan =
 `📋 *PERMOHONAN TTE — SK KGB*
 
 Kepada Yth. Admin TTE
 Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
 
-👤 *Nama     :* ${a.nama}
-🪪 *NIP      :* ${a.nip}
-📂 *Pangkat  :* ${a.pangkat}
-🏢 *Unit     :* ${a.unit}
-📄 *Nomor SK :* ${nomorFull}
-📅 *Tgl SK   :* ${fmtTglIndoStr(tglSurat)}
+👤 *Nama    :* ${a.nama}
+🪪 *NIP     :* ${a.nip}
+📂 *Pangkat :* ${a.pangkat}
+🏢 *Unit    :* ${a.unit}
+📄 *Nomor SK:* ${nomorFull}
+📅 *Tgl SK  :* ${fmtTglIndoStr(tglSurat)}
 💰 *Gaji Baru:* Rp ${num(gajiBaru)}
 
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-      showToast('⏳ Membuat PDF SK KGB...', 'info');
-
-      try {
-        // 1. Generate PDF dari elemen HTML SK KGB
-        const elContent = document.getElementById('sk-kgb-content');
-        if(!elContent) throw new Error('Elemen SK tidak ditemukan');
-
-        // Set ukuran eksplisit agar html2canvas tidak blank
-        const elWrap = document.getElementById('print-surat-kgb');
-        const prevWrapStyle = elWrap ? (elWrap.getAttribute('style') || '') : '';
-        if(elWrap){
-          elWrap.style.cssText = `
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 794px !important;
-            background: #fff !important;
-            z-index: -1 !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            display: block !important;
-            overflow: visible !important;
-          `;
-        }
-
-        // Tunggu browser selesai render
-        await new Promise(r => setTimeout(r, 300));
-
-        const canvas = await html2canvas(elContent, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          width: 794,
-          windowWidth: 794,
-        });
-
-        if(elWrap) elWrap.setAttribute('style', prevWrapStyle);
-
-        console.log('[TTE] Canvas KGB size:', canvas.width, 'x', canvas.height);
-
-        const { jsPDF } = window.jspdf;
-        const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdfW    = pdf.internal.pageSize.getWidth();
-        const pdfH    = pdf.internal.pageSize.getHeight();
-        const ratio   = canvas.height / canvas.width;
-        const imgH    = pdfW * ratio;
-
-        // Potong per halaman A4
-        let posY = 0;
-        while(posY < imgH){
-          if(posY > 0) pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
-          posY += pdfH;
-        }
-
-        // 2. Convert PDF ke base64
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        const namaFile  = `SK_KGB_${a.nip}_${nomorFull.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
-
-        // 3. Kirim ke Fonnte dengan link PDF
-        const ok = await kirimWADenganFile(nomorWA, pesan, pdfBase64, namaFile);
-
-        el.innerHTML = '';
-        if(ok){
-          showToast('✅ SK KGB + link PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
-        } else {
-          await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
-          showToast('⚠️ PDF gagal dikirim, pesan teks tetap terkirim','warning');
-        }
-
-        await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
-          `Kirim SK KGB + PDF ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
-
-      } catch(err) {
-        console.error('Generate PDF TTE error:', err);
-        el.innerHTML = '';
-        await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
-        showToast('⚠️ PDF gagal dibuat, pesan teks tetap terkirim','warning');
-      }
-
+      await kirimWA(WA_ADMIN_TTE, pesan);
+      el.innerHTML = '';
+      showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
+      await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
+        `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
     } else {
       // ── Mode TTD Biasa: cetak langsung ──
       window.print();
       setTimeout(()=>{ el.innerHTML=''; }, 500);
     }
-  }, 600);
+  }, 300);
 }

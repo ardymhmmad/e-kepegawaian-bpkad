@@ -88,6 +88,9 @@ async function init(){
   renderDashboard(); updateCutiBadge();
   // Load WA templates
   await loadWATemplates();
+  // Load Fonnte token & nomor WA Admin TTE agar siap dipakai tanpa harus buka Pengaturan dulu
+  if(typeof loadFonnteTokenSilent === 'function') await loadFonnteTokenSilent();
+  if(typeof loadWaAdminTTESilent  === 'function') await loadWaAdminTTESilent();
   // Load tabel gaji PNS dari DB — jika kosong, auto-seed dari hardcode GAJI_PNS
   if(typeof loadTabelGaji === 'function') await loadTabelGaji();
   if(typeof seedTabelGajiFromHardcode === 'function') await seedTabelGajiFromHardcode();
