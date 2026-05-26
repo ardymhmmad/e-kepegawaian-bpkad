@@ -961,10 +961,13 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   closeModal();
 
   if(mode==='tte'){
-    // ── Mode TTE: generate PDF → upload → kirim WA + attachment ──
+    // ── Mode TTE: kirim WA ke Admin TTE ──
     const c = DB.cuti.find(x=>x.id===id);
-    const tglMulai   = c?.tgl_mulai   ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-    const tglSelesai = c?.tgl_selesai ? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
+    if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+
+    const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
 
     const pesan =
 `📋 *PERMOHONAN TTE — SURAT CUTI*
@@ -984,30 +987,23 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    // Generate PDF dari elemen surat yang sudah dirender oleh _doCetakSurat
-    _doCetakSurat(id, nomorSuratInput, 'tte');
-    await new Promise(r => setTimeout(r, 400)); // tunggu DOM render
-    const elSurat = document.getElementById('print-surat');
-    const filename = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/\//g,'-')}`;
-    const ok = await generateAndSendPDF(elSurat, filename, pesan);
-    if(elSurat) elSurat.innerHTML = '';
-    if(ok){
-      await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
-        `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
-    }
+    await kirimWA(nomor, pesan);
+    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
+    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
+      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
-    _doCetakSurat(id, nomorSuratInput, 'ttd');
+    _doCetakSurat(id, nomorSuratInput);
   }
 }
 
-function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
+function _doCetakSurat(id, nomorSuratOverride){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-
+  
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
@@ -1018,11 +1014,6 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
   const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
-
-  // Untuk TTE: nama, NIP, pangkat dikosongkan
-  const _nama    = mode==='tte' ? '' : c.nama;
-  const _nip     = mode==='tte' ? '' : c.nip;
-  const _pangkat = mode==='tte' ? '' : (asn?.pangkat || '_______________');
 
   const logoHtml = _logoData
     ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
@@ -1121,7 +1112,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         color:#000;
       ">
         <span style="font-weight:normal">
-  ${_nama}
+  ${c.nama}
 </span>
       </td>
     </tr>
@@ -1156,7 +1147,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         font-size:12pt;
         color:#000;
       ">
-        ${_nip}
+        ${c.nip}
       </td>
     </tr>
 
@@ -1190,7 +1181,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         font-size:12pt;
         color:#000;
       ">
-        ${_pangkat}
+        ${asn?.pangkat || '_______________'}
       </td>
     </tr>
 
@@ -1296,7 +1287,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
 
 </div>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3px">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8px">
         <tr style="border:none">
           <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
           <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
@@ -1329,17 +1320,10 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
           KEUANGAN DAN ASET DAERAH<br>
           PROVINSI KALIMANTAN SELATAN,<br>
           SEKRETARIS,
-          <div style="height:50px"></div>
-
-          H. Fatkhan, S.E., M.M<br>
-          Pembina Tingkat I (IV/b)<br>
-          NIP. 197505182010011001
         </span>
-        
-        
       </div>
 
-      <div style="height:30px"></div>
+      <div style="height:80px"></div>
     </td>
   </tr>
 </table>

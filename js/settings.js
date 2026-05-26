@@ -16,21 +16,6 @@ function renderSettings(){
   renderUserTable();
 }
 
-// ── Silent loader — dipanggil saat init app, tidak butuh DOM Pengaturan ──
-async function loadFonnteTokenSilent(){
-  try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
-    if(data?.setting_val) FONNTE_TOKEN = data.setting_val;
-  } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
-}
-
-async function loadWaAdminTTESilent(){
-  try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
-    if(data?.setting_val) WA_ADMIN_TTE = data.setting_val;
-  } catch(e){ console.warn('loadWaAdminTTESilent:', e.message); }
-}
-
 // ── Fonnte Token ───────────────────────────────────────────
 async function loadFonnteToken(){
   const el = document.getElementById('fonnte-token-input'); if(!el) return;
@@ -609,9 +594,10 @@ async function renderTabelGajiForm(){
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="saveTabelGaji()">💾 Simpan Tabel Gaji</button>
-      <button class="btn" onclick="resetTabelGaji()">↺ Reset ke Default PP 5/2024</button>
+      <button class="btn" onclick="resetTabelGaji()">↺ Reset Tampilan</button>
+      <button class="btn btn-success" onclick="forceUpdateTabelGaji()" title="Timpa data di database dengan tabel gaji terbaru dari kode (GAJI_PNS)">⬆️ Perbarui DB dari Data Terbaru</button>
       <span style="font-size:11px;color:var(--tx3)">PP No. 5 Tahun 2024</span>
     </div>`;
 }
@@ -629,6 +615,47 @@ function resetTabelGaji(){
   });
   renderTabelGajiForm();
   showToast('✅ Tabel direset ke data PP 5/2024 — klik Simpan untuk menyimpan','info');
+}
+
+// Force update tabel gaji di DB langsung dari data hardcode GAJI_PNS (kgb.js)
+// Akan menimpa data lama di DB tanpa perlu klik Simpan lagi
+async function forceUpdateTabelGaji(){
+  if(!confirm('Perbarui tabel gaji di database dengan data terbaru dari kode? Data tabel gaji yang tersimpan sebelumnya akan ditimpa.')) return;
+  if(typeof GAJI_PNS === 'undefined'){
+    showToast('Data hardcode tidak ditemukan','error'); return;
+  }
+  try {
+    // Bangun data dari GAJI_PNS
+    const newData = {};
+    GOL_URUT.forEach(gol => {
+      newData[gol] = {};
+      getMKList(gol).forEach(mk => { newData[gol][mk] = GAJI_PNS[gol]?.[mk] || 0; });
+    });
+    const val = JSON.stringify(newData);
+
+    // Cek apakah row sudah ada di DB
+    const { data: ex } = await supa.from('settings')
+      .select('id').eq('setting_key','tabel_gaji_pns').maybeSingle();
+
+    let error;
+    if(ex){
+      ({ error } = await supa.from('settings')
+        .update({ setting_val: val }).eq('setting_key','tabel_gaji_pns'));
+    } else {
+      ({ error } = await supa.from('settings')
+        .insert({ setting_key:'tabel_gaji_pns', setting_val: val }));
+    }
+
+    if(error) throw error;
+
+    // Update cache lokal & re-render form
+    TABEL_GAJI_PNS = newData;
+    await renderTabelGajiForm();
+    showToast('✅ Tabel gaji berhasil diperbarui dan disimpan ke database','success');
+  } catch(e){
+    showToast('Gagal memperbarui: '+e.message,'error');
+    console.error('forceUpdateTabelGaji error:', e);
+  }
 }
 
 async function loadNoUrutCuti(){
