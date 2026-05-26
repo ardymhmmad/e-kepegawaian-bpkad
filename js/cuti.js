@@ -963,9 +963,7 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   if(mode==='tte'){
     // ── Mode TTE: kirim WA ke Admin TTE ──
     const c = DB.cuti.find(x=>x.id===id);
-    let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
-    if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
-
+    // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
     const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
     const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
 
@@ -987,23 +985,23 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    await kirimWA(nomor, pesan);
+    await kirimWA(WA_ADMIN_TTE, pesan);
     showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
     await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
       `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
-    _doCetakSurat(id, nomorSuratInput);
+    _doCetakSurat(id, nomorSuratInput, 'ttd');
   }
 }
 
-function _doCetakSurat(id, nomorSuratOverride){
+function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-  
+
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
@@ -1014,6 +1012,11 @@ function _doCetakSurat(id, nomorSuratOverride){
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
   const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
+
+  // Untuk TTE: nama, NIP, pangkat dikosongkan
+  const _nama    = mode==='tte' ? '' : c.nama;
+  const _nip     = mode==='tte' ? '' : c.nip;
+  const _pangkat = mode==='tte' ? '' : (asn?.pangkat || '_______________');
 
   const logoHtml = _logoData
     ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
@@ -1112,7 +1115,7 @@ function _doCetakSurat(id, nomorSuratOverride){
         color:#000;
       ">
         <span style="font-weight:normal">
-  ${c.nama}
+  ${_nama}
 </span>
       </td>
     </tr>
@@ -1147,7 +1150,7 @@ function _doCetakSurat(id, nomorSuratOverride){
         font-size:12pt;
         color:#000;
       ">
-        ${c.nip}
+        ${_nip}
       </td>
     </tr>
 
@@ -1181,7 +1184,7 @@ function _doCetakSurat(id, nomorSuratOverride){
         font-size:12pt;
         color:#000;
       ">
-        ${asn?.pangkat || '_______________'}
+        ${_pangkat}
       </td>
     </tr>
 

@@ -264,6 +264,13 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   const mkLamaStr = `${mkLamaTh} Tahun ${mkLamaBl} Bulan`;
   const mkBaruStr = `${mkBaruTh} Tahun ${mkBaruBl} Bulan`;
 
+  // Untuk TTE: nama, NIP, pangkat dikosongkan
+  const _nama    = mode==='tte' ? '' : a.nama;
+  const _nip     = mode==='tte' ? '' : a.nip;
+  const _pangkat = mode==='tte' ? '' : `${a.pangkat} / ${a.jabatan||'...'}`;
+  const _hal     = mode==='tte' ? 'Kenaikan Gaji Berkala PNS' : `Kenaikan Gaji Berkala PNS a.n. ${a.nama}`;
+  const _tembusan4 = mode==='tte' ? 'Sdr.' : `Sdr. ${a.nama}`;
+
   closeModal();
 
   // ── Render surat ke div print lalu panggil window.print() ──
@@ -321,7 +328,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
       <tr>
         <td style="border:none;padding:2px 0;vertical-align:top">Hal</td>
         <td style="border:none;padding:2px 0;vertical-align:top">:</td>
-        <td style="border:none;padding:2px 0">Kenaikan Gaji Berkala PNS a.n. ${a.nama}</td>
+        <td style="border:none;padding:2px 0">${_hal}</td>
       </tr>
     </table>
 
@@ -357,7 +364,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
         <td style="vertical-align:top;border:none;padding:2px 0">
           <div style="display:flex;justify-content:space-between;gap:8px">
-            <p>${a.nama}</p>
+            <p>${_nama}</p>
             <span style="white-space:nowrap">(${tglLahir ? fmtTglIndo(tglLahir) : '...........'})</span>
           </div>
         </td>
@@ -366,13 +373,13 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">2.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">NIP</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0">${a.nip}</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${_nip}</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">3.</td>
         <td style="width:190px;vertical-align:top;border:none;padding:2px 0">Pangkat (Gol.ruang) / Jabatan</td>
         <td style="width:12px;vertical-align:top;border:none;padding:2px 0">:</td>
-        <td style="vertical-align:top;border:none;padding:2px 0">${a.pangkat} / ${a.jabatan||'...'}</td>
+        <td style="vertical-align:top;border:none;padding:2px 0">${_pangkat}</td>
       </tr>
       <tr>
         <td style="width:22px;vertical-align:top;border:none;padding:2px 0">4.</td>
@@ -486,7 +493,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
       <div>1.&nbsp;&nbsp;Kepala Badan Kepegawaian Daerah Provisi Kalsel di Banjarbaru</div>
       <div>2.&nbsp;&nbsp;Kepala Cabang PT. Taspen Banjarmasin di Banjarmasin</div>
       <div>3.&nbsp;&nbsp;Bendaharawan Gaji PNS yang Bersangkutan</div>
-      <div>4.&nbsp;&nbsp;Sdr. ${a.nama}</div>
+      <div>4.&nbsp;&nbsp;${_tembusan4}</div>
     </div>
 
   </div>`;
@@ -495,9 +502,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   setTimeout(async ()=>{
     if(mode === 'tte'){
       // ── Mode TTE: kirim pesan WA ke Admin TTE ──
-      let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
-      if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
-
+      // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
       const pesan =
 `📋 *PERMOHONAN TTE — SK KGB*
 
@@ -515,7 +520,7 @@ Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-      await kirimWA(nomor, pesan);
+      await kirimWA(WA_ADMIN_TTE, pesan);
       el.innerHTML = '';
       showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
       await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,

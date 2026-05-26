@@ -16,6 +16,21 @@ function renderSettings(){
   renderUserTable();
 }
 
+// ── Silent loader — dipanggil saat init app, tidak butuh DOM Pengaturan ──
+async function loadFonnteTokenSilent(){
+  try {
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
+    if(data?.setting_val) FONNTE_TOKEN = data.setting_val;
+  } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
+}
+
+async function loadWaAdminTTESilent(){
+  try {
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
+    if(data?.setting_val) WA_ADMIN_TTE = data.setting_val;
+  } catch(e){ console.warn('loadWaAdminTTESilent:', e.message); }
+}
+
 // ── Fonnte Token ───────────────────────────────────────────
 async function loadFonnteToken(){
   const el = document.getElementById('fonnte-token-input'); if(!el) return;
