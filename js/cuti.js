@@ -249,8 +249,8 @@ async function kirimWA(target, pesan){
   } catch(e){ console.error('WA error:',e); return false; }
 }
 
-// Kirim WA dengan lampiran PDF via Fonnte
-// Strategi: upload PDF ke Supabase Storage → dapat URL publik → kirim URL ke Fonnte
+// Kirim WA dengan link download PDF via Fonnte
+// Strategi: upload PDF ke Supabase Storage → dapat URL publik → sisipkan link di pesan WA
 async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
   if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi','error'); return false; }
   if(!target) return false;
@@ -293,33 +293,34 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
       return false;
     }
 
-    // 4. Kirim ke Fonnte dengan parameter url + filename
-    showToast('⏳ Mengirim PDF ke WhatsApp...', 'info');
-    const formData = new FormData();
-    formData.append('target', nomor);
-    formData.append('message', pesan);
-    formData.append('url', publicUrl);
-    formData.append('filename', namaFile);
-    formData.append('countryCode', '62');
+    // 4. Sisipkan link download di pesan (tanpa lampiran — kompatibel paket Free)
+    showToast('⏳ Mengirim WA ke Admin TTE...', 'info');
+    const pesanDenganLink = pesan + `\n\n📎 *Download PDF:*\n${publicUrl}`;
 
     const res = await fetch('https://api.fonnte.com/send',{
       method:'POST',
       headers:{ 'Authorization': FONNTE_TOKEN },
-      body: formData
+      body: new URLSearchParams({
+        target: nomor,
+        message: pesanDenganLink,
+        countryCode: '62'
+      })
     });
     const data = await res.json();
     console.log('[TTE] Fonnte response:', JSON.stringify(data));
 
     if(data.status !== true){
       showToast('❌ Fonnte gagal: ' + (data.reason || data.message || JSON.stringify(data)), 'error');
+      return false;
     }
 
-    // 5. Hapus file dari storage setelah 5 menit (cleanup)
+    // 5. Hapus file dari storage setelah 24 jam (cukup waktu untuk diunduh)
     setTimeout(async ()=>{
       await supa.storage.from('sk-kgb').remove([pathStorage]);
-    }, 5 * 60 * 1000);
+      console.log('[TTE] File storage dihapus:', pathStorage);
+    }, 24 * 60 * 60 * 1000);
 
-    return data.status === true;
+    return true;
   } catch(e){
     console.error('[TTE] WA file error:', e);
     showToast('❌ Error: ' + e.message, 'error');
