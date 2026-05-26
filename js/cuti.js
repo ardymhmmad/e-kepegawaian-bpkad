@@ -1320,7 +1320,14 @@ function _doCetakSurat(id, nomorSuratOverride){
           KEUANGAN DAN ASET DAERAH<br>
           PROVINSI KALIMANTAN SELATAN,<br>
           SEKRETARIS,
+          <div style="height:80px"></div>
+
+          H. Fatkhan, S.E., M.M<br>
+          Pembina Tingkat I (IV/b)<br>
+          NIP. 197505182010011001
         </span>
+        
+        
       </div>
 
       <div style="height:80px"></div>
