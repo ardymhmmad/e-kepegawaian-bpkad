@@ -961,11 +961,10 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   closeModal();
 
   if(mode==='tte'){
-    // ── Mode TTE: kirim WA ke Admin TTE ──
+    // ── Mode TTE: generate PDF → upload → kirim WA + attachment ──
     const c = DB.cuti.find(x=>x.id===id);
-    // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
-    const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-    const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglMulai   = c?.tgl_mulai   ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglSelesai = c?.tgl_selesai ? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
 
     const pesan =
 `📋 *PERMOHONAN TTE — SURAT CUTI*
@@ -985,10 +984,17 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    await kirimWA(WA_ADMIN_TTE, pesan);
-    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
-    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
-      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+    // Generate PDF dari elemen surat yang sudah dirender oleh _doCetakSurat
+    _doCetakSurat(id, nomorSuratInput, 'tte');
+    await new Promise(r => setTimeout(r, 400)); // tunggu DOM render
+    const elSurat = document.getElementById('print-surat');
+    const filename = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/\//g,'-')}`;
+    const ok = await generateAndSendPDF(elSurat, filename, pesan);
+    if(elSurat) elSurat.innerHTML = '';
+    if(ok){
+      await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
+        `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+    }
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
     _doCetakSurat(id, nomorSuratInput, 'ttd');

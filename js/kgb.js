@@ -501,8 +501,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   // Beri waktu browser render sebelum eksekusi
   setTimeout(async ()=>{
     if(mode === 'tte'){
-      // ── Mode TTE: kirim pesan WA ke Admin TTE ──
-      // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
+      // ── Mode TTE: generate PDF → upload → kirim WA + attachment ──
       const pesan =
 `📋 *PERMOHONAN TTE — SK KGB*
 
@@ -520,11 +519,13 @@ Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-      await kirimWA(WA_ADMIN_TTE, pesan);
+      const filename = `SK_KGB_${a.nip}_${nomorFull.replace(/\//g,'-')}`;
+      const ok = await generateAndSendPDF(el, filename, pesan);
       el.innerHTML = '';
-      showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
-      await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
-        `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+      if(ok){
+        await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
+          `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+      }
     } else {
       // ── Mode TTD Biasa: cetak langsung ──
       window.print();

@@ -160,6 +160,88 @@ function kgbBadge(s){ return s==='Lewat Jatuh Tempo'?'b-red':s==='Segera'?'b-amb
 function kontrakBadge(d){ const dy=daysUntil(d); return dy<0?'b-red':dy<=30?'b-amber':'b-green'; }
 
 // ═══════════════════════════════════════════════════
+// PDF GENERATOR + UPLOAD + KIRIM WA TTE
+// ═══════════════════════════════════════════════════
+
+/**
+ * Generate PDF dari elemen HTML, upload ke Supabase Storage,
+ * lalu kirim ke Admin TTE via WA (teks + attachment).
+ *
+ * @param {HTMLElement} el       - elemen yang akan di-PDF-kan
+ * @param {string}      filename - nama file (tanpa .pdf)
+ * @param {string}      pesanWA  - teks WA yang dikirim bersama link PDF
+ * @returns {Promise<boolean>}   - true jika berhasil
+ */
+async function generateAndSendPDF(el, filename, pesanWA){
+  if(!el){ showToast('Elemen dokumen tidak ditemukan','error'); return false; }
+  if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return false; }
+  if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return false; }
+  if(typeof html2pdf === 'undefined'){ showToast('Library html2pdf belum termuat, coba refresh','error'); return false; }
+
+  showToast('⏳ Sedang generate PDF...','info');
+
+  try {
+    // 1. Generate PDF sebagai Blob
+    const opt = {
+      margin:       [10, 10, 10, 10],
+      filename:     `${filename}.pdf`,
+      image:        { type:'jpeg', quality:0.95 },
+      html2canvas:  { scale:2, useCORS:true, logging:false },
+      jsPDF:        { unit:'mm', format:'a4', orientation:'portrait' },
+    };
+    const pdfBlob = await html2pdf().set(opt).from(el).outputPdf('blob');
+
+    // 2. Upload ke Supabase Storage bucket 'sk-documents'
+    showToast('⏳ Mengupload PDF...','info');
+    const path = `${filename}_${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await supa.storage
+      .from('sk-documents')
+      .upload(path, pdfBlob, { contentType:'application/pdf', upsert:true });
+
+    if(uploadError) throw new Error('Upload gagal: ' + uploadError.message);
+
+    // 3. Ambil URL publik
+    const { data: urlData } = supa.storage.from('sk-documents').getPublicUrl(path);
+    const publicUrl = urlData?.publicUrl;
+    if(!publicUrl) throw new Error('Gagal mendapatkan URL publik PDF');
+
+    // 4. Kirim WA — teks + link PDF
+    const pesanLengkap = `${pesanWA}\n\n📎 *File PDF:*\n${publicUrl}`;
+
+    let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
+    if(nomor.startsWith('0')) nomor = '62' + nomor.slice(1);
+
+    // Kirim teks + link
+    const res1 = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: { 'Authorization': FONNTE_TOKEN },
+      body: new URLSearchParams({ target: nomor, message: pesanLengkap, countryCode:'62' })
+    });
+    const d1 = await res1.json();
+
+    // Kirim attachment PDF langsung
+    const res2 = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: { 'Authorization': FONNTE_TOKEN },
+      body: new URLSearchParams({ target: nomor, url: publicUrl, filename: `${filename}.pdf`, countryCode:'62' })
+    });
+    const d2 = await res2.json();
+
+    if(d1.status === true || d2.status === true){
+      showToast('✅ PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
+      return true;
+    } else {
+      throw new Error('WA gagal: ' + (d1.reason || d2.reason || 'Unknown error'));
+    }
+
+  } catch(e){
+    console.error('generateAndSendPDF error:', e);
+    showToast('Gagal: ' + e.message, 'error');
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // LOCALSTORAGE
 // ═══════════════════════════════════════════════════
 function saveLocal(){}
