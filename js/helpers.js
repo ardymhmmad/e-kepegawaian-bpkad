@@ -164,3 +164,124 @@ function kontrakBadge(d){ const dy=daysUntil(d); return dy<0?'b-red':dy<=30?'b-a
 // ═══════════════════════════════════════════════════
 function saveLocal(){}
 function loadLocal(){ return false; }
+
+// ═══════════════════════════════════════════════════
+// PDF GENERATOR & WA DENGAN LINK PDF
+// ═══════════════════════════════════════════════════
+
+// Generate PDF base64 dari elemen HTML
+// Elemen akan di-clone ke container tersembunyi agar tidak mengganggu UI
+async function generatePdfBase64(elId, lebar=794){
+  const elSrc = document.getElementById(elId);
+  if(!elSrc) throw new Error('Elemen #'+elId+' tidak ditemukan');
+
+  // Clone elemen ke container sementara yang visible di viewport
+  const container = document.createElement('div');
+  container.style.cssText = `
+    position:fixed; top:0; left:0;
+    width:${lebar}px; background:#fff;
+    z-index:99999; opacity:0;
+    pointer-events:none; overflow:visible;
+  `;
+  container.innerHTML = elSrc.innerHTML;
+  document.body.appendChild(container);
+
+  // Tunggu browser render
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 400)));
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: lebar,
+      windowWidth: lebar,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf   = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pdfW  = pdf.internal.pageSize.getWidth();
+    const pdfH  = pdf.internal.pageSize.getHeight();
+    const imgH  = pdfW * (canvas.height / canvas.width);
+    const img   = canvas.toDataURL('image/jpeg', 0.95);
+
+    let posY = 0;
+    while(posY < imgH){
+      if(posY > 0) pdf.addPage();
+      pdf.addImage(img, 'JPEG', 0, -posY, pdfW, imgH);
+      posY += pdfH;
+    }
+
+    console.log('[PDF] canvas:', canvas.width+'x'+canvas.height, '| halaman:', Math.ceil(imgH/pdfH));
+    return pdf.output('datauristring').split(',')[1]; // base64
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+// Upload PDF ke Supabase Storage lalu kirim link via WA Fonnte
+async function kirimWADenganFile(target, pesan, pdfBase64, namaFile){
+  if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi','error'); return false; }
+  if(!target) return false;
+
+  let nomor = String(target).replace(/\D/g,'');
+  if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+
+  try {
+    // 1. Base64 → Blob
+    const binary = atob(pdfBase64);
+    const bytes  = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    const blob = new Blob([bytes],{type:'application/pdf'});
+    console.log('[WA-PDF] blob size:', blob.size, 'bytes');
+
+    // 2. Upload ke Supabase Storage bucket 'sk-kgb'
+    showToast('⏳ Mengupload PDF...','info');
+    const path = `surat/${Date.now()}_${namaFile}`;
+    const { error: upErr } = await supa.storage
+      .from('sk-kgb')
+      .upload(path, blob, { contentType:'application/pdf', upsert:true });
+
+    if(upErr){
+      console.error('[WA-PDF] Upload gagal:', upErr);
+      showToast('❌ Upload gagal: '+upErr.message,'error');
+      return false;
+    }
+
+    // 3. Ambil URL publik
+    const { data: urlData } = supa.storage.from('sk-kgb').getPublicUrl(path);
+    const url = urlData?.publicUrl;
+    if(!url){ showToast('❌ Gagal ambil URL publik','error'); return false; }
+    console.log('[WA-PDF] Public URL:', url);
+
+    // 4. Kirim WA dengan link PDF disisipkan di pesan
+    showToast('⏳ Mengirim WA...','info');
+    const pesanFinal = pesan + `\n\n📎 *Download PDF:*\n${url}`;
+    const res = await fetch('https://api.fonnte.com/send',{
+      method:'POST',
+      headers:{ 'Authorization': FONNTE_TOKEN },
+      body: new URLSearchParams({ target:nomor, message:pesanFinal, countryCode:'62' })
+    });
+    const data = await res.json();
+    console.log('[WA-PDF] Fonnte:', data);
+
+    if(data.status !== true){
+      showToast('❌ WA gagal: '+(data.reason||data.message||JSON.stringify(data)),'error');
+      return false;
+    }
+
+    // 5. Auto-hapus file setelah 24 jam
+    setTimeout(async ()=>{
+      await supa.storage.from('sk-kgb').remove([path]);
+      console.log('[WA-PDF] File dihapus:', path);
+    }, 24*60*60*1000);
+
+    return true;
+  } catch(e){
+    console.error('[WA-PDF] Error:', e);
+    showToast('❌ Error: '+e.message,'error');
+    return false;
+  }
+}

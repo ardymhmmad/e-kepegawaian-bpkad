@@ -961,11 +961,10 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   closeModal();
 
   if(mode==='tte'){
-    // ── Mode TTE: kirim WA ke Admin TTE ──
+    // ── Mode TTE: generate PDF surat → upload Supabase → kirim link via WA ──
     const c = DB.cuti.find(x=>x.id===id);
-    // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
-    const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-    const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglMulai   = c?.tgl_mulai   ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglSelesai = c?.tgl_selesai ? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
 
     const pesan =
 `📋 *PERMOHONAN TTE — SURAT CUTI*
@@ -985,10 +984,31 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    await kirimWA(WA_ADMIN_TTE, pesan);
-    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
-    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
-      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+    // Render HTML surat ke #print-surat dulu (tanpa print)
+    _doCetakSurat(id, nomorSuratInput, 'tte');
+
+    showToast('⏳ Membuat PDF Surat Cuti...','info');
+    setTimeout(async ()=>{
+      try {
+        const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+        const pdfBase64 = await generatePdfBase64('print-surat');
+        const ok        = await kirimWADenganFile(WA_ADMIN_TTE, pesan, pdfBase64, namaFile);
+        if(ok){
+          showToast('✅ Surat Cuti + link PDF berhasil dikirim ke Admin TTE','success');
+        } else {
+          await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
+          showToast('⚠️ PDF gagal, pesan teks tetap terkirim','warning');
+        }
+      } catch(err){
+        console.error('[TTE Cuti]', err);
+        await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
+        showToast('⚠️ PDF gagal dibuat: '+err.message,'warning');
+      }
+      document.getElementById('print-surat').style.display='none';
+      await logAudit(AUDIT_ACTION.SETTING,'cuti',id,
+        `Kirim Surat Cuti TTE — ${c?.nama||id} (${nomorSuratInput})`,null,null);
+    }, 600);
+
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
     _doCetakSurat(id, nomorSuratInput, 'ttd');
@@ -1348,8 +1368,10 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   </div>`;
 
   document.getElementById('print-surat').style.display='block';
-  window.print();
-  setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
+  if(mode !== 'tte'){
+    window.print();
+    setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
+  }
 }
 
 function terbilang(n){

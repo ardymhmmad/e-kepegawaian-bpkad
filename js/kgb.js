@@ -501,30 +501,43 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   // Beri waktu browser render sebelum eksekusi
   setTimeout(async ()=>{
     if(mode === 'tte'){
-      // ── Mode TTE: kirim pesan WA ke Admin TTE ──
-      // Langsung pakai WA_ADMIN_TTE — kirimWA sudah handle konversi nomor
+      // ── Mode TTE: generate PDF SK → upload Supabase → kirim link via WA ──
       const pesan =
 `📋 *PERMOHONAN TTE — SK KGB*
 
 Kepada Yth. Admin TTE
 Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
 
-👤 *Nama    :* ${a.nama}
-🪪 *NIP     :* ${a.nip}
-📂 *Pangkat :* ${a.pangkat}
-🏢 *Unit    :* ${a.unit}
-📄 *Nomor SK:* ${nomorFull}
-📅 *Tgl SK  :* ${fmtTglIndoStr(tglSurat)}
+👤 *Nama     :* ${a.nama}
+🪪 *NIP      :* ${a.nip}
+📂 *Pangkat  :* ${a.pangkat}
+🏢 *Unit     :* ${a.unit}
+📄 *Nomor SK :* ${nomorFull}
+📅 *Tgl SK   :* ${fmtTglIndoStr(tglSurat)}
 💰 *Gaji Baru:* Rp ${num(gajiBaru)}
 
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-      await kirimWA(WA_ADMIN_TTE, pesan);
+      showToast('⏳ Membuat PDF SK KGB...','info');
+      try {
+        const namaFile  = `SK_KGB_${a.nip}_${nomorFull.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+        const pdfBase64 = await generatePdfBase64('sk-kgb-content');
+        const ok        = await kirimWADenganFile(WA_ADMIN_TTE, pesan, pdfBase64, namaFile);
+        if(ok){
+          showToast('✅ SK KGB + link PDF berhasil dikirim ke Admin TTE','success');
+        } else {
+          await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
+          showToast('⚠️ PDF gagal, pesan teks tetap terkirim','warning');
+        }
+      } catch(err){
+        console.error('[TTE KGB]', err);
+        await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
+        showToast('⚠️ PDF gagal: '+err.message,'warning');
+      }
       el.innerHTML = '';
-      showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
       await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
-        `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+        `Kirim SK KGB TTE — ${a.nama} (${nomorFull})`, null, null);
     } else {
       // ── Mode TTD Biasa: cetak langsung ──
       window.print();
