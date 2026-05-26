@@ -252,7 +252,7 @@ async function kirimWA(target, pesan){
 // Kirim WA dengan lampiran PDF via Fonnte
 // Strategi: upload PDF ke Supabase Storage → dapat URL publik → kirim URL ke Fonnte
 async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
-  if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
+  if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi','error'); return false; }
   if(!target) return false;
   let nomor = target.replace(/\D/g,'');
   if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
@@ -268,25 +268,33 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
       byteArrays.push(bytes);
     }
     const blob = new Blob(byteArrays, { type: 'application/pdf' });
+    console.log('[TTE] PDF blob size:', blob.size, 'bytes');
 
-    // 2. Upload ke Supabase Storage bucket 'sk-kgb' (buat bucket ini di dashboard Supabase, set public)
+    // 2. Upload ke Supabase Storage bucket 'sk-kgb'
+    showToast('⏳ Mengupload PDF ke storage...', 'info');
     const pathStorage = `kgb/${Date.now()}_${namaFile}`;
     const { data: upData, error: upError } = await supa.storage
       .from('sk-kgb')
       .upload(pathStorage, blob, { contentType: 'application/pdf', upsert: true });
 
     if(upError){
-      console.error('Upload Supabase error:', upError);
-      // Fallback: coba kirim tanpa file
+      console.error('[TTE] Upload Supabase GAGAL:', upError);
+      showToast('❌ Upload storage gagal: ' + upError.message, 'error');
       return false;
     }
+    console.log('[TTE] Upload berhasil:', upData);
 
     // 3. Ambil URL publik
     const { data: urlData } = supa.storage.from('sk-kgb').getPublicUrl(pathStorage);
     const publicUrl = urlData?.publicUrl;
-    if(!publicUrl){ console.error('Gagal ambil public URL'); return false; }
+    console.log('[TTE] Public URL:', publicUrl);
+    if(!publicUrl){
+      showToast('❌ Gagal ambil URL publik dari storage', 'error');
+      return false;
+    }
 
     // 4. Kirim ke Fonnte dengan parameter url + filename
+    showToast('⏳ Mengirim PDF ke WhatsApp...', 'info');
     const formData = new FormData();
     formData.append('target', nomor);
     formData.append('message', pesan);
@@ -300,7 +308,11 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
       body: formData
     });
     const data = await res.json();
-    console.log('Fonnte file response:', data);
+    console.log('[TTE] Fonnte response:', JSON.stringify(data));
+
+    if(data.status !== true){
+      showToast('❌ Fonnte gagal: ' + (data.reason || data.message || JSON.stringify(data)), 'error');
+    }
 
     // 5. Hapus file dari storage setelah 5 menit (cleanup)
     setTimeout(async ()=>{
@@ -308,7 +320,11 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
     }, 5 * 60 * 1000);
 
     return data.status === true;
-  } catch(e){ console.error('WA file error:',e); return false; }
+  } catch(e){
+    console.error('[TTE] WA file error:', e);
+    showToast('❌ Error: ' + e.message, 'error');
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
