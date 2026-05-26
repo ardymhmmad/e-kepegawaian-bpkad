@@ -1330,7 +1330,7 @@ function _doCetakSurat(id, nomorSuratOverride){
         
       </div>
 
-      <div style="height:80px"></div>
+      <div style="height:30px"></div>
     </td>
   </tr>
 </table>
