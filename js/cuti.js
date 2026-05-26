@@ -1320,7 +1320,7 @@ function _doCetakSurat(id, nomorSuratOverride){
           KEUANGAN DAN ASET DAERAH<br>
           PROVINSI KALIMANTAN SELATAN,<br>
           SEKRETARIS,
-          <div style="height:80px"></div>
+          <div style="height:50px"></div>
 
           H. Fatkhan, S.E., M.M<br>
           Pembina Tingkat I (IV/b)<br>
