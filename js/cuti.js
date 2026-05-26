@@ -1066,7 +1066,7 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    // Render surat dulu ke DOM (tersembunyi) lalu generate PDF
+    // Render surat dulu ke DOM lalu generate PDF
     showToast('⏳ Membuat PDF Surat Cuti...', 'info');
     _doCetakSurat(id, nomorSuratInput, true); // render HTML ke #print-surat tanpa print
 
@@ -1075,30 +1075,49 @@ Harap segera diproses. Terima kasih.
         const elSurat = document.getElementById('print-surat');
         if(!elSurat || !elSurat.innerHTML.trim()) throw new Error('Elemen surat tidak ditemukan');
 
-        // Tampilkan sementara agar html2canvas bisa render
-        elSurat.style.position = 'fixed';
-        elSurat.style.left     = '-9999px';
-        elSurat.style.display  = 'block';
+        // Tampilkan di viewport (visible) tapi tidak mengganggu UI
+        const prevStyle = elSurat.getAttribute('style') || '';
+        elSurat.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 794px !important;
+          min-height: 1123px !important;
+          background: #fff !important;
+          z-index: -1 !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          display: block !important;
+          overflow: visible !important;
+        `;
+
+        // Tunggu browser selesai render
+        await new Promise(r => setTimeout(r, 300));
 
         const canvas = await html2canvas(elSurat, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
+          width: 794,
+          windowWidth: 794,
         });
 
-        elSurat.style.position = '';
-        elSurat.style.left     = '';
-        elSurat.style.display  = 'none';
+        // Kembalikan style semula
+        elSurat.setAttribute('style', prevStyle);
+        elSurat.style.display = 'none';
+
+        console.log('[TTE] Canvas cuti size:', canvas.width, 'x', canvas.height);
 
         const { jsPDF } = window.jspdf;
-        const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const imgData   = canvas.toDataURL('image/jpeg', 0.92);
-        const pdfW      = pdf.internal.pageSize.getWidth();
-        const pdfH      = pdf.internal.pageSize.getHeight();
-        const imgAspect = canvas.height / canvas.width;
-        const imgH      = pdfW * imgAspect;
+        const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pdfW    = pdf.internal.pageSize.getWidth();   // 210mm
+        const pdfH    = pdf.internal.pageSize.getHeight();  // 297mm
+        const ratio   = canvas.height / canvas.width;
+        const imgH    = pdfW * ratio;
 
+        // Potong per halaman A4
         let posY = 0;
         while(posY < imgH){
           if(posY > 0) pdf.addPage();
@@ -1111,10 +1130,10 @@ Harap segera diproses. Terima kasih.
 
         const ok = await kirimWADenganFile(nomor, pesan, pdfBase64, namaFile);
         if(ok){
-          showToast('✅ Surat Cuti + PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
+          showToast('✅ Surat Cuti + link PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
         } else {
-          await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dilampirkan, mohon cetak manual._');
-          showToast('⚠️ PDF gagal dilampirkan, pesan teks tetap terkirim','warning');
+          await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
+          showToast('⚠️ PDF gagal dikirim, pesan teks tetap terkirim','warning');
         }
       } catch(err){
         console.error('Generate PDF cuti TTE error:', err);
@@ -1125,7 +1144,7 @@ Harap segera diproses. Terima kasih.
 
       await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
         `Kirim Surat Cuti + PDF ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
-    }, 400);
+    }, 500);
 
   } else {
     // ── Mode TTD Biasa: cetak langsung ──

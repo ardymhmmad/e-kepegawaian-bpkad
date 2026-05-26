@@ -522,25 +522,51 @@ Harap segera diproses. Terima kasih.
         const elContent = document.getElementById('sk-kgb-content');
         if(!elContent) throw new Error('Elemen SK tidak ditemukan');
 
+        // Set ukuran eksplisit agar html2canvas tidak blank
+        const elWrap = document.getElementById('print-surat-kgb');
+        const prevWrapStyle = elWrap ? (elWrap.getAttribute('style') || '') : '';
+        if(elWrap){
+          elWrap.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 794px !important;
+            background: #fff !important;
+            z-index: -1 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            display: block !important;
+            overflow: visible !important;
+          `;
+        }
+
+        // Tunggu browser selesai render
+        await new Promise(r => setTimeout(r, 300));
+
         const canvas = await html2canvas(elContent, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
+          width: 794,
+          windowWidth: 794,
         });
 
+        if(elWrap) elWrap.setAttribute('style', prevWrapStyle);
+
+        console.log('[TTE] Canvas KGB size:', canvas.width, 'x', canvas.height);
+
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pdfW    = pdf.internal.pageSize.getWidth();
+        const pdfH    = pdf.internal.pageSize.getHeight();
+        const ratio   = canvas.height / canvas.width;
+        const imgH    = pdfW * ratio;
 
-        const imgData   = canvas.toDataURL('image/jpeg', 0.92);
-        const pdfW      = pdf.internal.pageSize.getWidth();
-        const pdfH      = pdf.internal.pageSize.getHeight();
-        const imgAspect = canvas.height / canvas.width;
-        const imgH      = pdfW * imgAspect;
-
-        // Jika konten lebih dari 1 halaman, bagi per halaman
+        // Potong per halaman A4
         let posY = 0;
-        while(posY < imgH) {
+        while(posY < imgH){
           if(posY > 0) pdf.addPage();
           pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
           posY += pdfH;
@@ -550,16 +576,15 @@ Harap segera diproses. Terima kasih.
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
         const namaFile  = `SK_KGB_${a.nip}_${nomorFull.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
 
-        // 3. Kirim ke Fonnte dengan lampiran PDF
+        // 3. Kirim ke Fonnte dengan link PDF
         const ok = await kirimWADenganFile(nomorWA, pesan, pdfBase64, namaFile);
 
         el.innerHTML = '';
         if(ok){
-          showToast('✅ SK KGB + PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
+          showToast('✅ SK KGB + link PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
         } else {
-          // Fallback: kirim pesan teks saja jika file gagal
-          await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dilampirkan, mohon cetak manual._');
-          showToast('⚠️ PDF gagal dilampirkan, pesan teks tetap terkirim','warning');
+          await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
+          showToast('⚠️ PDF gagal dikirim, pesan teks tetap terkirim','warning');
         }
 
         await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
@@ -568,7 +593,6 @@ Harap segera diproses. Terima kasih.
       } catch(err) {
         console.error('Generate PDF TTE error:', err);
         el.innerHTML = '';
-        // Fallback kirim teks saja
         await kirimWA(nomorWA, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
         showToast('⚠️ PDF gagal dibuat, pesan teks tetap terkirim','warning');
       }
