@@ -1287,7 +1287,7 @@ function _doCetakSurat(id, nomorSuratOverride){
 
 </div>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8px">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3px">
         <tr style="border:none">
           <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
           <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
