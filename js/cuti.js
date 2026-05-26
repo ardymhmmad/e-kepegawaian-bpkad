@@ -249,21 +249,18 @@ async function kirimWA(target, pesan){
   } catch(e){ console.error('WA error:',e); return false; }
 }
 
-// Kirim WA dengan lampiran file (base64) via Fonnte
+// Kirim WA dengan lampiran PDF via Fonnte
+// Strategi: upload PDF ke Supabase Storage → dapat URL publik → kirim URL ke Fonnte
 async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
   if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
   if(!target) return false;
   let nomor = target.replace(/\D/g,'');
   if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
-  try{
-    const formData = new FormData();
-    formData.append('target', nomor);
-    formData.append('message', pesan);
-    formData.append('countryCode', '62');
 
-    // Convert base64 ke Blob lalu lampirkan sebagai file
-    const byteChars   = atob(fileBase64);
-    const byteArrays  = [];
+  try{
+    // 1. Convert base64 ke Blob
+    const byteChars  = atob(fileBase64);
+    const byteArrays = [];
     for(let i=0; i<byteChars.length; i+=512){
       const slice = byteChars.slice(i, i+512);
       const bytes = new Uint8Array(slice.length);
@@ -271,7 +268,31 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
       byteArrays.push(bytes);
     }
     const blob = new Blob(byteArrays, { type: 'application/pdf' });
-    formData.append('file', blob, namaFile);
+
+    // 2. Upload ke Supabase Storage bucket 'sk-kgb' (buat bucket ini di dashboard Supabase, set public)
+    const pathStorage = `kgb/${Date.now()}_${namaFile}`;
+    const { data: upData, error: upError } = await supa.storage
+      .from('sk-kgb')
+      .upload(pathStorage, blob, { contentType: 'application/pdf', upsert: true });
+
+    if(upError){
+      console.error('Upload Supabase error:', upError);
+      // Fallback: coba kirim tanpa file
+      return false;
+    }
+
+    // 3. Ambil URL publik
+    const { data: urlData } = supa.storage.from('sk-kgb').getPublicUrl(pathStorage);
+    const publicUrl = urlData?.publicUrl;
+    if(!publicUrl){ console.error('Gagal ambil public URL'); return false; }
+
+    // 4. Kirim ke Fonnte dengan parameter url + filename
+    const formData = new FormData();
+    formData.append('target', nomor);
+    formData.append('message', pesan);
+    formData.append('url', publicUrl);
+    formData.append('filename', namaFile);
+    formData.append('countryCode', '62');
 
     const res = await fetch('https://api.fonnte.com/send',{
       method:'POST',
@@ -280,6 +301,12 @@ async function kirimWADenganFile(target, pesan, fileBase64, namaFile){
     });
     const data = await res.json();
     console.log('Fonnte file response:', data);
+
+    // 5. Hapus file dari storage setelah 5 menit (cleanup)
+    setTimeout(async ()=>{
+      await supa.storage.from('sk-kgb').remove([pathStorage]);
+    }, 5 * 60 * 1000);
+
     return data.status === true;
   } catch(e){ console.error('WA file error:',e); return false; }
 }
@@ -996,7 +1023,7 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   closeModal();
 
   if(mode==='tte'){
-    // ── Mode TTE: kirim WA ke Admin TTE ──
+    // ── Mode TTE: generate PDF → upload Supabase → kirim WA + PDF ke Admin TTE ──
     const c = DB.cuti.find(x=>x.id===id);
     let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
     if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
@@ -1022,17 +1049,74 @@ Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
 Harap segera diproses. Terima kasih.
 — E-Kepegawaian BPKAD`;
 
-    await kirimWA(nomor, pesan);
-    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
-    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
-      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+    // Render surat dulu ke DOM (tersembunyi) lalu generate PDF
+    showToast('⏳ Membuat PDF Surat Cuti...', 'info');
+    _doCetakSurat(id, nomorSuratInput, true); // render HTML ke #print-surat tanpa print
+
+    setTimeout(async ()=>{
+      try {
+        const elSurat = document.getElementById('print-surat');
+        if(!elSurat || !elSurat.innerHTML.trim()) throw new Error('Elemen surat tidak ditemukan');
+
+        // Tampilkan sementara agar html2canvas bisa render
+        elSurat.style.position = 'fixed';
+        elSurat.style.left     = '-9999px';
+        elSurat.style.display  = 'block';
+
+        const canvas = await html2canvas(elSurat, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+
+        elSurat.style.position = '';
+        elSurat.style.left     = '';
+        elSurat.style.display  = 'none';
+
+        const { jsPDF } = window.jspdf;
+        const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgData   = canvas.toDataURL('image/jpeg', 0.92);
+        const pdfW      = pdf.internal.pageSize.getWidth();
+        const pdfH      = pdf.internal.pageSize.getHeight();
+        const imgAspect = canvas.height / canvas.width;
+        const imgH      = pdfW * imgAspect;
+
+        let posY = 0;
+        while(posY < imgH){
+          if(posY > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
+          posY += pdfH;
+        }
+
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+
+        const ok = await kirimWADenganFile(nomor, pesan, pdfBase64, namaFile);
+        if(ok){
+          showToast('✅ Surat Cuti + PDF berhasil dikirim ke Admin TTE via WhatsApp','success');
+        } else {
+          await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dilampirkan, mohon cetak manual._');
+          showToast('⚠️ PDF gagal dilampirkan, pesan teks tetap terkirim','warning');
+        }
+      } catch(err){
+        console.error('Generate PDF cuti TTE error:', err);
+        document.getElementById('print-surat').style.display = 'none';
+        await kirimWA(nomor, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
+        showToast('⚠️ PDF gagal dibuat, pesan teks tetap terkirim','warning');
+      }
+
+      await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
+        `Kirim Surat Cuti + PDF ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+    }, 400);
+
   } else {
     // ── Mode TTD Biasa: cetak langsung ──
     _doCetakSurat(id, nomorSuratInput);
   }
 }
 
-function _doCetakSurat(id, nomorSuratOverride){
+function _doCetakSurat(id, nomorSuratOverride, skipPrint=false){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
@@ -1373,7 +1457,7 @@ function _doCetakSurat(id, nomorSuratOverride){
   </div>`;
 
   document.getElementById('print-surat').style.display='block';
-  window.print();
+  if(!skipPrint) window.print();
   setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
 }
 
