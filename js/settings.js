@@ -8,9 +8,10 @@ function renderSettings(){
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
   loadFonnteToken();
+  loadWaAdminTTE();
   loadNoUrutCuti();
   renderWATemplatesForm();
-  setTimeout(renderLiburNasional, 300); // tunggu DOM render
+  setTimeout(renderLiburNasional, 300);
   setTimeout(renderTabelGajiForm, 100);
   renderUserTable();
 }
@@ -71,7 +72,37 @@ async function testFonnteToken(){
   }catch(e){ showToast('Error: '+e.message,'error'); }
 }
 
-// ── Tabel daftar user ──────────────────────────────────────
+// ── WA Admin TTE ───────────────────────────────────────────
+async function loadWaAdminTTE(){
+  const el = document.getElementById('wa-admin-tte-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
+  if(data?.setting_val){
+    el.value = data.setting_val;
+    WA_ADMIN_TTE = data.setting_val;
+  }
+}
+
+async function saveWaAdminTTE(){
+  const val = (document.getElementById('wa-admin-tte-input')?.value||'').trim();
+  if(!val){ showToast('Nomor WA tidak boleh kosong','error'); return; }
+  const { data: existing } = await supa.from('settings')
+    .select('id').eq('setting_key','wa_admin_tte').maybeSingle();
+  let error;
+  if(existing){
+    ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','wa_admin_tte'));
+  } else {
+    ({ error } = await supa.from('settings').insert({ setting_key:'wa_admin_tte', setting_val: val }));
+  }
+  if(!error){
+    WA_ADMIN_TTE = val;
+    await logAudit(AUDIT_ACTION.SETTING, 'settings', null, 'Update nomor WA Admin TTE', null, { wa_admin_tte: val });
+    showToast('✅ Nomor WA Admin TTE berhasil disimpan','success');
+  } else {
+    showToast('Gagal simpan: '+error.message,'error');
+  }
+}
+
+
 async function renderUserTable(){
   const tb = document.getElementById('user-table-body');
   if(!tb) return;

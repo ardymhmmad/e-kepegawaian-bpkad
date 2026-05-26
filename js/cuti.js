@@ -937,23 +937,64 @@ function cetakSuratCuti(id){
     </div>`;
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}')">🖨 Cetak Sekarang</button>`;
+    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}','ttd')">🖨 TTD Biasa (Cetak)</button>
+    <button class="btn btn-success" onclick="eksekusiCetakSurat('${id}','tte')" title="Kirim ke Admin TTE via WhatsApp">📲 TTE (Kirim WA)</button>`;
   document.getElementById('modal').style.display = 'flex';
   setTimeout(()=>{ document.getElementById('input-no-surat')?.focus(); }, 100);
 }
 
-async function eksekusiCetakSurat(id){
+async function eksekusiCetakSurat(id, mode='ttd'){
   const nomorSuratInput = (document.getElementById('input-no-surat')?.value||'').trim();
   if(!nomorSuratInput){ showToast('Nomor surat tidak boleh kosong','error'); return; }
 
+  // Validasi TTE sebelum tutup modal
+  if(mode==='tte'){
+    if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
+    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
+  }
+
   // Simpan nomor surat ke database
   await supa.from('cuti').update({ no_surat: nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput }).eq('id', id);
-  // Update cache lokal
   const idx = DB.cuti.findIndex(x=>x.id===id);
   if(idx>=0) DB.cuti[idx].no_surat = nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput;
 
   closeModal();
-  _doCetakSurat(id, nomorSuratInput);
+
+  if(mode==='tte'){
+    // ── Mode TTE: kirim WA ke Admin TTE ──
+    const c = DB.cuti.find(x=>x.id===id);
+    let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
+    if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+
+    const tglMulai  = c?.tgl_mulai  ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglSelesai= c?.tgl_selesai? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+
+    const pesan =
+`📋 *PERMOHONAN TTE — SURAT CUTI*
+
+Kepada Yth. Admin TTE
+Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
+
+👤 *Nama       :* ${c?.nama||'–'}
+🪪 *NIP        :* ${c?.nip||'–'}
+🏢 *Unit       :* ${c?.unit||'–'}
+📄 *Nomor Surat:* ${nomorSuratInput}
+📝 *Jenis Cuti :* ${c?.jenis_cuti||'Cuti Tahunan'}
+📅 *Tgl Mulai  :* ${tglMulai}
+📅 *Tgl Selesai:* ${tglSelesai}
+⏱ *Hari Kerja :* ${c?.hari_kerja||'–'} hari
+
+Harap segera diproses. Terima kasih.
+— E-Kepegawaian BPKAD`;
+
+    await kirimWA(nomor, pesan);
+    showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
+    await logAudit(AUDIT_ACTION.SETTING, 'cuti', id,
+      `Kirim Surat Cuti ke Admin TTE — ${c?.nama||id} (${nomorSuratInput})`, null, null);
+  } else {
+    // ── Mode TTD Biasa: cetak langsung ──
+    _doCetakSurat(id, nomorSuratInput);
+  }
 }
 
 function _doCetakSurat(id, nomorSuratOverride){

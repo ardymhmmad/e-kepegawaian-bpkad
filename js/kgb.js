@@ -212,7 +212,8 @@ function cetakSKKGB(id){
 
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="eksekusiCetakSKKGB('${id}')">🖨 Cetak SK</button>`;
+    <button class="btn btn-primary" onclick="eksekusiCetakSKKGB('${id}','ttd')">🖨 TTD Biasa (Cetak)</button>
+    <button class="btn btn-success" onclick="eksekusiCetakSKKGB('${id}','tte')" title="Kirim ke Admin TTE via WhatsApp">📲 TTE (Kirim WA)</button>`;
   document.getElementById('modal').style.display='flex';
 
   // Sinkron gaji baru saat masa kerja baru berubah
@@ -226,9 +227,15 @@ function cetakSKKGB(id){
   });
 }
 
-function eksekusiCetakSKKGB(id){
+function eksekusiCetakSKKGB(id, mode='ttd'){
   const a = DB.asn.find(x=>x.id===id);
   if(!a) return;
+
+  // Validasi TTE sebelum tutup modal
+  if(mode==='tte'){
+    if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
+    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
+  }
 
   const tglSurat     = document.getElementById('sk-tgl-surat')?.value||'';
   const nomor        = (document.getElementById('sk-nomor')?.value||'').trim();
@@ -484,10 +491,39 @@ function eksekusiCetakSKKGB(id){
 
   </div>`;
 
-  // Beri waktu browser render sebelum print
-  setTimeout(()=>{
-    window.print();
-    // Kosongkan setelah print
-    setTimeout(()=>{ el.innerHTML=''; }, 500);
+  // Beri waktu browser render sebelum eksekusi
+  setTimeout(async ()=>{
+    if(mode === 'tte'){
+      // ── Mode TTE: kirim pesan WA ke Admin TTE ──
+      let nomor = WA_ADMIN_TTE.replace(/\D/g,'');
+      if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+
+      const pesan =
+`📋 *PERMOHONAN TTE — SK KGB*
+
+Kepada Yth. Admin TTE
+Mohon dilakukan Tanda Tangan Elektronik untuk SK berikut:
+
+👤 *Nama    :* ${a.nama}
+🪪 *NIP     :* ${a.nip}
+📂 *Pangkat :* ${a.pangkat}
+🏢 *Unit    :* ${a.unit}
+📄 *Nomor SK:* ${nomorFull}
+📅 *Tgl SK  :* ${fmtTglIndoStr(tglSurat)}
+💰 *Gaji Baru:* Rp ${num(gajiBaru)}
+
+Harap segera diproses. Terima kasih.
+— E-Kepegawaian BPKAD`;
+
+      await kirimWA(nomor, pesan);
+      el.innerHTML = '';
+      showToast('✅ Permohonan TTE berhasil dikirim ke Admin via WhatsApp','success');
+      await logAudit(AUDIT_ACTION.SETTING, 'kgb', id,
+        `Kirim SK KGB ke Admin TTE — ${a.nama} (${nomorFull})`, null, null);
+    } else {
+      // ── Mode TTD Biasa: cetak langsung ──
+      window.print();
+      setTimeout(()=>{ el.innerHTML=''; }, 500);
+    }
   }, 300);
 }
