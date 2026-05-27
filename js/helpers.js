@@ -170,42 +170,65 @@ function loadLocal(){ return false; }
 // ═══════════════════════════════════════════════════
 
 // Generate PDF base64 dari elemen HTML
-// Elemen akan di-clone ke container tersembunyi agar tidak mengganggu UI
-async function generatePdfBase64(elId, lebar=794){
+// Menggunakan iframe tersembunyi dengan CSS lengkap agar render sama dengan print
+async function generatePdfBase64(elId){
   const elSrc = document.getElementById(elId);
   if(!elSrc) throw new Error('Elemen #'+elId+' tidak ditemukan');
 
-  // Clone elemen ke container sementara yang visible di viewport
-  const container = document.createElement('div');
-  container.style.cssText = `
-    position:fixed; top:0; left:0;
-    width:${lebar}px; background:#fff;
-    z-index:99999; opacity:0;
-    pointer-events:none; overflow:visible;
-  `;
-  container.innerHTML = elSrc.innerHTML;
-  document.body.appendChild(container);
+  // Ambil semua CSS dari halaman utama
+  const cssLinks  = Array.from(document.styleSheets)
+    .map(s => { try{ return Array.from(s.cssRules).map(r=>r.cssText).join('\n'); } catch(e){ return ''; } })
+    .join('\n');
 
-  // Tunggu browser render
-  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 400)));
+  // Buat iframe tersembunyi
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:794px;height:1123px;opacity:0;pointer-events:none;border:none;z-index:-1;';
+  document.body.appendChild(iframe);
+
+  // Tulis HTML ke iframe dengan CSS lengkap + override visibility
+  const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+  iDoc.open();
+  iDoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+      ${cssLinks}
+      /* Override: paksa semua visible */
+      body, body *{ visibility:visible !important; }
+      #${elId}, #${elId} *{ visibility:visible !important; display:block; }
+      body{ background:#fff !important; margin:0; padding:0; width:794px; }
+    </style>
+  </head><body>
+    <div id="${elId}" style="display:block !important; visibility:visible !important; position:static !important; width:794px; background:#fff;">
+      ${elSrc.innerHTML}
+    </div>
+  </body></html>`);
+  iDoc.close();
+
+  // Tunggu iframe render selesai
+  await new Promise(r => setTimeout(r, 800));
 
   try {
-    const canvas = await html2canvas(container, {
+    const el = iDoc.getElementById(elId);
+    if(!el) throw new Error('Elemen tidak ditemukan di iframe');
+
+    const canvas = await html2canvas(el, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
-      width: lebar,
-      windowWidth: lebar,
+      width: 794,
+      windowWidth: 794,
     });
 
+    console.log('[PDF] iframe canvas:', canvas.width+'x'+canvas.height);
+    if(canvas.width < 10 || canvas.height < 10) throw new Error('Canvas terlalu kecil — konten tidak ter-render');
+
     const { jsPDF } = window.jspdf;
-    const pdf   = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-    const pdfW  = pdf.internal.pageSize.getWidth();
-    const pdfH  = pdf.internal.pageSize.getHeight();
-    const imgH  = pdfW * (canvas.height / canvas.width);
-    const img   = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const imgH = pdfW * (canvas.height / canvas.width);
+    const img  = canvas.toDataURL('image/jpeg', 0.95);
 
     let posY = 0;
     while(posY < imgH){
@@ -214,10 +237,9 @@ async function generatePdfBase64(elId, lebar=794){
       posY += pdfH;
     }
 
-    console.log('[PDF] canvas:', canvas.width+'x'+canvas.height, '| halaman:', Math.ceil(imgH/pdfH));
-    return pdf.output('datauristring').split(',')[1]; // base64
+    return pdf.output('datauristring').split(',')[1];
   } finally {
-    document.body.removeChild(container);
+    document.body.removeChild(iframe);
   }
 }
 
