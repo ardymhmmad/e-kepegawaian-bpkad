@@ -950,6 +950,7 @@ async function eksekusiCetakSurat(id, mode='ttd'){
   // Validasi TTE sebelum tutup modal
   if(mode==='tte'){
     if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
+    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
     if(!EMAIL_ADMIN_TTE){ showToast('Email Admin TTE belum diisi di Pengaturan','error'); return; }
   }
 
@@ -993,15 +994,30 @@ Harap segera diproses. Terima kasih.
         const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
         const pdfBase64 = await generatePdfBase64('print-surat');
         const subject   = `Permohonan TTE — Surat Cuti ${c?.nama||''} (${nomorSuratInput})`;
-        const ok        = await kirimEmailTTE(subject, pesan.replace(/\n/g,'<br>'), pdfBase64, namaFile);
-        if(ok){
-          showToast('✅ Surat Cuti + PDF berhasil dikirim ke Email Admin TTE','success');
+
+        // Kirim WA notifikasi + Email PDF secara bersamaan
+        const pesanWA = pesan + `\n\n📧 _PDF dikirim ke email Admin TTE_`;
+        const [waOk, emailOk] = await Promise.all([
+          kirimWA(WA_ADMIN_TTE, pesanWA),
+          kirimEmailTTE(subject, pesan.replace(/\n/g,'<br>'), pdfBase64, namaFile),
+        ]);
+
+        if(waOk && emailOk){
+          showToast('✅ Notifikasi WA + PDF email berhasil dikirim ke Admin TTE','success');
+        } else if(emailOk){
+          showToast('✅ PDF email terkirim, WA gagal','warning');
+        } else if(waOk){
+          showToast('⚠️ WA terkirim, email PDF gagal','warning');
         } else {
-          showToast('⚠️ Gagal kirim email ke Admin TTE','warning');
+          showToast('❌ Gagal kirim WA dan email ke Admin TTE','error');
         }
       } catch(err){
-        console.error('[TTE Cuti]', err);
-        showToast('⚠️ PDF gagal dibuat: '+err.message,'warning');
+        console.error('[TTE Cuti] PDF error:', err);
+        // Fallback: kirim WA teks saja meski PDF gagal
+        showToast('⚠️ PDF gagal dibuat, mencoba kirim WA notifikasi...','warning');
+        const waOk = await kirimWA(WA_ADMIN_TTE, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon minta cetak manual._');
+        if(waOk) showToast('📲 Notifikasi WA terkirim (tanpa PDF)','info');
+        else showToast('❌ Gagal kirim WA: '+err.message,'error');
       }
       document.getElementById('print-surat').style.display='none';
       await logAudit(AUDIT_ACTION.SETTING,'cuti',id,
