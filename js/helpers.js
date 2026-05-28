@@ -170,45 +170,65 @@ function loadLocal(){ return false; }
 // ═══════════════════════════════════════════════════
 
 // Generate PDF base64 dari elemen HTML
-// Menggunakan iframe tersembunyi dengan CSS lengkap agar render sama dengan print
+// Buka popup window kecil dengan CSS asli → html2canvas di popup → tutup popup
 async function generatePdfBase64(elId){
   const elSrc = document.getElementById(elId);
   if(!elSrc) throw new Error('Elemen #'+elId+' tidak ditemukan');
 
-  // Ambil semua CSS dari halaman utama
-  const cssLinks  = Array.from(document.styleSheets)
-    .map(s => { try{ return Array.from(s.cssRules).map(r=>r.cssText).join('\n'); } catch(e){ return ''; } })
-    .join('\n');
+  // Kumpulkan href CSS yang dimuat di halaman
+  const cssHrefs = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .map(l => l.href).filter(Boolean);
 
-  // Buat iframe tersembunyi
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:0;left:0;width:794px;height:1123px;opacity:0;pointer-events:none;border:none;z-index:-1;';
-  document.body.appendChild(iframe);
+  const cssTagStr = cssHrefs.map(h => `<link rel="stylesheet" href="${h}">`).join('\n');
 
-  // Tulis HTML ke iframe dengan CSS lengkap + override visibility
-  const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-  iDoc.open();
-  iDoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+  // HTML lengkap untuk popup
+  const htmlContent = `<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    ${cssTagStr}
     <style>
-      ${cssLinks}
-      /* Override: paksa semua visible */
-      body, body *{ visibility:visible !important; }
-      #${elId}, #${elId} *{ visibility:visible !important; display:block; }
-      body{ background:#fff !important; margin:0; padding:0; width:794px; }
+      body{ margin:0; padding:0; background:#fff !important; width:794px; }
+      body *{ visibility:visible !important; }
+      #${elId}{
+        display:block !important;
+        visibility:visible !important;
+        position:static !important;
+        width:794px !important;
+        background:#fff !important;
+      }
+      #${elId} *{ visibility:visible !important; }
+      /* Sembunyikan elemen lain */
+      body > *:not(#${elId}){ display:none !important; }
     </style>
   </head><body>
-    <div id="${elId}" style="display:block !important; visibility:visible !important; position:static !important; width:794px; background:#fff;">
-      ${elSrc.innerHTML}
-    </div>
-  </body></html>`);
-  iDoc.close();
+    <div id="${elId}">${elSrc.innerHTML}</div>
+    <script>window._ready = false; window.onload = function(){ window._ready = true; };<\/script>
+  </body></html>`;
 
-  // Tunggu iframe render selesai
-  await new Promise(r => setTimeout(r, 800));
+  // Buka popup di pojok layar (tidak mengganggu)
+  const popup = window.open('', '_pdf_render',
+    'width=850,height=1200,left=-2000,top=-2000,scrollbars=no,toolbar=no,menubar=no');
+  if(!popup) throw new Error('Popup diblokir browser — izinkan popup untuk domain ini');
+
+  popup.document.open();
+  popup.document.write(htmlContent);
+  popup.document.close();
+
+  // Tunggu CSS + gambar di popup selesai load
+  await new Promise(r => {
+    const check = setInterval(()=>{
+      if(popup.document.readyState === 'complete'){
+        clearInterval(check);
+        setTimeout(r, 600); // ekstra waktu untuk render font/gambar
+      }
+    }, 100);
+    setTimeout(()=>{ clearInterval(check); r(); }, 5000); // max 5 detik
+  });
 
   try {
-    const el = iDoc.getElementById(elId);
-    if(!el) throw new Error('Elemen tidak ditemukan di iframe');
+    const el = popup.document.getElementById(elId);
+    if(!el) throw new Error('Elemen tidak ditemukan di popup');
+
+    console.log('[PDF] popup el size:', el.scrollWidth, 'x', el.scrollHeight);
 
     const canvas = await html2canvas(el, {
       scale: 2,
@@ -220,8 +240,11 @@ async function generatePdfBase64(elId){
       windowWidth: 794,
     });
 
-    console.log('[PDF] iframe canvas:', canvas.width+'x'+canvas.height);
-    if(canvas.width < 10 || canvas.height < 10) throw new Error('Canvas terlalu kecil — konten tidak ter-render');
+    popup.close();
+
+    console.log('[PDF] canvas:', canvas.width+'x'+canvas.height);
+    if(canvas.width < 50 || canvas.height < 50)
+      throw new Error('Canvas terlalu kecil ('+canvas.width+'x'+canvas.height+') — konten tidak ter-render');
 
     const { jsPDF } = window.jspdf;
     const pdf  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
@@ -238,8 +261,9 @@ async function generatePdfBase64(elId){
     }
 
     return pdf.output('datauristring').split(',')[1];
-  } finally {
-    document.body.removeChild(iframe);
+  } catch(e){
+    try { popup.close(); } catch(_){}
+    throw e;
   }
 }
 
