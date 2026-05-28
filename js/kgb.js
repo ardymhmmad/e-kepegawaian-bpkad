@@ -234,7 +234,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   // Validasi TTE sebelum tutup modal
   if(mode==='tte'){
     if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
-    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
+    if(!EMAIL_ADMIN_TTE){ showToast('Email Admin TTE belum diisi di Pengaturan','error'); return; }
   }
 
   const tglSurat     = document.getElementById('sk-tgl-surat')?.value||'';
@@ -523,16 +523,15 @@ Harap segera diproses. Terima kasih.
       try {
         const namaFile  = `SK_KGB_${a.nip}_${nomorFull.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
         const pdfBase64 = await generatePdfBase64('sk-kgb-content');
-        const ok        = await kirimWADenganFile(WA_ADMIN_TTE, pesan, pdfBase64, namaFile);
+        const subject   = `Permohonan TTE — SK KGB ${a.nama} (${nomorFull})`;
+        const ok        = await kirimEmailTTE(subject, pesan.replace(/\n/g,'<br>'), pdfBase64, namaFile);
         if(ok){
-          showToast('✅ SK KGB + link PDF berhasil dikirim ke Admin TTE','success');
+          showToast('✅ SK KGB + PDF berhasil dikirim ke Email Admin TTE','success');
         } else {
-          await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dikirim, mohon cetak manual._');
-          showToast('⚠️ PDF gagal, pesan teks tetap terkirim','warning');
+          showToast('⚠️ Gagal kirim email ke Admin TTE','warning');
         }
       } catch(err){
         console.error('[TTE KGB]', err);
-        await kirimWA(WA_ADMIN_TTE, pesan+'\n\n⚠️ _PDF gagal dibuat, mohon cetak manual._');
         showToast('⚠️ PDF gagal: '+err.message,'warning');
       }
       el.innerHTML = '';

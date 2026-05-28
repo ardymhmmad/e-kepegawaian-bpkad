@@ -16,6 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 // Load XLSX asynchronously — app init waits until ready
 var _xlsxReady = false;
@@ -454,17 +455,38 @@ var _xlsxReady = false;
                 <button class="btn btn-success always-allow" onclick="saveFonnteToken()" style="white-space:nowrap">Simpan Token</button>
                 <button class="btn always-allow" onclick="testFonnteToken()" style="white-space:nowrap">Test WA</button>
               </div>
-              <!-- WA Admin TTE -->
+              <!-- Email Admin TTE -->
               <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
                 <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">
-                  📋 Nomor WA Admin TTE — digunakan untuk pengiriman SK yang memerlukan Tanda Tangan Elektronik.
+                  📋 Email Admin TTE — digunakan untuk pengiriman SK/Surat Cuti beserta PDF yang memerlukan Tanda Tangan Elektronik.
                 </div>
                 <div style="display:flex;gap:10px;align-items:flex-end">
                   <div class="fg" style="flex:1;margin-bottom:0">
-                    <label>Nomor WA Admin TTE</label>
-                    <input type="text" id="wa-admin-tte-input" placeholder="cth: 08123456789">
+                    <label>Email Admin TTE</label>
+                    <input type="email" id="email-admin-tte-input" placeholder="cth: admin.tte@bpkad.go.id">
                   </div>
-                  <button class="btn btn-success always-allow" onclick="saveWaAdminTTE()" style="white-space:nowrap">Simpan</button>
+                  <button class="btn btn-success always-allow" onclick="saveEmailAdminTTE()" style="white-space:nowrap">Simpan</button>
+                </div>
+              </div>
+
+              <!-- Konfigurasi EmailJS -->
+              <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
+                <div style="font-size:12px;font-weight:600;margin-bottom:6px">⚙️ Konfigurasi EmailJS</div>
+                <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">
+                  Digunakan untuk kirim PDF via email. Daftar gratis di <a href="https://emailjs.com" target="_blank" style="color:var(--pr)">emailjs.com</a> → buat Service + Template → isi konfigurasi di bawah.
+                </div>
+                <div class="fg"><label>EmailJS Public Key</label>
+                  <input type="text" id="emailjs-public-key-input" placeholder="cth: user_xxxxxxxxxxxxxxx">
+                </div>
+                <div class="fg"><label>EmailJS Service ID</label>
+                  <input type="text" id="emailjs-service-id-input" placeholder="cth: service_xxxxxxx">
+                </div>
+                <div class="fg"><label>EmailJS Template ID</label>
+                  <input type="text" id="emailjs-template-id-input" placeholder="cth: template_xxxxxxx">
+                </div>
+                <div style="display:flex;gap:8px;margin-top:4px">
+                  <button class="btn btn-primary always-allow" onclick="saveEmailJSConfig()">💾 Simpan Konfigurasi EmailJS</button>
+                  <button class="btn always-allow" onclick="testEmailJS()">📧 Test Kirim Email</button>
                 </div>
               </div>
             </div>

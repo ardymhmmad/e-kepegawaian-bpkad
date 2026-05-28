@@ -89,8 +89,9 @@ async function init(){
   // Load WA templates
   await loadWATemplates();
   // Load Fonnte token & nomor WA Admin TTE agar siap dipakai tanpa harus buka Pengaturan dulu
-  if(typeof loadFonnteTokenSilent === 'function') await loadFonnteTokenSilent();
-  if(typeof loadWaAdminTTESilent  === 'function') await loadWaAdminTTESilent();
+  if(typeof loadFonnteTokenSilent    === 'function') await loadFonnteTokenSilent();
+  if(typeof loadEmailAdminTTESilent  === 'function') await loadEmailAdminTTESilent();
+  if(typeof loadEmailJSSilent        === 'function') await loadEmailJSSilent();
   // Load tabel gaji PNS dari DB — jika kosong, auto-seed dari hardcode GAJI_PNS
   if(typeof loadTabelGaji === 'function') await loadTabelGaji();
   if(typeof seedTabelGajiFromHardcode === 'function') await seedTabelGajiFromHardcode();

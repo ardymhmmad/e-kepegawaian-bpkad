@@ -8,7 +8,8 @@ function renderSettings(){
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
   loadFonnteToken();
-  loadWaAdminTTE();
+  loadEmailAdminTTE();
+  loadEmailJSConfig();
   loadNoUrutCuti();
   renderWATemplatesForm();
   setTimeout(renderLiburNasional, 300);
@@ -24,11 +25,23 @@ async function loadFonnteTokenSilent(){
   } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
 }
 
-async function loadWaAdminTTESilent(){
+async function loadEmailAdminTTESilent(){
   try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
-    if(data?.setting_val) WA_ADMIN_TTE = data.setting_val;
-  } catch(e){ console.warn('loadWaAdminTTESilent:', e.message); }
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
+    if(data?.setting_val) EMAIL_ADMIN_TTE = data.setting_val;
+  } catch(e){ console.warn('loadEmailAdminTTESilent:', e.message); }
+}
+
+async function loadEmailJSSilent(){
+  try {
+    const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
+    const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
+    for(let i=0;i<keys.length;i++){
+      const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
+      if(data?.setting_val) window[vars[i]] = data.setting_val;
+    }
+    if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  } catch(e){ console.warn('loadEmailJSSilent:', e.message); }
 }
 
 // ── Fonnte Token ───────────────────────────────────────────
@@ -87,34 +100,83 @@ async function testFonnteToken(){
   }catch(e){ showToast('Error: '+e.message,'error'); }
 }
 
-// ── WA Admin TTE ───────────────────────────────────────────
-async function loadWaAdminTTE(){
-  const el = document.getElementById('wa-admin-tte-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
-  if(data?.setting_val){
-    el.value = data.setting_val;
-    WA_ADMIN_TTE = data.setting_val;
-  }
+// ── Email Admin TTE ─────────────────────────────────────────
+async function loadEmailAdminTTE(){
+  const el = document.getElementById('email-admin-tte-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
+  if(data?.setting_val){ el.value = data.setting_val; EMAIL_ADMIN_TTE = data.setting_val; }
 }
 
-async function saveWaAdminTTE(){
-  const val = (document.getElementById('wa-admin-tte-input')?.value||'').trim();
-  if(!val){ showToast('Nomor WA tidak boleh kosong','error'); return; }
-  const { data: existing } = await supa.from('settings')
-    .select('id').eq('setting_key','wa_admin_tte').maybeSingle();
+async function saveEmailAdminTTE(){
+  const val = (document.getElementById('email-admin-tte-input')?.value||'').trim();
+  if(!val){ showToast('Email tidak boleh kosong','error'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Format email tidak valid','error'); return; }
+  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','email_admin_tte').maybeSingle();
   let error;
-  if(existing){
-    ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','wa_admin_tte'));
-  } else {
-    ({ error } = await supa.from('settings').insert({ setting_key:'wa_admin_tte', setting_val: val }));
-  }
+  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','email_admin_tte')); }
+  else   { ({ error } = await supa.from('settings').insert({ setting_key:'email_admin_tte', setting_val: val })); }
   if(!error){
-    WA_ADMIN_TTE = val;
-    await logAudit(AUDIT_ACTION.SETTING, 'settings', null, 'Update nomor WA Admin TTE', null, { wa_admin_tte: val });
-    showToast('✅ Nomor WA Admin TTE berhasil disimpan','success');
-  } else {
-    showToast('Gagal simpan: '+error.message,'error');
+    EMAIL_ADMIN_TTE = val;
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Email Admin TTE',null,{email_admin_tte:val});
+    showToast('✅ Email Admin TTE berhasil disimpan','success');
+  } else { showToast('Gagal simpan: '+error.message,'error'); }
+}
+
+// ── EmailJS Config ───────────────────────────────────────────
+async function loadEmailJSConfig(){
+  const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
+  const ids  = ['emailjs-public-key-input','emailjs-service-id-input','emailjs-template-id-input'];
+  const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
+  for(let i=0;i<keys.length;i++){
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
+    if(data?.setting_val){
+      const el = document.getElementById(ids[i]);
+      if(el) el.value = data.setting_val;
+      window[vars[i]] = data.setting_val;
+    }
   }
+  // Init EmailJS jika public key sudah ada
+  if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+async function saveEmailJSConfig(){
+  const pairs = [
+    ['emailjs_public_key',   'emailjs-public-key-input',  'EMAILJS_PUBLIC_KEY'],
+    ['emailjs_service_id',   'emailjs-service-id-input',  'EMAILJS_SERVICE_ID'],
+    ['emailjs_template_id',  'emailjs-template-id-input', 'EMAILJS_TEMPLATE_ID'],
+  ];
+  for(const [key, elId, varName] of pairs){
+    const val = (document.getElementById(elId)?.value||'').trim();
+    if(!val){ showToast('Semua field EmailJS wajib diisi','error'); return; }
+    const { data: ex } = await supa.from('settings').select('id').eq('setting_key',key).maybeSingle();
+    let error;
+    if(ex){ ({ error } = await supa.from('settings').update({ setting_val:val }).eq('setting_key',key)); }
+    else   { ({ error } = await supa.from('settings').insert({ setting_key:key, setting_val:val })); }
+    if(error){ showToast('Gagal simpan '+key+': '+error.message,'error'); return; }
+    window[varName] = val;
+  }
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Konfigurasi EmailJS',null,{});
+  showToast('✅ Konfigurasi EmailJS berhasil disimpan','success');
+}
+
+async function testEmailJS(){
+  if(!EMAILJS_PUBLIC_KEY||!EMAILJS_SERVICE_ID||!EMAILJS_TEMPLATE_ID){
+    showToast('Isi dan simpan konfigurasi EmailJS dulu','error'); return;
+  }
+  if(!EMAIL_ADMIN_TTE){ showToast('Isi Email Admin TTE dulu','error'); return; }
+  try {
+    showToast('⏳ Mengirim email test...','info');
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email   : EMAIL_ADMIN_TTE,
+      to_name    : 'Admin TTE',
+      subject    : 'Test Email — E-Kepegawaian BPKAD',
+      message    : 'Email test dari sistem E-Kepegawaian BPKAD berhasil terkirim.',
+      from_name  : 'E-Kepegawaian BPKAD',
+      pdf_link   : '-',
+    });
+    showToast('✅ Email test berhasil dikirim ke '+EMAIL_ADMIN_TTE,'success');
+  } catch(e){ showToast('❌ Gagal: '+(e?.text||e?.message||JSON.stringify(e)),'error'); }
 }
 
 

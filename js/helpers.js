@@ -267,13 +267,14 @@ async function generatePdfBase64(elId){
   }
 }
 
-// Upload PDF ke Supabase Storage lalu kirim link via WA Fonnte
-async function kirimWADenganFile(target, pesan, pdfBase64, namaFile){
-  if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi','error'); return false; }
-  if(!target) return false;
-
-  let nomor = String(target).replace(/\D/g,'');
-  if(nomor.startsWith('0')) nomor = '62'+nomor.slice(1);
+// Upload PDF ke Supabase Storage → kirim email via EmailJS dengan link PDF
+async function kirimEmailTTE(subject, pesanHtml, pdfBase64, namaFile){
+  if(!EMAILJS_PUBLIC_KEY||!EMAILJS_SERVICE_ID||!EMAILJS_TEMPLATE_ID){
+    showToast('❌ Konfigurasi EmailJS belum diisi di Pengaturan','error'); return false;
+  }
+  if(!EMAIL_ADMIN_TTE){
+    showToast('❌ Email Admin TTE belum diisi di Pengaturan','error'); return false;
+  }
 
   try {
     // 1. Base64 → Blob
@@ -281,53 +282,40 @@ async function kirimWADenganFile(target, pesan, pdfBase64, namaFile){
     const bytes  = new Uint8Array(binary.length);
     for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
     const blob = new Blob([bytes],{type:'application/pdf'});
-    console.log('[WA-PDF] blob size:', blob.size, 'bytes');
 
-    // 2. Upload ke Supabase Storage bucket 'sk-kgb'
+    // 2. Upload ke Supabase Storage
     showToast('⏳ Mengupload PDF...','info');
     const path = `surat/${Date.now()}_${namaFile}`;
     const { error: upErr } = await supa.storage
       .from('sk-kgb')
       .upload(path, blob, { contentType:'application/pdf', upsert:true });
 
-    if(upErr){
-      console.error('[WA-PDF] Upload gagal:', upErr);
-      showToast('❌ Upload gagal: '+upErr.message,'error');
-      return false;
-    }
+    if(upErr){ showToast('❌ Upload gagal: '+upErr.message,'error'); return false; }
 
-    // 3. Ambil URL publik
     const { data: urlData } = supa.storage.from('sk-kgb').getPublicUrl(path);
-    const url = urlData?.publicUrl;
-    if(!url){ showToast('❌ Gagal ambil URL publik','error'); return false; }
-    console.log('[WA-PDF] Public URL:', url);
+    const pdfUrl = urlData?.publicUrl;
+    if(!pdfUrl){ showToast('❌ Gagal ambil URL publik','error'); return false; }
 
-    // 4. Kirim WA dengan link PDF disisipkan di pesan
-    showToast('⏳ Mengirim WA...','info');
-    const pesanFinal = pesan + `\n\n📎 *Download PDF:*\n${url}`;
-    const res = await fetch('https://api.fonnte.com/send',{
-      method:'POST',
-      headers:{ 'Authorization': FONNTE_TOKEN },
-      body: new URLSearchParams({ target:nomor, message:pesanFinal, countryCode:'62' })
+    // 3. Kirim email via EmailJS
+    showToast('⏳ Mengirim email ke Admin TTE...','info');
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email  : EMAIL_ADMIN_TTE,
+      to_name   : 'Admin TTE',
+      subject   : subject,
+      message   : pesanHtml,
+      pdf_link  : pdfUrl,
+      from_name : 'E-Kepegawaian BPKAD',
     });
-    const data = await res.json();
-    console.log('[WA-PDF] Fonnte:', data);
 
-    if(data.status !== true){
-      showToast('❌ WA gagal: '+(data.reason||data.message||JSON.stringify(data)),'error');
-      return false;
-    }
-
-    // 5. Auto-hapus file setelah 24 jam
+    // 4. Auto-hapus file setelah 24 jam
     setTimeout(async ()=>{
       await supa.storage.from('sk-kgb').remove([path]);
-      console.log('[WA-PDF] File dihapus:', path);
     }, 24*60*60*1000);
 
     return true;
   } catch(e){
-    console.error('[WA-PDF] Error:', e);
-    showToast('❌ Error: '+e.message,'error');
+    console.error('[EmailTTE]', e);
+    showToast('❌ Gagal kirim email: '+(e?.text||e?.message||JSON.stringify(e)),'error');
     return false;
   }
 }
