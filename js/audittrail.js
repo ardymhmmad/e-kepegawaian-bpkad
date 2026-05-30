@@ -64,6 +64,41 @@ const AUDIT_BADGE = {
  * @param {object} oldData  - data sebelum diubah (untuk EDIT/HAPUS)
  * @param {object} newData  - data sesudah diubah (untuk TAMBAH/EDIT)
  */
+
+// Cek tabel activity_log — tampilkan SQL panduan jika belum ada
+async function checkAuditTable(){
+  try {
+    const { error } = await supa.from('activity_log').select('id').limit(1);
+    if(error && (error.code==='42P01'||error.message.includes('does not exist'))){
+      console.error(`
+╔══════════════════════════════════════════════════════════════╗
+║  ⚠️  TABEL activity_log BELUM DIBUAT DI SUPABASE!            ║
+║  Jalankan SQL berikut di Supabase → SQL Editor:             ║
+╚══════════════════════════════════════════════════════════════╝
+
+CREATE TABLE IF NOT EXISTS activity_log (
+  id          bigserial PRIMARY KEY,
+  created_at  timestamptz DEFAULT now(),
+  user_email  text,
+  user_label  text,
+  action      text,
+  entity      text,
+  entity_id   text,
+  description text,
+  old_data    jsonb,
+  new_data    jsonb
+);
+ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_insert" ON activity_log FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "allow_select" ON activity_log FOR SELECT TO authenticated USING (true);
+      `);
+      showToast('⚠️ Tabel activity_log belum dibuat — cek console untuk SQL panduan','warning');
+      return false;
+    }
+    return true;
+  } catch(e){ console.warn('checkAuditTable:', e.message); return false; }
+}
+
 async function logAudit(action, entity, entityId, description, oldData=null, newData=null){
   try {
     if(!session) { console.warn('logAudit: session belum ada, log dilewati'); return; }
