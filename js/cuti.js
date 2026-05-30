@@ -638,6 +638,9 @@ async function simpanCuti(editId=null){
     if(error) throw new Error(error.message);
     await loadCutiFromServer(); closeModal(); renderCutiTable(); updateCutiBadge();
     showToast(editId?'Pengajuan diperbarui':'Pengajuan cuti dibuat','success');
+    await logAudit(editId?AUDIT_ACTION.EDIT:AUDIT_ACTION.TAMBAH,'cuti',newId,
+      `${editId?'Edit':'Tambah'} cuti — ${asn?.nama||''} (${jenis_cuti} ${mulai} s/d ${selesai})`,
+      null, {nama:asn?.nama,jenis_cuti,tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari});
   }catch(e){ showToast('Error: '+e.message,'error'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=editId?'Simpan Perubahan':'Ajukan Cuti'; } }
 }
@@ -763,6 +766,7 @@ async function ajukanStep1(id){
   }
   openCutiDetail(id); updateCutiBadge();
   showToast('Diajukan ke Kepala Subbagian','success');
+  await logAudit(AUDIT_ACTION.APPROVE,'cuti',id,`Ajukan cuti Step 1 — ${c?.nama||id}`,null,null);
 }
 
 async function approveStep(id,step){
@@ -803,6 +807,9 @@ async function approveStep(id,step){
   }
 
   openCutiDetail(id); updateCutiBadge();
+  const stepLabel={1:'Kasubbag',2:'Kabid',3:'Final'}[step]||step;
+  await logAudit(AUDIT_ACTION.APPROVE,'cuti',id,
+    `Approve cuti Step ${step} (${stepLabel}) — ${c?.nama||id}`,null,upd);
 }
 
 async function rejectStep(id,step){
@@ -823,13 +830,19 @@ async function rejectStep(id,step){
   if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanTolak);
   openCutiDetail(id); updateCutiBadge();
   showToast('Pengajuan ditolak — WA terkirim ke semua pihak','error');
+  await logAudit(AUDIT_ACTION.REJECT,'cuti',id,
+    `Tolak cuti Step ${step} — ${c?.nama||id} | Alasan: ${note.trim()}`,null,null);
 }
 
 function batalkanCuti(id){
   showConfirm('Batalkan Cuti','Batalkan pengajuan cuti ini?',async()=>{
+    const c=DB.cuti.find(x=>x.id===id);
     const {error}=await supa.from('cuti').update({status:'cancelled'}).eq('id',id);
-    if(!error){ await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success'); }
-    else showToast(error.message,'error');
+    if(!error){
+      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge();
+      showToast('Dibatalkan','success');
+      await logAudit(AUDIT_ACTION.CANCEL,'cuti',id,`Batalkan cuti — ${c?.nama||id}`,null,null);
+    } else showToast(error.message,'error');
   });
 }
 
@@ -843,6 +856,7 @@ function hapusCuti(id,dariDetail=false){
       if(dariDetail) showPage('cuti',document.querySelector('.ni.active'));
       else renderCutiTable();
       updateCutiBadge(); showToast('Riwayat dihapus','success');
+      await logAudit(AUDIT_ACTION.HAPUS,'cuti',id,`Hapus riwayat cuti — ${c?.nama||id}`,c,null);
     } else showToast(error.message,'error');
   });
 }
