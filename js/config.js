@@ -1,138 +1,108 @@
 // ═══════════════════════════════════════════════════
-// KP CALCULATION ENGINE
+// CONSTANTS
 // ═══════════════════════════════════════════════════
-function getMaxGol(pendidikan){
-  return EDU_MAX[pendidikan]||'IV/e';
+let USERS_CACHE=[];
+function loadUsers(){}
+function saveUsers(){}
+
+const UNITS = {
+  'Kepala BPKAD': [
+    'Kepala BPKAD'
+  ],
+  'Sekretariat': [
+    'Sekretaris BPKAD',
+    'Sub Bagian Umum dan Kepegawaian',
+    'Kepala Sub Bagian Umum dan Kepegawaian',
+    'Sub Bagian Perencanaan Keuangan dan Aset',
+    'Kepala Sub Bagian Perencanaan Keuangan dan Aset'
+  ],
+  'Bidang Perencanaan Anggaran Daerah': [
+    'Kepala Bidang Perencanaan Anggaran Daerah',
+    'Sub Bidang Perencanaan Anggaran Daerah I',
+    'Kepala Sub Bidang Perencanaan Anggaran Daerah I',
+    'Sub Bidang Perencanaan Anggaran Daerah II',
+    'Kepala Sub Bidang Perencanaan Anggaran Daerah II',
+    'Sub Bidang Perencanaan Anggaran Daerah III',
+    'Kepala Sub Bidang Perencanaan Anggaran Daerah III'
+  ],
+  'Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah': [
+    'Kepala Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah',
+    'Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah I',
+    'Kepala Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah I',
+    'Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah II',
+    'Kepala Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah II',
+    'Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III',
+    'Kepala Sub Bidang Perbendaharaan, Akuntansi, dan Pelaporan Keuangan Daerah III'
+  ],
+  'Bidang Pengelolaan Barang Milik Daerah': [
+    'Kepala Bidang Pengelolaan Barang Milik Daerah',
+    'Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
+    'Kepala Sub Bidang Perencanaan dan Pengamanan Barang Milik Daerah',
+    'Sub Bidang Penggunaan, Pemanfaatan, Pemindahtanganan, Pemusnahan, dan Penghapusan',
+    'Kepala Sub Bidang Penggunaan, Pemanfaatan, Pemindahtanganan, Pemusnahan, dan Penghapusan',
+    'Sub Bidang Penatausahaan Barang Milik Daerah',
+    'Kepala Sub Bidang Penatausahaan Barang Milik Daerah'
+  ]
+};
+
+const GOL_LIST = ['Juru Muda (I/a)','Juru Muda Tingkat I (I/b)','Juru (I/c)','Juru Tingkat I (I/d)','Pengatur Muda (II/a)','Pengatur Muda Tingkat I (II/b)','Pengatur (II/c)','Pengatur Tingkat I (II/d)','Penata Muda (III/a)','Penata Muda Tingkat I (III/b)','Penata (III/c)','Penata Tingkat I (III/d)','Pembina (IV/a)','Pembina Tingkat I (IV/b)','Pembina Utama Muda (IV/c)','Pembina Utama Madya (IV/d)','Pembina Utama (IV/e)'];
+const EDU_MAX = { 'SMP':'Pengatur (II/c)', 'SMA/SMK':'III/b', 'D3':'Penata Muda Tingkat I (III/b)', 'D4':'Penata Tingkat I (III/d)', 'S1':'Penata Tingkat I (III/d)', 'S2':'Pembina Utama Muda (IV/c)', 'S3':'Pembina Utama (IV/e'};
+const EDU_LIST = ['SD','SMP','SMA/SMK','D1','D2','D3','D4','S1','S2','S3'];
+
+
+
+const PER_PAGE = 10;
+let currentPage = 'dashboard';
+let session = null;
+let pageNums = {};
+// ══════════════════════════════════════════════════════
+// SUPABASE CONFIG — isi dengan nilai dari project Anda
+// Supabase Dashboard → Settings → API
+// ══════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://qyiaswmlnkqtldjtprub.supabase.co'; // ← GANTI
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWFzd21sbmtxdGxkanRwcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMjUxMzAsImV4cCI6MjA5NDYwMTEzMH0.3kl65V5vQl8RVNRKiN9oILwOSjOyCI2AtnzbA9N0u_Q';  // ← GANTI
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── FONNTE TOKEN — diisi otomatis dari tabel settings saat login ─
+let FONNTE_TOKEN = '';
+
+// Client-side cache
+let DB = { asn:[], pppk:[], pjlp:[], cuti:[], alokasi:{} };
+
+// loadFromServer — Supabase
+async function loadFromServer(){
+  const [a,b,c]=await Promise.all([
+    supa.from('asn').select('*').order('nama'),
+    supa.from('pppk').select('*').order('nama'),
+    supa.from('pjlp').select('*').order('nama'),
+  ]);
+  DB.asn=a.data||[]; DB.pppk=b.data||[]; DB.pjlp=c.data||[];
 }
-function nextGol(g){
-  const i=GOL_LIST.indexOf(g);
-  return i>=0&&i<GOL_LIST.length-1?GOL_LIST[i+1]:g;
+async function reloadType(type){
+  const {data}=await supa.from(type).select('*').order('nama');
+  if(data) DB[type]=data;
 }
-function golIndex(g){ return GOL_LIST.indexOf(g); }
-function calcKP(asn){
-  const tmt=new Date(asn.tmt_pangkat);
-  const today=new Date();
-  const msPerYear=1000*60*60*24*365.25;
-  const yearsElapsed=(today-tmt)/msPerYear;
-  const maxGol=getMaxGol(asn.pendidikan);
-  const curIdx=golIndex(asn.pangkat);
-  const maxIdx=golIndex(maxGol);
-  const atMax=curIdx>=maxIdx;
-
-  // Date 4 years from TMT
-  const dueDate=new Date(tmt);
-  dueDate.setFullYear(dueDate.getFullYear()+4);
-  const daysToKP=Math.ceil((dueDate-today)/(1000*60*60*24));
-  const reminderDate=new Date(dueDate);
-  reminderDate.setMonth(reminderDate.getMonth()-4);
-
-  let status, keterangan, nextPangkat;
-  if(atMax){
-    // Max education — every 5 months if MS
-    const due5m=new Date(tmt);
-    due5m.setMonth(due5m.getMonth()+5);
-    const days5m=Math.ceil((due5m-today)/(1000*60*60*24));
-    nextPangkat=asn.pangkat;
-    if(yearsElapsed>=4){
-      status='Batas Pendidikan';
-      keterangan=`Telah mencapai batas maksimal (${maxGol}) sesuai pendidikan ${asn.pendidikan}. Naik 1 tingkat tiap 5 bulan jika MS.`;
-    } else {
-      status='Batas Pendidikan';
-      keterangan=`Golongan sudah di batas pendidikan ${asn.pendidikan} (maks ${maxGol}).`;
-    }
-  } else if(yearsElapsed>=4){
-    status='Memenuhi Syarat';
-    nextPangkat=nextGol(asn.pangkat);
-    keterangan=`Telah memenuhi syarat 4 tahun dari TMT ${fmt(asn.tmt_pangkat)}. Dapat diusulkan ke ${nextPangkat}.`;
-  } else if(daysToKP<=120){
-    status='Mengingatkan';
-    nextPangkat=nextGol(asn.pangkat);
-    keterangan=`Jatuh tempo KP dalam ${daysToKP} hari (${fmtDate(dueDate)}). Siapkan berkas pengajuan ke ${nextPangkat}.`;
-  } else {
-    status='Belum Memenuhi Syarat';
-    nextPangkat=nextGol(asn.pangkat);
-    keterangan=`Belum mencapai 4 tahun. Jatuh tempo pada ${fmtDate(dueDate)} (${Math.abs(daysToKP)} hari lagi).`;
-  }
-  return { status, nextPangkat, dueDate, daysToKP, keterangan, maxGol };
+async function loadCutiFromServer(){
+  const {data}=await supa.from('cuti').select('*').order('created_at',{ascending:false});
+  if(data) DB.cuti=data;
 }
+// cuti: [{id,asn_id,nip,nama,unit,jenis_cuti,tgl_mulai,tgl_selesai,
+//         hari_kerja,keperluan,status,step,
+//         step1_by,step1_at,step1_note,
+//         step2_by,step2_at,step2_note,
+//         final_by,final_at,final_note,
+//         no_surat,tahun,created_at}]
+// alokasi: { asn_id: { jenis: { alokasi:N, terpakai:N } } }
+// DEF_ALOKASI = global default days, set in cuti module
 
-// ═══════════════════════════════════════════════════
-// KGB ENGINE
-// ═══════════════════════════════════════════════════
-function calcKGB(asn){
-  const tmt=new Date(asn.tmt_kgb);
-  const today=new Date();
-  const due=new Date(tmt); due.setFullYear(due.getFullYear()+2);
-  const daysToKGB=Math.ceil((due-today)/(1000*60*60*24));
-  const gajiSkrg = (asn.gaji && asn.gaji > 0) ? parseInt(asn.gaji) : 0;
-  let status;
-  if(daysToKGB<0) status='Lewat Jatuh Tempo';
-  else if(daysToKGB<=30) status='Segera';
-  else status='Normal';
-  return { due, daysToKGB, gajiSkrg, status };
-}
+// ── Email & WA Admin TTE — diisi dari tabel settings ─────────
+let WA_ADMIN_TTE     = '';
+let EMAIL_ADMIN_TTE  = '';
 
-// ═══════════════════════════════════════════════════
-// PENSIUN ENGINE
-// ═══════════════════════════════════════════════════
+// ── EmailJS Config — diisi dari tabel settings ───────────────
+let EMAILJS_PUBLIC_KEY  = '';
+let EMAILJS_SERVICE_ID  = '';
+let EMAILJS_TEMPLATE_ID = '';
 
-// Ekstrak tanggal lahir dari NIP (8 digit pertama: YYYYMMDD)
-function tglLahirDariNIP(nip){
-  if(!nip || nip.length < 8) return null;
-  const s = String(nip).replace(/\s/g,'');
-  const y = parseInt(s.substring(0,4));
-  const m = parseInt(s.substring(4,6));
-  const d = parseInt(s.substring(6,8));
-  if(!y||!m||!d||m>12||d>31) return null;
-  return new Date(y, m-1, d, 0,0,0);
-}
-
-function calcPensiun(asn){
-  const tglLahir = tglLahirDariNIP(asn.nip);
-  const batasUsia = parseInt(asn.batas_usia_pensiun) || 58;
-  const today = new Date();
-
-  if(!tglLahir) return {
-    valid: false, tglLahir:null, tglPensiun:null, usia:null,
-    sisaHari:null, sisaBulan:null,
-    status:'Data Tidak Valid',
-    keterangan:'NIP tidak valid atau batas usia belum diisi',
-    batasUsia
-  };
-
-  // Pensiun = akhir bulan lahir + batasUsia tahun
-  // Contoh: lahir 14-09-1967, batas 58 → pensiun 30-09-2025
-  const tglPensiun = new Date(
-    tglLahir.getFullYear() + batasUsia,  // tahun lahir + batas usia
-    tglLahir.getMonth() + 1,             // bulan berikutnya (month+1)
-    0                                    // hari ke-0 = hari terakhir bulan lahir
-  );
-
-  let usia = today.getFullYear() - tglLahir.getFullYear();
-  const bulanDiff = today.getMonth() - tglLahir.getMonth();
-  if(bulanDiff < 0 || (bulanDiff===0 && today.getDate() < tglLahir.getDate())) usia--;
-
-  const msPerHari = 1000*60*60*24;
-  const sisaHari  = Math.ceil((tglPensiun - today) / msPerHari);
-  const sisaBulan = Math.ceil(sisaHari / 30.44);
-
-  let status, keterangan;
-  if(sisaHari <= 0){
-    status = 'Segera Pensiun';
-    keterangan = 'Telah mencapai batas usia pensiun per '+fmtDate(tglPensiun)+'. Segera proses berkas pensiun.';
-  } else if(sisaHari <= 180){
-    status = 'Segera Pensiun';
-    keterangan = 'Akan pensiun dalam '+sisaHari+' hari lagi ('+fmtDate(tglPensiun)+'). Siapkan berkas pensiun.';
-  } else {
-    status = 'Aktif';
-    keterangan = 'Pensiun pada '+fmtDate(tglPensiun)+' ('+sisaBulan+' bulan lagi).';
-  }
-
-  return { valid:true, tglLahir, tglPensiun, usia, sisaHari, sisaBulan, status, keterangan, batasUsia };
-}
-
-function pensiunBadge(status){
-  if(status==='Segera Pensiun') return 'b-amber';
-  if(status==='Aktif')          return 'b-green';
-  return 'b-gray';
-}
+// ── WA Templates — diisi dari tabel settings ─────────────────
+let WA_TEMPLATES = {};
