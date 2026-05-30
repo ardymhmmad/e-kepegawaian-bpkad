@@ -118,6 +118,7 @@ async function doLogin(){
     if(error) throw error;
     await applySupaSession(data.session);
     await init();
+    setTimeout(()=> logAudit(AUDIT_ACTION.LOGIN,'user',null,`Login: ${email}`,null,null), 800);
   } catch(e){
     const msg = e.message || '';
     if(msg.includes('Invalid login')) errEl.textContent = 'Email atau password salah.';
@@ -131,6 +132,7 @@ async function doLogin(){
 
 // ── Logout ─────────────────────────────────────────────────
 async function doLogout(){
+  await logAudit(AUDIT_ACTION.LOGOUT,'user',null,`Logout: ${session?.email||''}`,null,null);
   await supa.auth.signOut();
   clearAppSession();
 }
