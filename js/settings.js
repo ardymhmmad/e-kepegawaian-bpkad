@@ -46,6 +46,7 @@ async function saveFonnteToken(){
   if(!error){
     FONNTE_TOKEN = token;
     showToast('✅ Token Fonnte berhasil disimpan','success');
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Token Fonnte',null,null);
   } else {
     showToast('Gagal simpan: '+error.message,'error');
     console.error('saveFonnteToken error:', error);
@@ -296,16 +297,18 @@ async function simpanEditUser(uid){
 
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" diperbarui`, 'success');
+  await logAudit(AUDIT_ACTION.EDIT,'user',uid,`Edit pengguna — ${label}`,null,{label,role});
 }
 
 // ── Hapus user ─────────────────────────────────────────────
 function hapusUser(uid, label){
   if(session?.uid === uid){ showToast('Tidak dapat menghapus akun sendiri','error'); return; }
   showConfirm('Hapus Pengguna', `Hapus pengguna <strong>${label}</strong>? Tindakan ini tidak dapat dibatalkan.`, async ()=>{
-    // Hapus dari profiles — auth.users akan cascade delete via FK
     const { error } = await supa.from('profiles').delete().eq('id', uid);
-    if(!error){ renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success'); }
-    else showToast(error.message, 'error');
+    if(!error){
+      renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success');
+      await logAudit(AUDIT_ACTION.HAPUS,'user',uid,`Hapus pengguna — ${label}`,{label},null);
+    } else showToast(error.message, 'error');
   });
 }
 
@@ -525,6 +528,7 @@ async function saveNoUrutCuti(){
   if(!error){
     NO_URUT_CUTI = val;
     showToast('✅ Nomor urut surat cuti disimpan','success');
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,`Update nomor urut surat cuti → ${val}`,null,null);
   } else {
     showToast('Gagal: '+error.message,'error');
   }
@@ -562,10 +566,10 @@ async function saveWATemplates(){
   }));
   const { error } = await supa.from('settings').upsert(upserts, { onConflict:'setting_key' });
   if(!error){
-    // Update cache lokal
     if(typeof WA_TEMPLATES !== 'undefined')
       upserts.forEach(u=>{ WA_TEMPLATES[u.setting_key]=u.setting_val; });
     showToast('✅ Semua template berhasil disimpan','success');
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update template pesan WA',null,null);
   } else {
     showToast('Gagal: '+error.message,'error');
   }
