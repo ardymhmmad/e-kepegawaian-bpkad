@@ -74,10 +74,12 @@ async function saveAdd(type){
   const btn=document.querySelector('#modal-footer .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
-    const {error}=await supa.from(type).insert(obj);
+    const {data,error}=await supa.from(type).insert(obj).select().single();
     if(error) throw new Error(error.message);
     await reloadType(type); closeModal(); refreshTable(type); renderDashboard();
     showToast('Data berhasil ditambahkan','success');
+    await logAudit(AUDIT_ACTION.TAMBAH, type, data?.id||null,
+      `Tambah ${type.toUpperCase()}${obj.nama?' — '+obj.nama:''}`, null, obj);
   }catch(e){ showToast('Error: '+e.message,'error'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Simpan'; } }
 }
@@ -90,6 +92,7 @@ function openEditForm(type,id){
   document.getElementById('modal').style.display='flex';
 }
 async function saveEdit(type,id){
+  const oldRec=DB[type].find(r=>r.id===id)||{};
   const obj=collectForm(type);
   Object.keys(obj).forEach(k=>{ if(obj[k]==='') obj[k]=null; });
   const btn=document.querySelector('#modal-footer .btn-primary');
@@ -100,15 +103,22 @@ async function saveEdit(type,id){
     await reloadType(type); closeModal();
     if(currentPage==='detail') showDetail(type,id); else refreshTable(type);
     renderDashboard(); showToast('Data berhasil diperbarui','success');
+    await logAudit(AUDIT_ACTION.EDIT, type, id,
+      `Edit ${type.toUpperCase()}${oldRec.nama?' — '+oldRec.nama:''}`, oldRec, obj);
   }catch(e){ showToast('Error: '+e.message,'error'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Simpan Perubahan'; } }
 }
 function deleteRec(type,id){
   if(session?.role!=='admin'){ showToast('Hak akses tidak cukup','error'); return; }
+  const rec=DB[type].find(r=>r.id===id)||{};
   showConfirm('Hapus Data','Apakah Anda yakin ingin menghapus data ini?',async()=>{
     const {error}=await supa.from(type).delete().eq('id',id);
-    if(!error){ await reloadType(type); refreshTable(type); renderDashboard(); showToast('Data berhasil dihapus','success'); }
-    else showToast(error.message,'error');
+    if(!error){
+      await reloadType(type); refreshTable(type); renderDashboard();
+      showToast('Data berhasil dihapus','success');
+      await logAudit(AUDIT_ACTION.HAPUS, type, id,
+        `Hapus ${type.toUpperCase()}${rec.nama?' — '+rec.nama:''}`, rec, null);
+    } else showToast(error.message,'error');
   });
 }
 
