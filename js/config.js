@@ -94,15 +94,3 @@ async function loadCutiFromServer(){
 //         no_surat,tahun,created_at}]
 // alokasi: { asn_id: { jenis: { alokasi:N, terpakai:N } } }
 // DEF_ALOKASI = global default days, set in cuti module
-
-// ── Email & WA Admin TTE — diisi dari tabel settings ─────────
-let WA_ADMIN_TTE     = '';
-let EMAIL_ADMIN_TTE  = '';
-
-// ── EmailJS Config — diisi dari tabel settings ───────────────
-let EMAILJS_PUBLIC_KEY  = '';
-let EMAILJS_SERVICE_ID  = '';
-let EMAILJS_TEMPLATE_ID = '';
-
-// ── WA Templates — diisi dari tabel settings ─────────────────
-let WA_TEMPLATES = {};

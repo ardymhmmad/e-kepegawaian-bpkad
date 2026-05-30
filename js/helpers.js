@@ -1,243 +1,166 @@
-function noData(){ return '<div style="font-size:12px;color:var(--tx3);padding:8px 0">Tidak ada data</div>'; }
-
 // ═══════════════════════════════════════════════════
-// TABLE RENDERING
+// UNIT / SUBUNIT HELPERS
 // ═══════════════════════════════════════════════════
-const tblCfg = {
-  asn:{
-    heads:['','Nama / NIP','Gol','Pendidikan','Jabatan','J/K','Unit Kerja','TMT Pangkat','Aksi'],
-    row:a=>`<td style="width:44px">
-        <div class="emp-av" title="Klik untuk ganti foto" onclick="openPhotoModal('asn','${a.id}')"
-          style="width:34px;height:34px;font-size:12px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .2s"
-          onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
-          ${a.foto?`<img src="${a.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none'">`:initials(a.nama)}
-        </div>
-      </td>
-      <td>
-        <div class="emp-av-wrap" style="gap:0;flex-direction:column;align-items:flex-start">
-          <a href="#" onclick="showDetail('asn','${a.id}')" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:12px">${a.nama}</a>
-          <span class="emp-av-nip">${a.nip}</span>
-        </div>
-      </td>
-      <td><span class="badge ${golBadge(a.pangkat)}">${a.pangkat}</span></td>
-      <td>${a.pendidikan}</td>
-      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${a.jabatan}</td>
-      <td><span class="badge ${a.jk==='Laki-laki'?'b-blue':'b-amber'}">${a.jk==='Laki-laki'?'L':'P'}</span></td>
-      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.unit}">${shortUnit(a.unit)}</td>
-      <td>${fmt(a.tmt_pangkat)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditForm('asn','${a.id}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteRec('asn','${a.id}')">Hapus</button></td>`,
-    filter:(a,f)=>(a.nama.toLowerCase().includes(f.q)||a.nip.includes(f.q))&&(!f.unit||a.unit===f.unit)&&(!f.sub||a.subunit===f.sub)
-  },
-  pppk:{
-    heads:['','Nama / NIPPPK','Pendidikan','Jabatan','J/K','Unit Kerja','Sub Unit','Akhir Kontrak','Aksi'],
-    row:p=>`<td style="width:44px">
-        <div class="emp-av" title="Klik untuk ganti foto" onclick="openPhotoModal('pppk','${p.id}')"
-          style="width:34px;height:34px;font-size:12px;background:#ecfdf5;color:#065f46;cursor:pointer;overflow:hidden;transition:opacity .2s"
-          onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
-          ${p.foto?`<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none'">`:initials(p.nama)}
-        </div>
-      </td>
-      <td>
-        <div style="display:flex;flex-direction:column">
-          <a href="#" onclick="showDetail('pppk','${p.id}')" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:12px">${p.nama}</a>
-          <span class="emp-av-nip">${p.nipppk}</span>
-        </div>
-      </td>
-      <td>${p.pendidikan}</td><td style="font-size:11px">${p.jabatan}</td>
-      <td><span class="badge ${p.jk==='Laki-laki'?'b-blue':'b-amber'}">${p.jk==='Laki-laki'?'L':'P'}</span></td>
-      <td style="font-size:11px">${shortUnit(p.unit)}</td><td style="font-size:11px">${shortUnit(p.subunit)}</td>
-      <td><span class="badge ${kontrakBadge(p.akhir_kontrak)}">${fmt(p.akhir_kontrak)}</span></td>
-      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditForm('pppk','${p.id}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteRec('pppk','${p.id}')">Hapus</button></td>`,
-    filter:(p,f)=>(p.nama.toLowerCase().includes(f.q)||p.nipppk.includes(f.q))&&(!f.unit||p.unit===f.unit)&&(!f.sub||p.subunit===f.sub)
-  },
-  pjlp:{
-    heads:['','Nama / No.Pesanan','Pendidikan','Jenis Pekerjaan','Jabatan','J/K','Unit Kerja','Akhir Kontrak','Aksi'],
-    row:j=>`<td style="width:44px">
-        <div class="emp-av" title="Klik untuk ganti foto" onclick="openPhotoModal('pjlp','${j.id}')"
-          style="width:34px;height:34px;font-size:12px;background:#fffbeb;color:#92400e;cursor:pointer;overflow:hidden;transition:opacity .2s"
-          onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
-          ${j.foto?`<img src="${j.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none'">`:initials(j.nama)}
-        </div>
-      </td>
-      <td>
-        <div style="display:flex;flex-direction:column">
-          <a href="#" onclick="showDetail('pjlp','${j.id}')" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:12px">${j.nama}</a>
-          <span class="emp-av-nip">${j.no_pesanan}</span>
-        </div>
-      </td>
-      <td>${j.pendidikan}</td><td style="font-size:11px">${j.jenis_pekerjaan}</td>
-      <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.jabatan||'—'}</td>
-      <td><span class="badge ${j.jk==='Laki-laki'?'b-blue':'b-amber'}">${j.jk==='Laki-laki'?'L':j.jk==='Perempuan'?'P':'—'}</span></td>
-      <td style="font-size:11px">${shortUnit(j.unit)}</td>
-      <td><span class="badge ${kontrakBadge(j.akhir_kontrak)}">${fmt(j.akhir_kontrak)}</span></td>
-      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditForm('pjlp','${j.id}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteRec('pjlp','${j.id}')">Hapus</button></td>`,
-    filter:(j,f)=>(j.nama.toLowerCase().includes(f.q)||j.no_pesanan.toLowerCase().includes(f.q))&&(!f.unit||j.unit===f.unit)&&(!f.sub||j.subunit===f.sub)
-  }
-};
 
-function renderTable(type, filters={}){
-  const cfg=tblCfg[type]; if(!cfg) return;
-  const all=DB[type]||[];
-  const filtered=all.filter(r=>cfg.filter(r,filters));
-  const cEl=document.getElementById(type+'-count');
-  if(cEl){ const cfg2=pageConfigs[type]; cEl.textContent=`${cfg2?cfg2.title:type} (${filtered.length} data)`; }
-  const th=document.getElementById(type+'-thead');
-  if(th) th.innerHTML='<tr>'+cfg.heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  const pg=Math.min(pageNums[type]||1, Math.ceil(filtered.length/PER_PAGE)||1);
-  pageNums[type]=pg;
-  const slice=filtered.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
-  const tb=document.getElementById(type+'-tbody');
-  if(tb) tb.innerHTML=slice.length?slice.map(r=>`<tr>${cfg.row(r)}</tr>`).join(''):`<tr><td colspan="${cfg.heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data</td></tr>`;
-  renderPg(type, filtered.length, filters);
+// Populate unit dropdown for a given type — always includes "Semua Unit"
+function populateUnitFilter(type){
+  const sel=document.getElementById(type+'-f-unit');
+  if(!sel) return;
+  const cur=sel.value; // preserve current selection if any
+  sel.innerHTML='<option value="">Semua Unit</option>'+
+    Object.keys(UNITS).map(u=>`<option value="${u}">${u}</option>`).join('');
+  if(cur) sel.value=cur;
 }
 
-function renderPg(type, total, filters){
-  const el=document.getElementById(type+'-pg'); if(!el) return;
-  const pg=pageNums[type]||1;
-  const pages=Math.ceil(total/PER_PAGE)||1;
-  let h=`<span class="pg-info">${total} data</span>`;
-  if(pg>1) h+=`<button class="pg-btn" onclick="goPage('${type}',${pg-1})">‹</button>`;
-  for(let i=Math.max(1,pg-2);i<=Math.min(pages,pg+2);i++) h+=`<button class="pg-btn${i===pg?' active':''}" onclick="goPage('${type}',${i})">${i}</button>`;
-  if(pg<pages) h+=`<button class="pg-btn" onclick="goPage('${type}',${pg+1})">›</button>`;
-  el.innerHTML=h;
-}
-function goPage(type,pg){ pageNums[type]=pg; refreshTable(type); }
-
-// ═══════════════════════════════════════════════════
-// KP TABLE
-// ═══════════════════════════════════════════════════
-function renderKP(filters={}){
-  const q=(filters.q||'').toLowerCase();
-  const unit=filters.unit||'';
-  const status=filters.status||'';
-  const heads=['NIP','Nama ASN','Gol Saat Ini','Gol Berikutnya','TMT Terakhir','Tgl Jatuh Tempo','Status','Keterangan'];
-  const th=document.getElementById('kp-thead');
-  if(th) th.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  const data=DB.asn
-    .filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit))
-    .filter(a=>{ if(!status) return true; const k=calcKP(a); return k.status===status; });
-  const pg=Math.min(pageNums['kp']||1,Math.ceil(data.length/PER_PAGE)||1);
-  pageNums['kp']=pg;
-  const slice=data.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
-  const tb=document.getElementById('kp-tbody');
-  if(tb) tb.innerHTML=slice.map(a=>{
-    const k=calcKP(a);
-    return `<tr>
-      <td class="td-mono">${a.nip}</td>
-      <td style="font-weight:600"><a href="#" onclick="showDetail('asn','${a.id}')" style="color:var(--primary);text-decoration:none">${a.nama}</a></td>
-      <td><span class="badge ${golBadge(a.pangkat)}">${a.pangkat}</span></td>
-      <td><span class="badge b-green">${k.nextPangkat}</span></td>
-      <td>${fmt(a.tmt_pangkat)}</td>
-      <td>${fmtDate(k.dueDate)}</td>
-      <td><span class="badge ${kpStatusBadge(k.status)}">${k.status}</span></td>
-      <td style="font-size:11px;color:var(--tx2);max-width:200px">${k.keterangan}</td>
-    </tr>`;
-  }).join('')||`<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
-  renderPg2('kp',data.length,filters);
-}
-function renderPg2(type,total,filters){
-  const el=document.getElementById(type+'-pg');if(!el)return;
-  const pg=pageNums[type]||1;const pages=Math.ceil(total/PER_PAGE)||1;
-  let h=`<span class="pg-info">${total} data</span>`;
-  if(pg>1)h+=`<button class="pg-btn" onclick="goPageKP('${type}',${pg-1})">‹</button>`;
-  for(let i=Math.max(1,pg-2);i<=Math.min(pages,pg+2);i++)h+=`<button class="pg-btn${i===pg?' active':''}" onclick="goPageKP('${type}',${i})">${i}</button>`;
-  if(pg<pages)h+=`<button class="pg-btn" onclick="goPageKP('${type}',${pg+1})">›</button>`;
-  el.innerHTML=h;
-}
-function goPageKP(type,pg){ pageNums[type]=pg; if(type==='kp')renderKP(getFilters('kp')); else if(type==='kgb')renderKGB(getFilters('kgb')); else if(type==='pensiun')renderPensiun(getFilters('pensiun')); }
-function refreshTable2(type){ pageNums[type]=1; if(type==='kp')renderKP(getFilters('kp')); else renderKGB(getFilters('kgb')); }
-
-// ═══════════════════════════════════════════════════
-// KGB TABLE
-// ═══════════════════════════════════════════════════
-function renderKGB(filters={}){
-  const q=(filters.q||'').toLowerCase();
-  const unit=filters.unit||'';
-  const status=filters.status||'';
-  const heads=['NIP','Nama ASN','Unit Kerja','Gol','TMT KGB','Gaji Saat Ini','Tgl KGB Berikut','Status','Keterangan','Aksi'];
-  const th=document.getElementById('kgb-thead');
-  if(th) th.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  const data=DB.asn
-    .filter(a=>(!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q)))&&(!unit||a.unit===unit))
-    .filter(a=>{ if(!status) return true; const k=calcKGB(a); return k.status===status; });
-  const pg=Math.min(pageNums['kgb']||1,Math.ceil(data.length/PER_PAGE)||1);
-  pageNums['kgb']=pg;
-  const slice=data.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
-  const tb=document.getElementById('kgb-tbody');
-  if(tb) tb.innerHTML=slice.map(a=>{
-    const k=calcKGB(a);
-    return `<tr>
-      <td class="td-mono">${a.nip}</td>
-      <td style="font-weight:600"><a href="#" onclick="showDetail('asn','${a.id}')" style="color:var(--primary);text-decoration:none">${a.nama}</a></td>
-      <td style="font-size:11px">${shortUnit(a.unit)}</td>
-      <td><span class="badge ${golBadge(a.pangkat)}">${a.pangkat}</span></td>
-      <td>${fmt(a.tmt_kgb)}</td>
-      <td>Rp ${num(k.gajiSkrg)}</td>
-      <td>${fmtDate(k.due)}</td>
-      <td><span class="badge ${kgbBadge(k.status)}">${k.status}</span></td>
-      <td style="font-size:11px;color:var(--tx2)">KGB berikutnya ${fmtDate(k.due)}${k.daysToKGB>0?' ('+k.daysToKGB+' hari lagi)':' (Lewat jatuh tempo)'}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm btn-primary" onclick="cetakSKKGB('${a.id}')">🖨 Cetak SK</button></td>
-    </tr>`;
-  }).join('')||`<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
-  renderPg2('kgb',data.length,filters);
+// Sync sub-unit dropdown to match selected unit
+function onUnitFilter(type){
+  const unit=document.getElementById(type+'-f-unit')?.value||'';
+  const subSel=document.getElementById(type+'-f-sub');
+  if(!subSel) return;
+  const curSub=subSel.value;
+  const subs=unit?UNITS[unit]||[]:[];
+  subSel.innerHTML='<option value="">Semua Sub Unit</option>'+
+    subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  // restore sub selection if still valid
+  if(curSub && subs.includes(curSub)) subSel.value=curSub;
 }
 
-// ═══════════════════════════════════════════════════
-// PENSIUN TABLE
-// ═══════════════════════════════════════════════════
-function renderPensiun(filters={}){
-  const q      = (filters.q||'').toLowerCase();
-  const unit   = filters.unit||'';
-  const status = filters.status||'';
+// Init ALL filter dropdowns and wire change events — called once at app init
+function initAllFilters(){
+  const DATA_TYPES = ['asn','pppk','pjlp'];
+  const ALL_TYPES  = ['asn','pppk','pjlp','kp','kgb'];
+  // Note: cuti and alokasi-cuti have their own filter wiring in renderCutiPage/renderAlokasiPage
 
-  const heads = ['NIP','Nama ASN','Unit Kerja','Tgl Lahir','Usia (th)','Batas Usia','Tgl Pensiun','Sisa','Status','Keterangan'];
-  const th = document.getElementById('pensiun-thead');
-  if(th) th.innerHTML = '<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  ALL_TYPES.forEach(type=>{
+    const unitSel = document.getElementById(type+'-f-unit');
+    const subSel  = document.getElementById(type+'-f-sub');
+    if(!unitSel) return;
 
-  const data = DB.asn
-    .filter(a => (!q||(a.nama.toLowerCase().includes(q)||a.nip.includes(q))) && (!unit||a.unit===unit))
-    .filter(a => { if(!status) return true; return calcPensiun(a).status===status; })
-    .sort((a,b)=>{
-      const pa=calcPensiun(a), pb=calcPensiun(b);
-      // Segera Pensiun dulu, lalu Aktif, urut by sisaHari
-      const rank={'Segera Pensiun':0,'Aktif':1,'Data Tidak Valid':2};
-      const ra=rank[pa.status]??2, rb=rank[pb.status]??2;
-      if(ra!==rb) return ra-rb;
-      return (pa.sisaHari??9999)-(pb.sisaHari??9999);
+    // Populate options immediately
+    populateUnitFilter(type);
+
+    // Wire unit change: update sub options, then re-render table
+    unitSel.addEventListener('change', ()=>{
+      onUnitFilter(type);
+      refreshTable(type);
     });
 
-  const pg    = Math.min(pageNums['pensiun']||1, Math.ceil(data.length/PER_PAGE)||1);
-  pageNums['pensiun'] = pg;
-  const slice = data.slice((pg-1)*PER_PAGE, pg*PER_PAGE);
+    // Wire sub change: re-render table
+    if(subSel){
+      subSel.addEventListener('change', ()=>{ refreshTable(type); });
+    }
+  });
 
-  const tb = document.getElementById('pensiun-tbody');
-  if(!tb) return;
-
-  if(!slice.length){
-    tb.innerHTML = `<tr><td colspan="${heads.length}" style="text-align:center;color:var(--tx3);padding:20px">Tidak ada data ASN</td></tr>`;
-    renderPg2('pensiun', 0, filters);
-    return;
-  }
-
-  tb.innerHTML = slice.map(a => {
-    const p = calcPensiun(a);
-    const sisaLabel = !p.valid ? '—'
-      : p.sisaHari <= 0 ? `<span style="color:#d97706;font-weight:700">Batas usia tercapai</span>`
-      : p.sisaHari <= 180 ? `<span style="color:#d97706;font-weight:700">${p.sisaHari} hari</span>`
-      : `${p.sisaBulan} bln`;
-    return `<tr>
-      <td class="td-mono">${a.nip}</td>
-      <td style="font-weight:600"><a href="#" onclick="showDetail('asn','${a.id}')" style="color:var(--primary);text-decoration:none">${a.nama}</a></td>
-      <td style="font-size:11px">${shortUnit(a.unit)}</td>
-      <td>${p.tglLahir ? fmtDate(p.tglLahir) : '—'}</td>
-      <td style="text-align:center">${p.usia??'—'}</td>
-      <td style="text-align:center">${p.batasUsia} th</td>
-      <td>${p.tglPensiun ? fmtDate(p.tglPensiun) : '—'}</td>
-      <td style="text-align:center">${sisaLabel}</td>
-      <td><span class="badge ${pensiunBadge(p.status)}">${p.status}</span></td>
-      <td style="font-size:11px;color:var(--tx2);max-width:200px">${p.keterangan}</td>
-    </tr>`;
-  }).join('');
-
-  renderPg2('pensiun', data.length, filters);
+  // Wire search boxes
+  ALL_TYPES.forEach(type=>{
+    const sb = document.querySelector('#page-'+type+' .search-box');
+    if(sb) sb.addEventListener('input', ()=>{ refreshTable(type); });
+  });
 }
+
+// Central render dispatcher — always reads current filter state
+function refreshTable(type){
+  const f = getFilters(type);
+  if(type==='kp')       renderKP(f);
+  else if(type==='kgb') renderKGB(f);
+  else                  renderTable(type, f);
+}
+function buildUnitSubSelects(selectedUnit='', selectedSub='', prefix='fu'){
+  const unitOpts=Object.keys(UNITS).map(u=>`<option value="${u}"${u===selectedUnit?' selected':''}>${u}</option>`).join('');
+  const subOpts=selectedUnit?(UNITS[selectedUnit]||[]).map(s=>`<option value="${s}"${s===selectedSub?' selected':''}>${s}</option>`).join(''):'';
+  return `<div class="fg"><label>Unit Kerja</label><select id="${prefix}_unit" onchange="updateSubUnit('${prefix}')"><option value="">— Pilih Unit —</option>${unitOpts}</select></div><div class="fg"><label>Sub Unit Kerja</label><select id="${prefix}_subunit"><option value="">— Pilih Sub Unit —</option>${subOpts}</select></div>`;
+}
+function updateSubUnit(prefix){
+  const unit=document.getElementById(prefix+'_unit')?.value;
+  const sel=document.getElementById(prefix+'_subunit');
+  if(!sel) return;
+  const subs=unit?UNITS[unit]||[]:[];
+  sel.innerHTML='<option value="">— Pilih Sub Unit —</option>'+subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+function getFilters(type){
+  // Pensiun — pakai id khusus
+  if(type==='pensiun') return {
+    q:      (document.getElementById('pensiun-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('pensiun-unit')?.value||'',
+    status: document.getElementById('pensiun-status')?.value||''
+  };
+  // KP — search pakai id kp-q, filter kp-f-unit, kp-f-status
+  if(type==='kp') return {
+    q:      (document.getElementById('kp-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('kp-f-unit')?.value||'',
+    status: document.getElementById('kp-f-status')?.value||''
+  };
+  // KGB — search pakai id kgb-q, filter kgb-f-unit, kgb-f-status
+  if(type==='kgb') return {
+    q:      (document.getElementById('kgb-q')?.value||'').toLowerCase(),
+    unit:   document.getElementById('kgb-f-unit')?.value||'',
+    status: document.getElementById('kgb-f-status')?.value||''
+  };
+  // Default — ASN/PPPK/PJLP
+  return {
+    q:      (document.querySelector('#page-'+type+' .search-box')?.value||'').toLowerCase(),
+    unit:   document.getElementById(type+'-f-unit')?.value||'',
+    sub:    document.getElementById(type+'-f-sub')?.value||'',
+    status: document.getElementById(type+'-f-status')?.value||''
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL / CONFIRM / TOAST
+// ═══════════════════════════════════════════════════
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function closeModalOutside(e){ if(e.target===document.getElementById('modal')) closeModal(); }
+
+function showConfirm(title,msg,onOk,onCancel,okLabel='Ya, Lanjutkan',cancelLabel='Batal'){
+  document.getElementById('confirm-title').innerHTML=title;
+  document.getElementById('confirm-msg').innerHTML=msg;
+  document.getElementById('confirm-actions').innerHTML=`
+    <button class="btn" onclick="closeConfirm()">${cancelLabel}</button>
+    <button class="btn btn-primary" onclick="closeConfirm(true)">${okLabel}</button>`;
+  document.getElementById('confirm-overlay').style.display='flex';
+  window._confirmOk=onOk; window._confirmCancel=onCancel||null;
+}
+function closeConfirm(ok=false){
+  document.getElementById('confirm-overlay').style.display='none';
+  if(ok&&window._confirmOk) window._confirmOk();
+  else if(!ok&&window._confirmCancel) window._confirmCancel();
+}
+
+let _toastTimer;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function fmt(d){ if(!d) return '—'; const p=d.split('-'); return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:d; }
+function fmtDate(d){ if(!d) return '—'; if(d instanceof Date) return d.getDate().toString().padStart(2,'0')+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getFullYear(); return fmt(d); }
+function today(){ return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+function daysUntil(d){ if(!d) return 999; return Math.ceil((new Date(d)-new Date())/(864e5)); }
+function initials(n){ return (n||'').replace(/[,.].*$/,'').trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function shortName(n){ return (n||'').split(',')[0].replace(/^(Drs\.|Dr\.|Ir\.|Hj\.|H\.)\s*/i,'').split(' ').slice(0,2).join(' '); }
+function shortUnit(u){ if(!u) return '—'; if(u.length<=22) return u; return u.replace(/Subbidang\s*/i,'').replace(/Subbagian\s*/i,'').trim().substring(0,22)+'…'; }
+function str(v){ if(v===null||v===undefined) return ''; if(v instanceof Date) return v.toISOString().slice(0,10); return String(v).trim(); }
+function excelDate(v){
+  if(!v) return '';
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  if(typeof v==='number'){ const d=XLSX.SSF.parse_date_code(v); return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; }
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return s;
+}
+function num(v){ return Number(v||0).toLocaleString('id-ID'); }
+function golBadge(g){ if(!g) return 'b-gray'; if(g.startsWith('IV')) return 'b-green'; if(g.startsWith('III')) return 'b-blue'; return 'b-gray'; }
+function kpStatusBadge(s){ return s==='Memenuhi Syarat'?'b-green':s==='Mengingatkan'?'b-amber':s==='Batas Pendidikan'?'b-purple':'b-gray'; }
+function kgbBadge(s){ return s==='Lewat Jatuh Tempo'?'b-red':s==='Segera'?'b-amber':'b-green'; }
+function kontrakBadge(d){ const dy=daysUntil(d); return dy<0?'b-red':dy<=30?'b-amber':'b-green'; }
+
+// ═══════════════════════════════════════════════════
+// LOCALSTORAGE
+// ═══════════════════════════════════════════════════
+function saveLocal(){}
+function loadLocal(){ return false; }
