@@ -636,15 +636,6 @@ async function simpanCuti(editId=null){
       error=res.error; if(res.data) newId=res.data.id;
     }
     if(error) throw new Error(error.message);
-    await logAudit(
-      editId ? AUDIT_ACTION.EDIT : AUDIT_ACTION.TAMBAH,
-      'cuti', newId,
-      editId
-        ? `Edit pengajuan cuti — ${asn?.nama||''} (${jenis_cuti})`
-        : `Ajukan cuti baru — ${asn?.nama||''} (${jenis_cuti}, ${hari} hari)`,
-      null,
-      {asn_id:asn?.id,nama:asn?.nama,jenis_cuti,tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari}
-    );
     await loadCutiFromServer(); closeModal(); renderCutiTable(); updateCutiBadge();
     showToast(editId?'Pengajuan diperbarui':'Pengajuan cuti dibuat','success');
   }catch(e){ showToast('Error: '+e.message,'error'); }
@@ -766,8 +757,6 @@ async function ajukanStep1(id){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
-    `Ajukan ke Kepala Subbagian — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, {status:'step1',step:1});
   if(c?.wa_atasan1){
     const pesan=renderTemplate(WA_TEMPLATES.wa_tmpl_pengajuan, getCutiData(c));
     await kirimWA(c.wa_atasan1, pesan);
@@ -791,8 +780,6 @@ async function approveStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
-    `Approve cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, upd);
 
   // ── Notifikasi WA sesuai step ──────────────────────
   if(step===1){
@@ -829,8 +816,6 @@ async function rejectStep(id,step){
   if(error){ showToast(error.message,'error'); return; }
   await loadCutiFromServer();
   const c=DB.cuti.find(x=>x.id===id);
-  await logAudit(AUDIT_ACTION.REJECT, 'cuti', id,
-    `Tolak cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''}) — Alasan: ${note.trim()}`, null, upd);
   const d=getCutiData(c,{disetujui_oleh:who, alasan:note.trim()});
   const pesanTolak=renderTemplate(WA_TEMPLATES.wa_tmpl_rejected, d);
   if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanTolak);
@@ -842,13 +827,8 @@ async function rejectStep(id,step){
 
 function batalkanCuti(id){
   showConfirm('Batalkan Cuti','Batalkan pengajuan cuti ini?',async()=>{
-    const oldRec = DB.cuti.find(x=>x.id===id);
     const {error}=await supa.from('cuti').update({status:'cancelled'}).eq('id',id);
-    if(!error){
-      await logAudit(AUDIT_ACTION.CANCEL, 'cuti', id,
-        `Batalkan cuti — ${oldRec?.nama||id} (${oldRec?.jenis_cuti||''})`, oldRec, null);
-      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success');
-    }
+    if(!error){ await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success'); }
     else showToast(error.message,'error');
   });
 }
@@ -859,8 +839,6 @@ function hapusCuti(id,dariDetail=false){
   showConfirm('Hapus Riwayat Cuti',`Hapus permanen riwayat ini?${warn}`,async()=>{
     const {error}=await supa.from('cuti').delete().eq('id',id);
     if(!error){
-      await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id,
-        `Hapus riwayat cuti — ${c?.nama||id} (${c?.jenis_cuti||''})`, c, null);
       await loadCutiFromServer();
       if(dariDetail) showPage('cuti',document.querySelector('.ni.active'));
       else renderCutiTable();
@@ -873,27 +851,8 @@ function hapusCutiTerpilih(){
   const ids=[...document.querySelectorAll('.cuti-chk:checked')].map(el=>el.value);
   if(!ids.length){ showToast('Pilih riwayat terlebih dahulu','error'); return; }
   showConfirm('Hapus Riwayat Terpilih',`Hapus permanen <strong>${ids.length} riwayat</strong>?`,async()=>{
-    // Simpan data sebelum dihapus untuk audit
-    const oldRecs = ids.map(id => DB.cuti.find(x=>x.id===id||x.id===parseInt(id))).filter(Boolean);
     const {error}=await supa.from('cuti').delete().in('id',ids);
-    if(!error){
-      // Log satu per satu agar setiap riwayat tercatat
-      for(const rec of oldRecs){
-        await logAudit(AUDIT_ACTION.HAPUS, 'cuti', rec.id,
-          `Hapus riwayat cuti — ${rec.nama||rec.id} (${rec.jenis_cuti||''})`, rec, null);
-      }
-      // Jika ada id yang tidak ketemu di cache, log generic
-      if(oldRecs.length < ids.length){
-        const loggedIds = oldRecs.map(r=>String(r.id));
-        for(const id of ids){
-          if(!loggedIds.includes(String(id))){
-            await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id, `Hapus riwayat cuti — id: ${id}`, null, null);
-          }
-        }
-      }
-      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge();
-      showToast(`${ids.length} riwayat dihapus`,'success');
-    }
+    if(!error){ await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast(`${ids.length} riwayat dihapus`,'success'); }
     else showToast(error.message,'error');
   });
 }
@@ -937,106 +896,32 @@ function cetakSuratCuti(id){
     </div>`;
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}','ttd')">🖨 TTD Biasa (Cetak)</button>
-    <button class="btn btn-success" onclick="eksekusiCetakSurat('${id}','tte')" title="Kirim ke Admin TTE via WhatsApp">📲 TTE (Kirim WA)</button>`;
+    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}')">🖨 Cetak Sekarang</button>`;
   document.getElementById('modal').style.display = 'flex';
   setTimeout(()=>{ document.getElementById('input-no-surat')?.focus(); }, 100);
 }
 
-async function eksekusiCetakSurat(id, mode='ttd'){
+async function eksekusiCetakSurat(id){
   const nomorSuratInput = (document.getElementById('input-no-surat')?.value||'').trim();
   if(!nomorSuratInput){ showToast('Nomor surat tidak boleh kosong','error'); return; }
 
-  // Validasi TTE sebelum tutup modal
-  if(mode==='tte'){
-    if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
-    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
-    if(!EMAIL_ADMIN_TTE){ showToast('Email Admin TTE belum diisi di Pengaturan','error'); return; }
-  }
-
   // Simpan nomor surat ke database
   await supa.from('cuti').update({ no_surat: nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput }).eq('id', id);
+  // Update cache lokal
   const idx = DB.cuti.findIndex(x=>x.id===id);
   if(idx>=0) DB.cuti[idx].no_surat = nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput;
 
   closeModal();
-
-  if(mode==='tte'){
-    // ── Mode TTE: generate PDF surat → upload Supabase → kirim link via WA ──
-    const c = DB.cuti.find(x=>x.id===id);
-    const tglMulai   = c?.tgl_mulai   ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-    const tglSelesai = c?.tgl_selesai ? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-
-    const pesan =
-`📋 *PERMOHONAN TTE — SURAT CUTI*
-
-Kepada Yth. Admin TTE
-Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
-
-👤 *Nama       :* ${c?.nama||'–'}
-🪪 *NIP        :* ${c?.nip||'–'}
-🏢 *Unit       :* ${c?.unit||'–'}
-📄 *Nomor Surat:* ${nomorSuratInput}
-📝 *Jenis Cuti :* ${c?.jenis_cuti||'Cuti Tahunan'}
-📅 *Tgl Mulai  :* ${tglMulai}
-📅 *Tgl Selesai:* ${tglSelesai}
-⏱ *Hari Kerja :* ${c?.hari_kerja||'–'} hari
-
-Harap segera diproses. Terima kasih.
-— E-Kepegawaian BPKAD`;
-
-    // Render HTML surat ke #print-surat dulu (tanpa print)
-    _doCetakSurat(id, nomorSuratInput, 'tte');
-
-    showToast('⏳ Membuat PDF Surat Cuti...','info');
-    setTimeout(async ()=>{
-      try {
-        const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
-        const pdfBase64 = await generatePdfBase64('print-surat');
-        const subject   = `Permohonan TTE — Surat Cuti ${c?.nama||''} (${nomorSuratInput})`;
-
-        // Kirim WA notifikasi + Email PDF secara bersamaan
-        const pesanWA = pesan + `\n\n📧 _PDF dikirim ke email Admin TTE_`;
-        const [waOk, emailOk] = await Promise.all([
-          kirimWA(WA_ADMIN_TTE, pesanWA),
-          kirimEmailTTE(subject, pesan.replace(/\n/g,'<br>'), pdfBase64, namaFile),
-        ]);
-
-        if(waOk && emailOk){
-          showToast('✅ Notifikasi WA + PDF email berhasil dikirim ke Admin TTE','success');
-        } else if(emailOk){
-          showToast('✅ PDF email terkirim, WA gagal','warning');
-        } else if(waOk){
-          showToast('⚠️ WA terkirim, email PDF gagal','warning');
-        } else {
-          showToast('❌ Gagal kirim WA dan email ke Admin TTE','error');
-        }
-      } catch(err){
-        console.error('[TTE Cuti] PDF error:', err);
-        // Fallback: kirim WA teks saja meski PDF gagal
-        showToast('⚠️ PDF gagal dibuat, mencoba kirim WA notifikasi...','warning');
-        const waOk = await kirimWA(WA_ADMIN_TTE, pesan + '\n\n⚠️ _PDF gagal dibuat, mohon minta cetak manual._');
-        if(waOk) showToast('📲 Notifikasi WA terkirim (tanpa PDF)','info');
-        else showToast('❌ Gagal kirim WA: '+err.message,'error');
-      }
-      document.getElementById('print-surat').style.display='none';
-      await logAudit(AUDIT_ACTION.SETTING,'cuti',id,
-        `Kirim Surat Cuti TTE — ${c?.nama||id} (${nomorSuratInput})`,null,null);
-    }, 600);
-
-  } else {
-    // ── Mode TTD Biasa: cetak langsung ──
-    _doCetakSurat(id, nomorSuratInput, 'ttd');
-  }
+  _doCetakSurat(id, nomorSuratInput);
 }
 
-function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
+function _doCetakSurat(id, nomorSuratOverride){
   const c=DB.cuti.find(x=>x.id===id);
   if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
   const asn=DB.asn.find(a=>a.id===c.asn_id);
   const tahun=c.tahun||new Date().getFullYear();
   const sisa=getSisaTahun(c.asn_id, tahun);
-
+  
   const tglLong=d=>{
     if(!d) return '_______________';
     const dt=new Date(d);
@@ -1047,11 +932,6 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
   const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
   const jenisPeg   = 'Pegawai Negeri Sipil';
-
-  // Untuk TTE: nama, NIP, pangkat dikosongkan
-  const _nama    = mode==='tte' ? '' : c.nama;
-  const _nip     = mode==='tte' ? '' : c.nip;
-  const _pangkat = mode==='tte' ? '' : (asn?.pangkat || '_______________');
 
   const logoHtml = _logoData
     ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
@@ -1150,7 +1030,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         color:#000;
       ">
         <span style="font-weight:normal">
-  ${_nama}
+  ${c.nama}
 </span>
       </td>
     </tr>
@@ -1185,7 +1065,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         font-size:12pt;
         color:#000;
       ">
-        ${_nip}
+        ${c.nip}
       </td>
     </tr>
 
@@ -1219,7 +1099,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
         font-size:12pt;
         color:#000;
       ">
-        ${_pangkat}
+        ${asn?.pangkat || '_______________'}
       </td>
     </tr>
 
@@ -1325,7 +1205,7 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
 
 </div>
 
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3px">
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:8px">
         <tr style="border:none">
           <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
           <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
@@ -1358,17 +1238,10 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
           KEUANGAN DAN ASET DAERAH<br>
           PROVINSI KALIMANTAN SELATAN,<br>
           SEKRETARIS,
-          <div style="height:50px"></div>
-
-          H. Fatkhan, S.E., M.M<br>
-          Pembina Tingkat I (IV/b)<br>
-          NIP. 197505182010011001
         </span>
-        
-        
       </div>
 
-      <div style="height:30px"></div>
+      <div style="height:80px"></div>
     </td>
   </tr>
 </table>
@@ -1383,10 +1256,8 @@ function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
   </div>`;
 
   document.getElementById('print-surat').style.display='block';
-  if(mode !== 'tte'){
-    window.print();
-    setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
-  }
+  window.print();
+  setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
 }
 
 function terbilang(n){

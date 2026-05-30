@@ -64,11 +64,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── FONNTE TOKEN — diisi otomatis dari tabel settings saat login ─
-let FONNTE_TOKEN   = '';
-let EMAIL_ADMIN_TTE  = ''; // Email admin TTE untuk pengiriman SK/Surat Cuti via email
-let EMAILJS_PUBLIC_KEY = '';
-let EMAILJS_SERVICE_ID = '';
-let EMAILJS_TEMPLATE_ID = '';
+let FONNTE_TOKEN = '';
 
 // Client-side cache
 let DB = { asn:[], pppk:[], pjlp:[], cuti:[], alokasi:{} };

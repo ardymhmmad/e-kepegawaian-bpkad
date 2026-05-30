@@ -8,40 +8,11 @@ function renderSettings(){
   const umSection = document.getElementById('user-mgmt-section');
   if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
   loadFonnteToken();
-  loadEmailAdminTTE();
-  loadEmailJSConfig();
   loadNoUrutCuti();
   renderWATemplatesForm();
-  setTimeout(renderLiburNasional, 300);
+  setTimeout(renderLiburNasional, 300); // tunggu DOM render
   setTimeout(renderTabelGajiForm, 100);
   renderUserTable();
-}
-
-// ── Silent loader — dipanggil saat init app, tidak butuh DOM Pengaturan ──
-async function loadFonnteTokenSilent(){
-  try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
-    if(data?.setting_val) FONNTE_TOKEN = data.setting_val;
-  } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
-}
-
-async function loadEmailAdminTTESilent(){
-  try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
-    if(data?.setting_val) EMAIL_ADMIN_TTE = data.setting_val;
-  } catch(e){ console.warn('loadEmailAdminTTESilent:', e.message); }
-}
-
-async function loadEmailJSSilent(){
-  try {
-    const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
-    const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
-    for(let i=0;i<keys.length;i++){
-      const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
-      if(data?.setting_val) window[vars[i]] = data.setting_val;
-    }
-    if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  } catch(e){ console.warn('loadEmailJSSilent:', e.message); }
 }
 
 // ── Fonnte Token ───────────────────────────────────────────
@@ -100,86 +71,7 @@ async function testFonnteToken(){
   }catch(e){ showToast('Error: '+e.message,'error'); }
 }
 
-// ── Email Admin TTE ─────────────────────────────────────────
-async function loadEmailAdminTTE(){
-  const el = document.getElementById('email-admin-tte-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
-  if(data?.setting_val){ el.value = data.setting_val; EMAIL_ADMIN_TTE = data.setting_val; }
-}
-
-async function saveEmailAdminTTE(){
-  const val = (document.getElementById('email-admin-tte-input')?.value||'').trim();
-  if(!val){ showToast('Email tidak boleh kosong','error'); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Format email tidak valid','error'); return; }
-  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','email_admin_tte').maybeSingle();
-  let error;
-  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','email_admin_tte')); }
-  else   { ({ error } = await supa.from('settings').insert({ setting_key:'email_admin_tte', setting_val: val })); }
-  if(!error){
-    EMAIL_ADMIN_TTE = val;
-    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Email Admin TTE',null,{email_admin_tte:val});
-    showToast('✅ Email Admin TTE berhasil disimpan','success');
-  } else { showToast('Gagal simpan: '+error.message,'error'); }
-}
-
-// ── EmailJS Config ───────────────────────────────────────────
-async function loadEmailJSConfig(){
-  const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
-  const ids  = ['emailjs-public-key-input','emailjs-service-id-input','emailjs-template-id-input'];
-  const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
-  for(let i=0;i<keys.length;i++){
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
-    if(data?.setting_val){
-      const el = document.getElementById(ids[i]);
-      if(el) el.value = data.setting_val;
-      window[vars[i]] = data.setting_val;
-    }
-  }
-  // Init EmailJS jika public key sudah ada
-  if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-}
-
-async function saveEmailJSConfig(){
-  const pairs = [
-    ['emailjs_public_key',   'emailjs-public-key-input',  'EMAILJS_PUBLIC_KEY'],
-    ['emailjs_service_id',   'emailjs-service-id-input',  'EMAILJS_SERVICE_ID'],
-    ['emailjs_template_id',  'emailjs-template-id-input', 'EMAILJS_TEMPLATE_ID'],
-  ];
-  for(const [key, elId, varName] of pairs){
-    const val = (document.getElementById(elId)?.value||'').trim();
-    if(!val){ showToast('Semua field EmailJS wajib diisi','error'); return; }
-    const { data: ex } = await supa.from('settings').select('id').eq('setting_key',key).maybeSingle();
-    let error;
-    if(ex){ ({ error } = await supa.from('settings').update({ setting_val:val }).eq('setting_key',key)); }
-    else   { ({ error } = await supa.from('settings').insert({ setting_key:key, setting_val:val })); }
-    if(error){ showToast('Gagal simpan '+key+': '+error.message,'error'); return; }
-    window[varName] = val;
-  }
-  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Konfigurasi EmailJS',null,{});
-  showToast('✅ Konfigurasi EmailJS berhasil disimpan','success');
-}
-
-async function testEmailJS(){
-  if(!EMAILJS_PUBLIC_KEY||!EMAILJS_SERVICE_ID||!EMAILJS_TEMPLATE_ID){
-    showToast('Isi dan simpan konfigurasi EmailJS dulu','error'); return;
-  }
-  if(!EMAIL_ADMIN_TTE){ showToast('Isi Email Admin TTE dulu','error'); return; }
-  try {
-    showToast('⏳ Mengirim email test...','info');
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email   : EMAIL_ADMIN_TTE,
-      to_name    : 'Admin TTE',
-      subject    : 'Test Email — E-Kepegawaian BPKAD',
-      message    : 'Email test dari sistem E-Kepegawaian BPKAD berhasil terkirim.',
-      from_name  : 'E-Kepegawaian BPKAD',
-      pdf_link   : '-',
-    });
-    showToast('✅ Email test berhasil dikirim ke '+EMAIL_ADMIN_TTE,'success');
-  } catch(e){ showToast('❌ Gagal: '+(e?.text||e?.message||JSON.stringify(e)),'error'); }
-}
-
-
+// ── Tabel daftar user ──────────────────────────────────────
 async function renderUserTable(){
   const tb = document.getElementById('user-table-body');
   if(!tb) return;
@@ -312,9 +204,6 @@ async function simpanTambahUser(){
   // Pulihkan session admin
   await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
 
-  await logAudit(AUDIT_ACTION.TAMBAH, 'user', data.user.id,
-    `Tambah pengguna baru — ${label} (${email}) role: ${role}`, null, { email, label, role });
-
   closeModal(); renderUserTable();
   showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
 }
@@ -406,8 +295,6 @@ async function simpanEditUser(uid){
   }
 
   closeModal(); renderUserTable();
-  await logAudit(AUDIT_ACTION.EDIT, 'user', uid,
-    `Edit pengguna — ${label} (role: ${role})${pw?' + ganti password':''}`, null, { uid, label, role });
   showToast(`Pengguna "${label}" diperbarui`, 'success');
 }
 
@@ -417,11 +304,7 @@ function hapusUser(uid, label){
   showConfirm('Hapus Pengguna', `Hapus pengguna <strong>${label}</strong>? Tindakan ini tidak dapat dibatalkan.`, async ()=>{
     // Hapus dari profiles — auth.users akan cascade delete via FK
     const { error } = await supa.from('profiles').delete().eq('id', uid);
-    if(!error){
-      await logAudit(AUDIT_ACTION.HAPUS, 'user', uid,
-        `Hapus pengguna — ${label}`, { uid, label }, null);
-      renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success');
-    }
+    if(!error){ renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success'); }
     else showToast(error.message, 'error');
   });
 }
@@ -520,20 +403,11 @@ const GOL_URUT = [
   'III/a','III/b','III/c','III/d',
   'IV/a','IV/b','IV/c','IV/d','IV/e'
 ];
-// Pola MKG sesuai tabel PP 5/2024
-const _S_MK_IA      = [0,2,4,6,8,10,12,14,16,18,20,22,24,26];
-const _S_MK_I_BCD   = [3,5,7,9,11,13,15,17,19,21,23,25,27];
-const _S_MK_IIA     = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
-const _S_MK_II_BCD  = [3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
-const _S_MK_STD     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+const MK_LIST     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];      // Gol I, III, IV
+const MK_LIST_II  = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];   // Gol II
+const GOL_II      = ['II/a','II/b','II/c','II/d,'];
 
-function getMKList(gol){
-  if(gol === 'I/a')                          return _S_MK_IA;
-  if(['I/b','I/c','I/d'].includes(gol))      return _S_MK_I_BCD;
-  if(gol === 'II/a')                         return _S_MK_IIA;
-  if(['II/b','II/c','II/d'].includes(gol))   return _S_MK_II_BCD;
-  return _S_MK_STD;
-}
+function getMKList(gol){ return GOL_II.includes(gol) ? MK_LIST_II : MK_LIST; }
 
 // Load tabel gaji dari DB
 async function loadTabelGaji(){
@@ -545,55 +419,6 @@ async function loadTabelGaji(){
       console.log('✅ Tabel gaji loaded dari DB');
     }
   } catch(e){ console.warn('loadTabelGaji:', e); }
-}
-
-// Auto-seed: isi tabel gaji ke DB dari data hardcode GAJI_PNS (kgb.js)
-// Hanya berjalan jika tabel di DB masih kosong / belum pernah diisi
-async function seedTabelGajiFromHardcode(){
-  try {
-    // Cek apakah sudah ada data di DB
-    const { data: existing } = await supa.from('settings')
-      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
-
-    if(existing?.setting_val){
-      // Sudah ada — cek apakah semua nilai 0 (belum pernah diisi)
-      const parsed = JSON.parse(existing.setting_val);
-      const hasValue = Object.values(parsed).some(mkObj =>
-        Object.values(mkObj).some(v => v > 0)
-      );
-      if(hasValue){
-        console.log('ℹ️ Tabel gaji DB sudah berisi data, seed dilewati.');
-        return;
-      }
-    }
-
-    // DB kosong atau semua 0 — seed dari GAJI_PNS (hardcode kgb.js)
-    if(typeof GAJI_PNS === 'undefined'){
-      console.warn('seedTabelGaji: GAJI_PNS tidak ditemukan');
-      return;
-    }
-
-    const seedData = {};
-    GOL_URUT.forEach(gol => {
-      seedData[gol] = {};
-      getMKList(gol).forEach(mk => {
-        seedData[gol][mk] = GAJI_PNS[gol]?.[mk] || 0;
-      });
-    });
-
-    const val = JSON.stringify(seedData);
-    if(existing){
-      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
-    } else {
-      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
-    }
-
-    // Update cache lokal juga
-    TABEL_GAJI_PNS = seedData;
-    console.log('✅ Tabel gaji berhasil di-seed otomatis ke DB dari data hardcode PP 5/2024');
-  } catch(e){
-    console.warn('seedTabelGajiFromHardcode error:', e);
-  }
 }
 
 // Simpan tabel gaji ke DB
@@ -616,8 +441,6 @@ async function saveTabelGaji(){
       await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
     }
     showToast('✅ Tabel gaji berhasil disimpan','success');
-    await logAudit(AUDIT_ACTION.SETTING, 'settings', null,
-      'Update tabel gaji pokok PNS', null, null);
   } catch(e){ showToast('Gagal: '+e.message,'error'); }
 }
 
@@ -634,12 +457,8 @@ async function renderTabelGajiForm(){
     GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   }
 
-  // Header gabungan semua kolom masa kerja (union dari semua pola MKG)
-  const ALL_MK = [...new Set([
-    ..._S_MK_IA, ..._S_MK_I_BCD,
-    ..._S_MK_IIA, ..._S_MK_II_BCD,
-    ..._S_MK_STD
-  ])].sort((a,b)=>a-b);
+  // Header gabungan semua kolom masa kerja (union)
+  const ALL_MK = [...new Set([...MK_LIST,...MK_LIST_II])].sort((a,b)=>a-b);
   const thMK = ALL_MK.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
 
   const rows = GOL_URUT.map(gol => {
@@ -678,19 +497,13 @@ async function renderTabelGajiForm(){
     </div>`;
 }
 
-// Reset ke nilai default PP 5/2024 dari data hardcode GAJI_PNS
+// Reset ke nilai default PP 5/2024 (kosong — user isi sendiri)
 function resetTabelGaji(){
-  if(!confirm('Reset tabel gaji ke data default PP 5/2024? Perubahan yang belum disimpan akan hilang.')) return;
-  if(typeof GAJI_PNS === 'undefined'){
-    showToast('Data default tidak ditemukan','error'); return;
-  }
+  if(!confirm('Reset semua nilai ke 0? Data yang belum disimpan akan hilang.')) return;
   TABEL_GAJI_PNS = {};
-  GOL_URUT.forEach(g => {
-    TABEL_GAJI_PNS[g] = {};
-    getMKList(g).forEach(mk => { TABEL_GAJI_PNS[g][mk] = GAJI_PNS[g]?.[mk] || 0; });
-  });
+  GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   renderTabelGajiForm();
-  showToast('✅ Tabel direset ke data PP 5/2024 — klik Simpan untuk menyimpan','info');
+  showToast('Tabel direset — silakan isi nilai gaji','info');
 }
 
 async function loadNoUrutCuti(){

@@ -14,9 +14,6 @@
 
 <!-- External Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 // Load XLSX asynchronously — app init waits until ready
 var _xlsxReady = false;
@@ -198,10 +195,6 @@ var _xlsxReady = false;
           <span class="nbadge warn" id="pensiun-badge">0</span>
         </button>
         <div class="nl">Sistem</div>
-        <button class="ni" onclick="showPage('audit',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Audit Trail
-        </button>
         <button class="ni" onclick="showPage('settings',this)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 1.41 1.41M2.93 4.93a10 10 0 0 0-1.41 1.41M19.07 19.07a10 10 0 0 0 1.41-1.41M2.93 19.07a10 10 0 0 1-1.41-1.41M12 2v2M12 20v2M2 12H0M22 12h2"/><circle cx="12" cy="12" r="7"/></svg>
           Pengaturan
@@ -455,40 +448,6 @@ var _xlsxReady = false;
                 <button class="btn btn-success always-allow" onclick="saveFonnteToken()" style="white-space:nowrap">Simpan Token</button>
                 <button class="btn always-allow" onclick="testFonnteToken()" style="white-space:nowrap">Test WA</button>
               </div>
-              <!-- Email Admin TTE -->
-              <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
-                <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">
-                  📋 Email Admin TTE — digunakan untuk pengiriman SK/Surat Cuti beserta PDF yang memerlukan Tanda Tangan Elektronik.
-                </div>
-                <div style="display:flex;gap:10px;align-items:flex-end">
-                  <div class="fg" style="flex:1;margin-bottom:0">
-                    <label>Email Admin TTE</label>
-                    <input type="email" id="email-admin-tte-input" placeholder="cth: admin.tte@bpkad.go.id">
-                  </div>
-                  <button class="btn btn-success always-allow" onclick="saveEmailAdminTTE()" style="white-space:nowrap">Simpan</button>
-                </div>
-              </div>
-
-              <!-- Konfigurasi EmailJS -->
-              <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
-                <div style="font-size:12px;font-weight:600;margin-bottom:6px">⚙️ Konfigurasi EmailJS</div>
-                <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">
-                  Digunakan untuk kirim PDF via email. Daftar gratis di <a href="https://emailjs.com" target="_blank" style="color:var(--pr)">emailjs.com</a> → buat Service + Template → isi konfigurasi di bawah.
-                </div>
-                <div class="fg"><label>EmailJS Public Key</label>
-                  <input type="text" id="emailjs-public-key-input" placeholder="cth: user_xxxxxxxxxxxxxxx">
-                </div>
-                <div class="fg"><label>EmailJS Service ID</label>
-                  <input type="text" id="emailjs-service-id-input" placeholder="cth: service_xxxxxxx">
-                </div>
-                <div class="fg"><label>EmailJS Template ID</label>
-                  <input type="text" id="emailjs-template-id-input" placeholder="cth: template_xxxxxxx">
-                </div>
-                <div style="display:flex;gap:8px;margin-top:4px">
-                  <button class="btn btn-primary always-allow" onclick="saveEmailJSConfig()">💾 Simpan Konfigurasi EmailJS</button>
-                  <button class="btn always-allow" onclick="testEmailJS()">📧 Test Kirim Email</button>
-                </div>
-              </div>
             </div>
 
             <!-- Manajemen Pengguna -->
@@ -526,13 +485,6 @@ var _xlsxReady = false;
               </div>
             </div>
 
-          </div>
-        </div>
-
-        <!-- AUDIT TRAIL -->
-        <div class="page" id="page-audit">
-          <div id="audit-container">
-            <div style="text-align:center;padding:30px;color:var(--tx3)">Memuat log aktivitas...</div>
           </div>
         </div>
 
@@ -642,7 +594,6 @@ var _xlsxReady = false;
 <script src="js/form.js"></script>
 <script src="js/photo.js"></script>
 <script src="js/settings.js"></script>
-<script src="js/audittrail.js"></script>
 <script src="js/cuti.js"></script>
 <script src="js/alokasi.js"></script>
 <script src="js/app.js"></script>

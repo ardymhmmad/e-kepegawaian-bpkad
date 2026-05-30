@@ -240,10 +240,6 @@ async function saveEditAlokasi(asnId, yr){
     {onConflict:'asn_id,tahun'}
   );
   if(error){ showToast('Gagal: '+error.message,'error'); return; }
-  const asnNama = DB.asn.find(a=>a.id===asnId)?.nama || asnId;
-  await logAudit(AUDIT_ACTION.EDIT, 'alokasi', asnId,
-    `Edit alokasi cuti — ${asnNama} tahun ${yr}: ${v} hari${coVal!==null?` + carry over: ${coVal}`:''}`,
-    null, {asn_id:asnId, tahun:yr, alokasi:v, carryover_override:coVal});
   closeModal(); renderAlokasiTable();
   const tot=getTotalAlokasi(asnId,yr); const co=getCarryOver(asnId,yr);
   showToast(`Alokasi disimpan — ${v}+${co} = ${tot} hari`,'success');
@@ -269,8 +265,6 @@ function hapusOverrideAlokasi(asnId, yr, nama){
         if(!Object.keys(DB.alokasi[asnId]).length) delete DB.alokasi[asnId];
       }
       await supa.from('alokasi_cuti').delete().eq('asn_id',asnId).eq('tahun',yr);
-      await logAudit(AUDIT_ACTION.HAPUS, 'alokasi', asnId,
-        `Reset alokasi cuti — ${nama} tahun ${yr} ke default`, null, null);
       renderAlokasiTable();
       showToast(`Alokasi ${nama} direset ke default`,'success');
     }

@@ -13,8 +13,7 @@ const pageConfigs = {
   'alokasi-cuti':{ title:'Alokasi Cuti', sub:'Atur kuota hari cuti per pegawai (default & override)' },
   'cuti-detail':{ title:'Detail Pengajuan Cuti', sub:'' },
   settings:{ title:'Pengaturan', sub:'Konfigurasi logo, pengguna, dan sistem' },
-  pensiun:{ title:'Monitoring Pensiun', sub:'Pemantauan batas usia pensiun ASN' },
-  audit:{ title:'Audit Trail', sub:'Riwayat seluruh aktivitas dan perubahan data' }
+  pensiun:{ title:'Monitoring Pensiun', sub:'Pemantauan batas usia pensiun ASN' }
 };
 
 function showPage(id, btn){
@@ -50,7 +49,6 @@ function showPage(id, btn){
     if(uP && uP.options.length<=1) Object.keys(UNITS).forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; uP.appendChild(o); });
     renderPensiun(getFilters('pensiun'));
   }
-  else if(id==='audit')         renderAuditTrail();
   else refreshTable(id);
 }
 
