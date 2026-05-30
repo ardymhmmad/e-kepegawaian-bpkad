@@ -1,254 +1,396 @@
 // ═══════════════════════════════════════════════════
-// PHOTO UPLOAD — Supabase Storage
+// AUDIT TRAIL
+// Mencatat setiap aksi penting ke tabel activity_log
+// di Supabase. Tabel harus dibuat dulu:
+//
+// CREATE TABLE activity_log (
+//   id          bigserial PRIMARY KEY,
+//   created_at  timestamptz DEFAULT now(),
+//   user_email  text,
+//   user_label  text,
+//   action      text,        -- 'TAMBAH' | 'EDIT' | 'HAPUS' | 'APPROVE' | 'REJECT' | 'CANCEL' | 'LOGIN' | 'LOGOUT'
+//   entity      text,        -- 'asn' | 'pppk' | 'pjlp' | 'cuti' | 'alokasi' | 'settings'
+//   entity_id   text,
+//   description text,
+//   old_data    jsonb,
+//   new_data    jsonb
+// );
 // ═══════════════════════════════════════════════════
-let _photoCtx = null; // {type, id}
 
-function openPhotoModal(type, id){
-  if(session?.role!=='admin'){ showToast('Hanya Admin yang dapat mengubah foto','error'); return; }
-  const rec = DB[type]?.find(r=>r.id===id);
-  if(!rec) return;
-  _photoCtx = {type, id};
-  const hasPhoto = !!rec.foto;
-  document.getElementById('modal-title').textContent = 'Foto Pegawai — '+rec.nama;
+// Label aksi
+const AUDIT_ACTION = {
+  TAMBAH  : 'TAMBAH',
+  EDIT    : 'EDIT',
+  HAPUS   : 'HAPUS',
+  APPROVE : 'APPROVE',
+  REJECT  : 'REJECT',
+  CANCEL  : 'CANCEL',
+  LOGIN   : 'LOGIN',
+  LOGOUT  : 'LOGOUT',
+  SETTING : 'SETTING',
+};
+
+// Label entitas (untuk tampilan)
+const AUDIT_ENTITY_LABEL = {
+  asn       : 'ASN',
+  pppk      : 'PPPK',
+  pjlp      : 'PJLP',
+  cuti      : 'Cuti',
+  alokasi   : 'Alokasi Cuti',
+  settings  : 'Pengaturan',
+  user      : 'Pengguna',
+  kgb       : 'KGB',
+};
+
+// Warna badge per aksi
+const AUDIT_BADGE = {
+  TAMBAH  : { bg:'#dcfce7', tx:'#15803d' },
+  EDIT    : { bg:'#dbeafe', tx:'#1d4ed8' },
+  HAPUS   : { bg:'#fee2e2', tx:'#dc2626' },
+  APPROVE : { bg:'#d1fae5', tx:'#059669' },
+  REJECT  : { bg:'#fef3c7', tx:'#b45309' },
+  CANCEL  : { bg:'#f3f4f6', tx:'#6b7280' },
+  LOGIN   : { bg:'#ede9fe', tx:'#7c3aed' },
+  LOGOUT  : { bg:'#f3f4f6', tx:'#6b7280' },
+  SETTING : { bg:'#e0f2fe', tx:'#0369a1' },
+};
+
+/**
+ * Catat satu entri audit ke Supabase.
+ * @param {string} action   - dari AUDIT_ACTION
+ * @param {string} entity   - nama tabel / modul
+ * @param {string} entityId - id record (boleh null)
+ * @param {string} description - kalimat singkat
+ * @param {object} oldData  - data sebelum diubah (untuk EDIT/HAPUS)
+ * @param {object} newData  - data sesudah diubah (untuk TAMBAH/EDIT)
+ */
+async function logAudit(action, entity, entityId, description, oldData=null, newData=null){
+  try {
+    if(!session) { console.warn('logAudit: session belum ada, log dilewati'); return; }
+    const { error } = await supa.from('activity_log').insert({
+      user_email  : session.email  || '–',
+      user_label  : session.label  || session.email || '–',
+      action,
+      entity,
+      entity_id   : entityId ? String(entityId) : null,
+      description,
+      old_data    : oldData  ? oldData  : null,
+      new_data    : newData  ? newData  : null,
+    });
+    if(error){
+      // Tampilkan error jelas — kemungkinan tabel belum dibuat
+      console.error(`logAudit GAGAL [${action}/${entity}]:`, error.message);
+      if(error.message.includes('does not exist') || error.code === '42P01'){
+        console.error('⚠️ Tabel activity_log belum dibuat di Supabase! Jalankan SQL di README.');
+      }
+    }
+  } catch(e){
+    console.warn('logAudit error:', e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER HALAMAN AUDIT TRAIL
+// ═══════════════════════════════════════════════════
+
+let _auditPage    = 1;
+const _AUDIT_PER_PAGE = 50;
+let _auditFilter  = { action:'', entity:'', user:'', search:'' };
+
+async function renderAuditTrail(){
+  const container = document.getElementById('audit-container');
+  if(!container) return;
+
+  // Hanya admin
+  if(session?.role !== 'admin'){
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx3)">⛔ Hanya administrator yang dapat melihat Audit Trail.</div>`;
+    return;
+  }
+
+  container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--tx3)">Memuat log aktivitas...</div>`;
+
+  try {
+    let query = supa.from('activity_log')
+      .select('*', { count:'exact' })
+      .order('created_at', { ascending:false })
+      .range((_auditPage-1)*_AUDIT_PER_PAGE, _auditPage*_AUDIT_PER_PAGE - 1);
+
+    if(_auditFilter.action) query = query.eq('action', _auditFilter.action);
+    if(_auditFilter.entity) query = query.eq('entity', _auditFilter.entity);
+    if(_auditFilter.user)   query = query.ilike('user_label', `%${_auditFilter.user}%`);
+    if(_auditFilter.search) query = query.ilike('description', `%${_auditFilter.search}%`);
+
+    const { data, error, count } = await query;
+    if(error) throw new Error(error.message);
+
+    const totalPages = Math.ceil((count||0) / _AUDIT_PER_PAGE);
+
+    const rows = (data||[]).map(log => {
+      const badge = AUDIT_BADGE[log.action] || { bg:'#f3f4f6', tx:'#6b7280' };
+      const entityLabel = AUDIT_ENTITY_LABEL[log.entity] || log.entity || '–';
+      const tgl = log.created_at ? new Date(log.created_at).toLocaleString('id-ID',{
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit', second:'2-digit'
+      }) : '–';
+
+      // Tombol detail hanya jika ada old/new data
+      const hasDetail = log.old_data || log.new_data;
+      const detailBtn = hasDetail
+        ? `<button class="btn btn-sm" style="font-size:10px;padding:2px 8px"
+             onclick="showAuditDetail(${log.id})">Detail</button>`
+        : '';
+
+      return `<tr>
+        <td style="padding:8px 10px;font-size:11px;color:var(--tx3);white-space:nowrap">${tgl}</td>
+        <td style="padding:8px 10px;font-size:12px;font-weight:600">${log.user_label||'–'}</td>
+        <td style="padding:8px 10px">
+          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${badge.bg};color:${badge.tx}">${log.action}</span>
+        </td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${entityLabel}</td>
+        <td style="padding:8px 10px;font-size:12px">${log.description||'–'}</td>
+        <td style="padding:8px 10px;text-align:center">${detailBtn}</td>
+      </tr>`;
+    }).join('');
+
+    const emptyRow = !rows
+      ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--tx3)">Tidak ada log aktivitas ditemukan.</td></tr>`
+      : '';
+
+    // Pagination info
+    const from = (((_auditPage-1)*_AUDIT_PER_PAGE)+1);
+    const to   = Math.min(_auditPage*_AUDIT_PER_PAGE, count||0);
+    const paginasiInfo = count > 0
+      ? `<span style="font-size:11px;color:var(--tx3)">Menampilkan ${from}–${to} dari ${count} log</span>`
+      : `<span style="font-size:11px;color:var(--tx3)">0 log ditemukan</span>`;
+
+    container.innerHTML = `
+      <!-- Filter bar -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <input type="text" placeholder="Cari deskripsi..." id="audit-s-desc" value="${_auditFilter.search}"
+          style="flex:1;min-width:160px;font-size:12px;padding:6px 10px"
+          oninput="auditSetFilter('search',this.value)">
+        <select id="audit-s-action" style="font-size:12px;padding:6px 10px" onchange="auditSetFilter('action',this.value)">
+          <option value="">Semua Aksi</option>
+          ${Object.keys(AUDIT_ACTION).map(a=>`<option value="${a}" ${_auditFilter.action===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+        <select id="audit-s-entity" style="font-size:12px;padding:6px 10px" onchange="auditSetFilter('entity',this.value)">
+          <option value="">Semua Modul</option>
+          ${Object.entries(AUDIT_ENTITY_LABEL).map(([k,v])=>`<option value="${k}" ${_auditFilter.entity===k?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <input type="text" placeholder="Filter pengguna..." id="audit-s-user" value="${_auditFilter.user}"
+          style="width:140px;font-size:12px;padding:6px 10px"
+          oninput="auditSetFilter('user',this.value)">
+        <button class="btn" style="font-size:11px" onclick="exportAuditExcel()">⬇ Export Excel</button>
+      </div>
+
+      <!-- Tabel -->
+      <div style="overflow-x:auto;border:1px solid var(--bd);border-radius:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:var(--bg2)">
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Waktu</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Pengguna</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Aksi</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Modul</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Keterangan</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em"></th>
+            </tr>
+          </thead>
+          <tbody>${rows||emptyRow}</tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px">
+        ${paginasiInfo}
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" ${_auditPage<=1?'disabled':''} onclick="auditGoPage(${_auditPage-1})">‹ Prev</button>
+          <span style="font-size:11px;padding:4px 8px;background:var(--bg2);border-radius:6px">
+            Hal ${_auditPage} / ${totalPages||1}
+          </span>
+          <button class="btn btn-sm" ${_auditPage>=totalPages?'disabled':''} onclick="auditGoPage(${_auditPage+1})">Next ›</button>
+        </div>
+      </div>`;
+
+    // Simpan data ke cache untuk export
+    window._auditData = data || [];
+
+  } catch(e){
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red-tx)">
+      Gagal memuat log: ${e.message}<br>
+      <small style="color:var(--tx3)">Pastikan tabel <code>activity_log</code> sudah dibuat di Supabase.</small>
+    </div>`;
+  }
+}
+
+// Debounce filter agar tidak spam query
+let _auditFilterTimer = null;
+function auditSetFilter(key, val){
+  _auditFilter[key] = val;
+  _auditPage = 1;
+  clearTimeout(_auditFilterTimer);
+  _auditFilterTimer = setTimeout(renderAuditTrail, 400);
+}
+
+function auditGoPage(p){
+  _auditPage = p;
+  renderAuditTrail();
+}
+
+// Modal detail perubahan data
+function showAuditDetail(logId){
+  const log = (window._auditData||[]).find(l=>l.id===logId);
+  if(!log) return;
+
+  const badge  = AUDIT_BADGE[log.action] || { bg:'#f3f4f6', tx:'#6b7280' };
+  const entity = AUDIT_ENTITY_LABEL[log.entity] || log.entity || '–';
+  const tgl    = log.created_at ? new Date(log.created_at).toLocaleString('id-ID',{
+    weekday:'long', day:'2-digit', month:'long', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  }) : '–';
+
+  // Inisial pengguna
+  const inisial = (log.user_label||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  // Render baris detail (pakai style .dr seperti detail pegawai)
+  const dr = (l,v) => `
+    <div class="dr">
+      <span class="dr-l">${l}</span>
+      <span class="dr-v">${v||'—'}</span>
+    </div>`;
+
+  // Render JSON sebagai tabel baris per field (lebih rapi dari pre)
+  const renderDataTable = (obj) => {
+    if(!obj || typeof obj !== 'object') return `<div style="font-size:11px;color:var(--tx3);padding:6px 0">Tidak ada data</div>`;
+    const entries = Object.entries(obj).filter(([,v]) => v !== null && v !== undefined && v !== '');
+    if(!entries.length) return `<div style="font-size:11px;color:var(--tx3);padding:6px 0">—</div>`;
+    return entries.map(([k,v]) => {
+      const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      const display = val.length > 60 ? `<span title="${val}">${val.slice(0,60)}…</span>` : val;
+      return `<div class="dr">
+        <span class="dr-l" style="color:var(--tx3);font-size:11px">${k}</span>
+        <span class="dr-v" style="font-size:11px;max-width:65%;word-break:break-word">${display}</span>
+      </div>`;
+    }).join('');
+  };
+
+  // Tentukan apakah ada perubahan untuk ditampilkan diff
+  const hasOld = log.old_data && Object.keys(log.old_data).length > 0;
+  const hasNew = log.new_data && Object.keys(log.new_data).length > 0;
+
+  // Highlight field yang berubah antara old dan new
+  const renderDiff = (oldObj, newObj) => {
+    if(!oldObj || !newObj) return null;
+    const allKeys = [...new Set([...Object.keys(oldObj), ...Object.keys(newObj)])];
+    const changed = allKeys.filter(k => JSON.stringify(oldObj[k]) !== JSON.stringify(newObj[k]));
+    if(!changed.length) return null;
+    return `
+      <div class="dc" style="margin-top:12px">
+        <div class="dc-title">🔄 Field yang Berubah</div>
+        ${changed.map(k => {
+          const ov = oldObj[k]!=null ? String(oldObj[k]) : '—';
+          const nv = newObj[k]!=null ? String(newObj[k]) : '—';
+          return `<div class="dr">
+            <span class="dr-l">${k}</span>
+            <span class="dr-v" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <span style="font-size:10px;color:var(--red-tx);text-decoration:line-through">${ov.length>40?ov.slice(0,40)+'…':ov}</span>
+              <span style="font-size:11px;color:var(--grn-tx)">${nv.length>40?nv.slice(0,40)+'…':nv}</span>
+            </span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  };
+
+  const diffHtml = renderDiff(log.old_data, log.new_data) || '';
+
+  document.getElementById('modal-title').textContent = 'Detail Aktivitas';
   document.getElementById('modal-body').innerHTML = `
-    <div style="text-align:center;margin-bottom:20px">
-      <div class="photo-upload-circle" style="margin:0 auto 12px" onclick="document.getElementById('photo-file-in').click()">
-        ${hasPhoto
-          ? `<img id="photo-preview" src="${rec.foto}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
-          : `<div id="photo-preview" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--primary-bg)">
-               <span style="font-size:28px;font-weight:700;color:var(--primary-tx)">${initials(rec.nama)}</span>
-             </div>`}
-        <div class="photo-upload-overlay">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Ganti Foto</span>
+    <!-- Header seperti detail pegawai -->
+    <div class="detail-hdr" style="margin-bottom:12px">
+      <div class="av-lg" style="background:linear-gradient(135deg,${badge.bg},${badge.bg});color:${badge.tx};border:2px solid ${badge.tx}30;font-size:13px">
+        ${inisial}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:var(--tx1)">${log.user_label||'–'}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${log.user_email||'–'}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${badge.bg};color:${badge.tx}">${log.action}</span>
+          <span class="badge b-gray">${entity}</span>
+          ${log.entity_id ? `<span style="font-size:10px;color:var(--tx3)">ID: ${log.entity_id}</span>` : ''}
         </div>
       </div>
-      <div style="font-size:12px;color:var(--tx2);margin-bottom:4px">Klik foto untuk memilih gambar baru</div>
-      <div style="font-size:11px;color:var(--tx3)">JPG, PNG · Maks 2MB</div>
-      <input type="file" id="photo-file-in" accept=".jpg,.jpeg,.png" style="display:none" onchange="handlePhotoSelect(event)">
     </div>
-    <div id="photo-upload-msg" style="font-size:12px;text-align:center;min-height:18px"></div>
-    <div id="photo-size-wrap" style="display:none;margin-top:8px">
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:3px;text-align:right" id="photo-size-lbl"></div>
-      <div class="photo-size-bar"><div class="photo-size-fill" id="photo-size-fill" style="width:0%"></div></div>
+
+    <!-- Info waktu & deskripsi -->
+    <div class="dc" style="margin-bottom:12px">
+      <div class="dc-title">Informasi Aktivitas</div>
+      ${dr('Waktu', tgl)}
+      ${dr('Modul', entity)}
+      ${dr('Aksi', `<span style="padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;background:${badge.bg};color:${badge.tx}">${log.action}</span>`)}
+      ${dr('Keterangan', `<span style="text-align:right;line-height:1.5">${log.description||'–'}</span>`)}
+    </div>
+
+    <!-- Diff field berubah (jika EDIT) -->
+    ${diffHtml}
+
+    <!-- Data sebelum & sesudah -->
+    <div class="detail-grid" style="margin-top:0">
+      ${hasOld ? `
+      <div class="dc">
+        <div class="dc-title" style="color:var(--red-tx)">📋 Data Sebelum</div>
+        ${renderDataTable(log.old_data)}
+      </div>` : ''}
+      ${hasNew ? `
+      <div class="dc" style="${!hasOld?'grid-column:1/-1':''}">
+        <div class="dc-title" style="color:var(--grn-tx)">✅ Data Sesudah</div>
+        ${renderDataTable(log.new_data)}
+      </div>` : ''}
+      ${!hasOld && !hasNew ? `
+      <div class="dc" style="grid-column:1/-1">
+        <div class="dc-title">Data</div>
+        <div style="font-size:12px;color:var(--tx3);padding:8px 0">Tidak ada detail data yang dicatat untuk aktivitas ini.</div>
+      </div>` : ''}
     </div>`;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn" onclick="closeModal()">Batal</button>
-    ${hasPhoto?`<button class="btn btn-danger" onclick="removePhoto()">Hapus Foto</button>`:''}
-    <button class="btn btn-primary" id="photo-save-btn" onclick="uploadPhoto()" disabled>Upload & Simpan</button>`;
-  document.getElementById('modal').style.display='flex';
+
+  document.getElementById('modal-footer').innerHTML = `<button class="btn" onclick="closeModal()">Tutup</button>`;
+  document.getElementById('modal').style.display = 'flex';
 }
 
-function handlePhotoSelect(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const msg = document.getElementById('photo-upload-msg');
-  const sizeWrap = document.getElementById('photo-size-wrap');
-  const sizeLbl = document.getElementById('photo-size-lbl');
-  const sizeFill = document.getElementById('photo-size-fill');
-  const saveBtn = document.getElementById('photo-save-btn');
+// Export audit log ke Excel
+async function exportAuditExcel(){
+  try {
+    showToast('Memuat semua log untuk export...','info');
+    let query = supa.from('activity_log')
+      .select('*')
+      .order('created_at', { ascending:false })
+      .limit(5000);
 
-  // Validate format
-  if(!['image/jpeg','image/png'].includes(file.type)){
-    msg.textContent='✗ Format tidak didukung. Gunakan JPG atau PNG.';
-    msg.style.color='var(--red-tx)';
-    saveBtn.disabled=true; return;
-  }
-  // Validate size (2MB)
-  const mb = file.size/1024/1024;
-  if(mb>2){
-    msg.textContent=`✗ Ukuran file ${mb.toFixed(1)}MB melebihi batas 2MB.`;
-    msg.style.color='var(--red-tx)';
-    saveBtn.disabled=true; return;
-  }
-  // Show size bar
-  sizeWrap.style.display='block';
-  sizeLbl.textContent=`${(file.size/1024).toFixed(0)} KB / 2048 KB`;
-  sizeFill.style.width=Math.min(mb/2*100,100)+'%';
-  sizeFill.style.background = mb>1.5?'var(--amb-tx)':'var(--primary)';
+    if(_auditFilter.action) query = query.eq('action', _auditFilter.action);
+    if(_auditFilter.entity) query = query.eq('entity', _auditFilter.entity);
+    if(_auditFilter.user)   query = query.ilike('user_label', `%${_auditFilter.user}%`);
+    if(_auditFilter.search) query = query.ilike('description', `%${_auditFilter.search}%`);
 
-  // Preview
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const prev=document.getElementById('photo-preview');
-    if(prev.tagName==='IMG'){
-      prev.src=ev.target.result;
-    } else {
-      const img=document.createElement('img');
-      img.id='photo-preview';
-      img.src=ev.target.result;
-      img.style.cssText='width:100%;height:100%;object-fit:cover';
-      prev.replaceWith(img);
-    }
-    msg.textContent='✓ File siap diupload';
-    msg.style.color='var(--grn-tx)';
-    saveBtn.disabled=false;
-    saveBtn._file=file;
-  };
-  reader.readAsDataURL(file);
-}
+    const { data, error } = await query;
+    if(error) throw new Error(error.message);
 
-async function uploadPhoto(){
-  const btn=document.getElementById('photo-save-btn');
-  const msg=document.getElementById('photo-upload-msg');
-  const file=btn._file;
-  if(!file){ showToast('Pilih foto terlebih dahulu','error'); return; }
-  btn.disabled=true; btn.textContent='Mengupload...';
-  msg.textContent='Mengunggah ke Supabase Storage...'; msg.style.color='var(--tx3)';
-  try{
-    const rec=DB[_photoCtx.type]?.find(r=>r.id===_photoCtx.id);
-    const ext=file.name.split('.').pop().toLowerCase();
-    const filePath=`${_photoCtx.type}/${_photoCtx.id}_${Date.now()}.${ext}`;
-    if(rec?.foto){
-      const oldKey=rec.foto.split('/object/public/photos/')[1];
-      if(oldKey) await supa.storage.from('photos').remove([decodeURIComponent(oldKey.split('?')[0])]);
-    }
-    const {error:upErr}=await supa.storage.from('photos').upload(filePath,file,{upsert:true,contentType:file.type});
-    if(upErr) throw new Error(upErr.message);
-    const {data:urlData}=supa.storage.from('photos').getPublicUrl(filePath);
-    const url=urlData.publicUrl;
-    const {error:dbErr}=await supa.from(_photoCtx.type).update({foto:url}).eq('id',_photoCtx.id);
-    if(dbErr) throw new Error(dbErr.message);
-    if(rec) rec.foto=url;
-    refreshTable(_photoCtx.type);
-    const dc=document.getElementById('detail-content');
-    if(dc&&dc.dataset.id===_photoCtx.id) showDetail(_photoCtx.type,_photoCtx.id);
-    closeModal(); showToast('Foto berhasil disimpan','success');
-  }catch(err){
-    msg.textContent='✗ '+err.message; msg.style.color='var(--red-tx)';
-    btn.disabled=false; btn.textContent='Upload & Simpan';
-  }
-}
+    const rows = (data||[]).map(l=>({
+      'Waktu'      : l.created_at ? new Date(l.created_at).toLocaleString('id-ID') : '–',
+      'Pengguna'   : l.user_label || '–',
+      'Email'      : l.user_email || '–',
+      'Aksi'       : l.action || '–',
+      'Modul'      : AUDIT_ENTITY_LABEL[l.entity] || l.entity || '–',
+      'ID Record'  : l.entity_id || '–',
+      'Keterangan' : l.description || '–',
+    }));
 
-function savePhotoUrl(type, id, url, source){
-  const rec = DB[type]?.find(r=>r.id===id);
-  if(!rec) return;
-  rec.foto = url;
-  refreshTable(type);
-  // Update detail page if open
-  const dw=document.getElementById('detail-content');
-  if(dw&&dw.dataset.id===id) showDetail(type,id);
-  closeModal();
-  showToast(`Foto berhasil disimpan (${source})`, 'success');
-}
-
-async function removePhoto(){
-  if(!_photoCtx) return;
-  const rec=DB[_photoCtx.type]?.find(r=>r.id===_photoCtx.id);
-  if(rec){
-    // Hapus dari Supabase Storage jika ada
-    if(rec.foto){
-      try{
-        const path=rec.foto.split('/object/public/photos/')[1];
-        if(path) await supa.storage.from('photos').remove([decodeURIComponent(path.split('?')[0])]);
-      }catch(e){}
-    }
-    // Update database
-    await supa.from(_photoCtx.type).update({foto:null}).eq('id',_photoCtx.id);
-    delete rec.foto;
-    refreshTable(_photoCtx.type);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Audit Trail');
+    XLSX.writeFile(wb, `audit_trail_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast(`✅ Export ${rows.length} log berhasil`,'success');
+  } catch(e){
+    showToast('Gagal export: '+e.message,'error');
   }
-  closeModal();
-  showToast('Foto dihapus','success');
-}
-
-// ═══════════════════════════════════════════════════
-// LOGO INSTANSI
-// ═══════════════════════════════════════════════════
-let _logoData = null; // base64 or URL
-
-function loadLogo(){
-  try{
-    const l=localStorage.getItem('ekp_logo');
-    if(l){ _logoData=l; applyLogoEverywhere(l); }
-  }catch(e){}
-}
-
-function applyLogoEverywhere(src){
-  // Topbar seal
-  const tb=document.querySelector('.app-topbar-seal');
-  if(tb){
-    const img=document.createElement('img');
-    img.className='app-topbar-seal';
-    img.src=src;
-    img.style.cssText='width:34px;height:34px;object-fit:contain;border-radius:4px';
-    tb.replaceWith(img);
-  }
-  // Login side seal
-  const ls=document.querySelector('.login-side-seal');
-  if(ls){
-    const img=document.createElement('img');
-    img.className='login-side-seal';
-    img.src=src;
-    img.style.cssText='width:80px;height:80px;object-fit:contain';
-    ls.replaceWith(img);
-  }
-  // Sidebar brand icon
-  const sb=document.querySelector('.s-brand-icon');
-  if(sb){
-    sb.innerHTML=`<img src="${src}" style="width:24px;height:24px;object-fit:contain;border-radius:4px">`;
-  }
-  // Login logo icon
-  const li=document.querySelector('.login-logo-icon');
-  if(li){
-    li.innerHTML=`<img src="${src}" style="width:32px;height:32px;object-fit:contain">`;
-  }
-  // Settings preview
-  updateLogoSettingsPreview(src);
-}
-
-function updateLogoSettingsPreview(src){
-  const img=document.getElementById('logo-preview-img');
-  const ph=document.getElementById('logo-preview-placeholder');
-  const fn=document.getElementById('logo-filename');
-  const rb=document.getElementById('logo-remove-btn');
-  if(img){ img.src=src; img.style.display='block'; }
-  if(ph) ph.style.display='none';
-  if(fn) fn.textContent='Logo aktif';
-  if(rb) rb.style.display='';
-}
-
-async function handleLogoUpload(e){
-  const file=e.target.files[0]; if(!file) return;
-  const st=document.getElementById('logo-upload-status');
-  if(!['image/jpeg','image/png'].includes(file.type)){
-    if(st) st.innerHTML=`<div style="color:var(--red-tx);font-size:12px">✗ Format tidak didukung. Gunakan JPG atau PNG.</div>`; return;
-  }
-  if(file.size>2*1024*1024){
-    if(st) st.innerHTML=`<div style="color:var(--red-tx);font-size:12px">✗ Ukuran melebihi 2MB.</div>`; return;
-  }
-  if(st) st.innerHTML=`<div style="color:var(--tx3);font-size:12px;margin-top:6px">Mengupload logo ke Supabase...</div>`;
-  try{
-    const ext=file.name.split('.').pop().toLowerCase();
-    const path='logo_instansi.'+ext;
-    const {error:upErr}=await supa.storage.from('logos').upload(path,file,{upsert:true,contentType:file.type});
-    if(upErr) throw new Error(upErr.message);
-    const {data:urlData}=supa.storage.from('logos').getPublicUrl(path);
-    const url=urlData.publicUrl+'?t='+Date.now();
-    await supa.from('settings').upsert({setting_key:'logo_path',setting_val:url},{onConflict:'setting_key'});
-    _logoData=url; applyLogoEverywhere(url);
-    if(st) st.innerHTML=`<div style="color:var(--grn-tx);font-size:12px;margin-top:6px">✓ Logo berhasil disimpan dan diterapkan.</div>`;
-    showToast('Logo instansi berhasil diperbarui','success');
-  }catch(e){
-    if(st) st.innerHTML=`<div style="color:var(--red-tx);font-size:12px;margin-top:6px">✗ ${e.message}</div>`;
-  }
-}
-
-async function removeLogo(){
-  _logoData=null;
-  try{
-    await supa.storage.from('logos').remove(['logo_instansi.png','logo_instansi.jpg','logo_instansi.jpeg']);
-    await supa.from('settings').update({setting_val:null}).eq('setting_key','logo_path');
-  }catch(e){}
-  const img=document.getElementById('logo-preview-img');
-  const ph=document.getElementById('logo-preview-placeholder');
-  const fn=document.getElementById('logo-filename');
-  const rb=document.getElementById('logo-remove-btn');
-  if(img){ img.style.display='none'; img.src=''; }
-  if(ph) ph.style.display='';
-  if(fn) fn.textContent='Belum ada logo yang diupload';
-  if(rb) rb.style.display='none';
-  const st=document.getElementById('logo-upload-status');
-  if(st) st.innerHTML=`<div style="color:var(--amb-tx);font-size:12px">Logo dihapus.</div>`;
-  showToast('Logo dihapus','success');
 }

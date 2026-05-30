@@ -1,440 +1,788 @@
 // ═══════════════════════════════════════════════════
-// FORMS
+// RENDER SETTINGS PAGE
 // ═══════════════════════════════════════════════════
-const formDefs={
-  asn:[
-    {id:'nip',l:'NIP',t:'text',req:true},{id:'nama',l:'Nama Lengkap',t:'text',req:true},
-    {id:'pangkat',l:'Pangkat/Golongan',t:'select',opts:GOL_LIST},
-    {id:'pendidikan',l:'Pendidikan',t:'select',opts:EDU_LIST},
-    {id:'jabatan',l:'Jabatan',t:'text'},{id:'jk',l:'Jenis Kelamin',t:'select',opts:['Laki-laki','Perempuan']},
-    {id:'tmt_pangkat',l:'TMT Pangkat',t:'date'},{id:'tmt_kgb',l:'TMT KGB',t:'date'},{id:'gaji',l:'Gaji Pokok (Rp)',t:'number'},
-    {id:'no_hp',l:'No. HP / WhatsApp',t:'text'},{id:'email',l:'Email',t:'text'},
-    {id:'batas_usia_pensiun',l:'Batas Usia Pensiun (tahun)',t:'number'},
-    {id:'masa_kerja_tahun',l:'Masa Kerja Golongan (Tahun)',t:'number'},{id:'masa_kerja_bulan',l:'Masa Kerja Golongan (Bulan)',t:'number'},
-    {id:'tgl_sk_kgb_sebelumnya',l:'Tanggal SK KGB Sebelumnya',t:'date'},{id:'no_sk_kgb_sebelumnya',l:'Nomor SK KGB Sebelumnya',t:'text',placeholder:'cth: 800.1.1.1.13/045//BPKAD/2023'},
-    {id:'_unit_sub',l:'',t:'unit_sub'}
-  ],
-  pppk:[
-    {id:'nipppk',l:'NIPPPK PW',t:'text',req:true},{id:'nama',l:'Nama Lengkap',t:'text',req:true},
-    {id:'pendidikan',l:'Pendidikan',t:'select',opts:EDU_LIST},
-    {id:'jabatan',l:'Jabatan',t:'text'},{id:'jk',l:'Jenis Kelamin',t:'select',opts:['Laki-laki','Perempuan']},
-    {id:'akhir_kontrak',l:'Akhir Kontrak',t:'date'},{id:'_unit_sub',l:'',t:'unit_sub'}
-  ],
-  pjlp:[
-    {id:'no_pesanan',l:'No. Pesanan',t:'text',req:true},{id:'nama',l:'Nama Lengkap',t:'text',req:true},
-    {id:'pendidikan',l:'Pendidikan',t:'select',opts:EDU_LIST},
-    {id:'jenis_pekerjaan',l:'Jenis Pekerjaan',t:'select',opts:['Administrasi','Pengemudi','Satpam','Kebersihan']},
-    {id:'jabatan',l:'Jabatan',t:'text'},
-    {id:'jk',l:'Jenis Kelamin',t:'select',opts:['Laki-laki','Perempuan']},
-    {id:'akhir_kontrak',l:'Akhir Kontrak',t:'date'},
-    {id:'_unit_sub',l:'',t:'unit_sub'}
-  ]
-};
-
-function buildFormHTML(type, data={}){
-  const defs=formDefs[type]; if(!defs) return '';
-  document.getElementById('modal-box').style.maxWidth='700px';
-  let h='<div class="form-grid">';
-  defs.forEach(f=>{
-    if(f.t==='unit_sub'){
-      h+=buildUnitSubSelects(data.unit||'',data.subunit||'','ff');
-      return;
-    }
-    h+=`<div class="fg"><label>${f.l}${f.req?' *':''}</label>`;
-    if(f.t==='select'){
-      h+=`<select id="ff_${f.id}"><option value="">\u2014 Pilih \u2014</option>${f.opts.map(o=>`<option value="${o}"${data[f.id]===o?' selected':''}>${o}</option>`).join('')}</select>`;
-    } else {
-      h+=`<input type="${f.t}" id="ff_${f.id}" value="${data[f.id]||''}" placeholder="${f.l}">`;
-    }
-    h+='</div>';
-  });
-  h+='</div>'; return h;
-}
-function collectForm(type){
-  const defs=formDefs[type]; if(!defs) return {};
-  const obj={};
-  defs.forEach(f=>{ if(f.t!=='unit_sub') obj[f.id]=document.getElementById('ff_'+f.id)?.value||''; });
-  obj.unit=document.getElementById('ff_unit')?.value||'';
-  obj.subunit=document.getElementById('ff_subunit')?.value||'';
-  return obj;
+function renderSettings(){
+  if(_logoData) updateLogoSettingsPreview(_logoData);
+  const sui = document.getElementById('settings-user-info');
+  if(sui && session) sui.textContent = `${session.label} (${session.email})`;
+  const umSection = document.getElementById('user-mgmt-section');
+  if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
+  loadFonnteToken();
+  loadWaAdminTTE();
+  loadEmailAdminTTE();
+  loadEmailJSConfig();
+  loadNoUrutCuti();
+  renderWATemplatesForm();
+  setTimeout(renderLiburNasional, 300);
+  setTimeout(renderTabelGajiForm, 100);
+  renderUserTable();
 }
 
-function openAddForm(type){
-  if(session?.role==='user'){ showToast('Hak akses tidak cukup','error'); return; }
-  document.getElementById('modal-title').textContent='Tambah '+pageConfigs[type].title;
-  document.getElementById('modal-body').innerHTML=buildFormHTML(type);
-  document.getElementById('modal-footer').innerHTML=`<button class="btn" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveAdd('${type}')">Simpan</button>`;
-  document.getElementById('modal').style.display='flex';
-}
-async function saveAdd(type){
-  const obj=collectForm(type);
-  const reqs=formDefs[type].filter(f=>f.req);
-  for(const f of reqs){ if(!obj[f.id]){ showToast(`Field "${f.l}" wajib diisi`,'error'); return; } }
-  Object.keys(obj).forEach(k=>{ if(obj[k]===''||obj[k]===null) delete obj[k]; });
-  const btn=document.querySelector('#modal-footer .btn-primary');
-  if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
-  try{
-    const {data:inserted,error}=await supa.from(type).insert(obj).select().single();
-    if(error) throw new Error(error.message);
-    await logAudit(AUDIT_ACTION.TAMBAH, type, inserted?.id,
-      `Tambah data ${type.toUpperCase()}: ${obj.nama||obj.nip||inserted?.id||''}`,
-      null, inserted||obj);
-    await reloadType(type); closeModal(); refreshTable(type); renderDashboard();
-    showToast('Data berhasil ditambahkan','success');
-  }catch(e){ showToast('Error: '+e.message,'error'); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent='Simpan'; } }
-}
-function openEditForm(type,id){
-  if(session?.role==='user'){ showToast('Hak akses tidak cukup','error'); return; }
-  const rec=DB[type].find(r=>r.id===id); if(!rec) return;
-  document.getElementById('modal-title').textContent='Edit Data';
-  document.getElementById('modal-body').innerHTML=buildFormHTML(type,rec);
-  document.getElementById('modal-footer').innerHTML=`<button class="btn" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveEdit('${type}','${id}')">Simpan Perubahan</button>`;
-  document.getElementById('modal').style.display='flex';
-}
-async function saveEdit(type,id){
-  const obj=collectForm(type);
-  Object.keys(obj).forEach(k=>{ if(obj[k]==='') obj[k]=null; });
-  const btn=document.querySelector('#modal-footer .btn-primary');
-  if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
-  try{
-    const oldRec = DB[type]?.find(r=>r.id===id) || null;
-    const {error}=await supa.from(type).update(obj).eq('id',id);
-    if(error) throw new Error(error.message);
-    await logAudit(AUDIT_ACTION.EDIT, type, id,
-      `Edit data ${type.toUpperCase()}: ${obj.nama||obj.nip||id}`,
-      oldRec, obj);
-    await reloadType(type); closeModal();
-    if(currentPage==='detail') showDetail(type,id); else refreshTable(type);
-    renderDashboard(); showToast('Data berhasil diperbarui','success');
-  }catch(e){ showToast('Error: '+e.message,'error'); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent='Simpan Perubahan'; } }
-}
-function deleteRec(type,id){
-  if(session?.role!=='admin'){ showToast('Hak akses tidak cukup','error'); return; }
-  showConfirm('Hapus Data','Apakah Anda yakin ingin menghapus data ini?',async()=>{
-    const oldRec = DB[type]?.find(r=>r.id===id) || null;
-    const {error}=await supa.from(type).delete().eq('id',id);
-    if(!error){
-      await logAudit(AUDIT_ACTION.HAPUS, type, id,
-        `Hapus data ${type.toUpperCase()}: ${oldRec?.nama||oldRec?.nip||id}`,
-        oldRec, null);
-      await reloadType(type); refreshTable(type); renderDashboard(); showToast('Data berhasil dihapus','success');
-    }
-    else showToast(error.message,'error');
-  });
+// ── Silent loader — dipanggil saat init app, tidak butuh DOM Pengaturan ──
+async function loadFonnteTokenSilent(){
+  try {
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
+    if(data?.setting_val) FONNTE_TOKEN = data.setting_val;
+  } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
 }
 
-// ═══════════════════════════════════════════════════
-// DETAIL VIEW
-// ═══════════════════════════════════════════════════
-function showDetail(type,id){
-  const r=DB[type].find(x=>x.id===id); if(!r) return;
-  let html='';
-  if(type==='asn'){
-    const kp=calcKP(r); const kg=calcKGB(r);
-    html=`<div class="detail-hdr">
-      <div class="av-lg" onclick="openPhotoModal('asn','${id}')" title="Klik untuk ganti foto"
-        style="cursor:pointer;overflow:hidden;transition:opacity .2s;position:relative"
-        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-        ${r.foto
-          ? `<img src="${r.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML='<div class=av-lg style=cursor:pointer>${initials(r.nama)}</div>'">`
-          : initials(r.nama)}
-      </div>
-      <div><div style="font-size:16px;font-weight:700">${r.nama}</div>
-      <div style="font-size:12px;color:var(--tx2);margin-top:3px">${r.jabatan} · ${r.unit}</div>
-      <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
-        <span class="badge ${golBadge(r.pangkat)}">${r.pangkat}</span>
-        <span class="badge b-gray">${r.pendidikan}</span>
-        <span class="badge ${r.jk==='Laki-laki'?'b-blue':'b-amber'}">${r.jk}</span>
-        <span class="badge ${kpStatusBadge(kp.status)}">${kp.status}</span>
-      </div></div>
-      <div style="margin-left:auto;display:flex;gap:6px">
-        <button class="btn always-allow" onclick="openEditForm('asn','${id}')">Edit</button>
-        <button class="btn btn-danger" onclick="deleteRec('asn','${id}')">Hapus</button>
-      </div></div>
-    <div class="detail-grid">
-      <div class="dc"><div class="dc-title">Data Pokok</div>
-        ${dr('NIP',r.nip)}${dr('Nama',r.nama)}${dr('Jenis Kelamin',r.jk)}${dr('Pendidikan',r.pendidikan)}
-      </div>
-      <div class="dc"><div class="dc-title">Kepegawaian</div>
-        ${dr('Pangkat/Gol','<span class="badge '+golBadge(r.pangkat)+'">'+r.pangkat+'</span>')}
-        ${dr('Jabatan',r.jabatan)}${dr('Unit Kerja',r.unit)}${dr('Sub Unit',r.subunit)}
-      </div>
-      <div class="dc"><div class="dc-title">Kenaikan Pangkat</div>
-        ${dr('TMT Pangkat',fmt(r.tmt_pangkat))}
-        ${dr('Jatuh Tempo KP',fmtDate(kp.dueDate))}
-        ${dr('Pangkat Berikutnya','<span class="badge b-green">'+kp.nextPangkat+'</span>')}
-        ${dr('Status','<span class="badge '+kpStatusBadge(kp.status)+'">'+kp.status+'</span>')}
-        <div style="font-size:11px;color:var(--tx2);padding:7px 0;line-height:1.5">${kp.keterangan}</div>
-      </div>
-      <div class="dc"><div class="dc-title">KGB — Gaji Berkala</div>
-        ${dr('TMT KGB',fmt(r.tmt_kgb))}
-        ${dr('Masa Kerja Golongan',r.masa_kerja_tahun!=null?(r.masa_kerja_tahun+' Tahun '+(r.masa_kerja_bulan||0)+' Bulan'):'—')}
-        ${dr('Gaji Saat Ini','Rp '+num(kg.gajiSkrg))}
-        ${dr('Jatuh Tempo KGB',fmtDate(kg.due))}
-        ${dr('Status KGB','<span class="badge '+kgbBadge(kg.status)+'">'+kg.status+'</span>')}
-      </div>
-    </div>`;
-  } else if(type==='pppk'){
-    html=`<div class="detail-hdr">
-      <div class="av-lg">${initials(r.nama)}</div>
-      <div><div style="font-size:16px;font-weight:700">${r.nama}</div>
-      <div style="font-size:12px;color:var(--tx2);margin-top:3px">${r.jabatan} · ${r.unit}</div>
-      <div style="margin-top:7px;display:flex;gap:6px"><span class="badge b-blue">PPPK PW</span><span class="badge b-gray">${r.pendidikan}</span></div></div>
-      <div style="margin-left:auto"><button class="btn always-allow" onclick="openEditForm('pppk','${id}')">Edit</button></div></div>
-    <div class="detail-grid">
-      <div class="dc"><div class="dc-title">Data Pokok</div>${dr('NIPPPK PW',r.nipppk)}${dr('Nama',r.nama)}${dr('Jenis Kelamin',r.jk)}${dr('Pendidikan',r.pendidikan)}</div>
-      <div class="dc"><div class="dc-title">Penempatan</div>${dr('Jabatan',r.jabatan)}${dr('Unit Kerja',r.unit)}${dr('Sub Unit',r.subunit)}${dr('Akhir Kontrak','<span class="badge '+kontrakBadge(r.akhir_kontrak)+'">'+fmt(r.akhir_kontrak)+'</span>')}</div>
-    </div>`;
-  } else if(type==='pjlp'){
-    html=`<div class="detail-hdr">
-      <div class="av-lg">${initials(r.nama)}</div>
-      <div><div style="font-size:16px;font-weight:700">${r.nama}</div>
-      <div style="font-size:12px;color:var(--tx2);margin-top:3px">${r.jenis_pekerjaan} · ${r.unit}</div>
-      <div style="margin-top:7px"><span class="badge b-gray">${r.no_pesanan}</span></div></div>
-      <div style="margin-left:auto"><button class="btn always-allow" onclick="openEditForm('pjlp','${id}')">Edit</button></div></div>
-    <div class="detail-grid">
-      <div class="dc"><div class="dc-title">Data Pokok</div>${dr('No. Pesanan',r.no_pesanan)}${dr('Nama',r.nama)}${dr('Pendidikan',r.pendidikan)}${dr('Jenis Kelamin',r.jk||'—')}${dr('Jenis Pekerjaan',r.jenis_pekerjaan)}${dr('Jabatan',r.jabatan||'—')}</div>
-      <div class="dc"><div class="dc-title">Kontrak</div>${dr('Unit Kerja',r.unit)}${dr('Sub Unit',r.subunit)}${dr('Akhir Kontrak','<span class="badge '+kontrakBadge(r.akhir_kontrak)+'">'+fmt(r.akhir_kontrak)+'</span>')}</div>
-    </div>`;
+async function loadEmailAdminTTESilent(){
+  try {
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
+    if(data?.setting_val) EMAIL_ADMIN_TTE = data.setting_val;
+  } catch(e){ console.warn('loadEmailAdminTTESilent:', e.message); }
+}
+
+async function loadWaAdminTTESilent(){
+  try {
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
+    if(data?.setting_val) WA_ADMIN_TTE = data.setting_val;
+  } catch(e){ console.warn('loadWaAdminTTESilent:', e.message); }
+}
+
+async function loadEmailJSSilent(){
+  try {
+    const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
+    const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
+    for(let i=0;i<keys.length;i++){
+      const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
+      if(data?.setting_val) window[vars[i]] = data.setting_val;
+    }
+    if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  } catch(e){ console.warn('loadEmailJSSilent:', e.message); }
+}
+
+// ── Fonnte Token ───────────────────────────────────────────
+async function loadFonnteToken(){
+  const el = document.getElementById('fonnte-token-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
+  if(data?.setting_val){
+    el.value = data.setting_val;
+    FONNTE_TOKEN = data.setting_val; // update variabel global langsung
   }
-  html+=`<div style="margin-top:12px"><button class="btn" onclick="showPage('${type}',null)">← Kembali</button></div>`;
-  const dc=document.getElementById('detail-content');
-  dc.innerHTML=html;
-  dc.dataset.id=id; dc.dataset.type=type;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-detail').classList.add('active');
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  document.getElementById('pt-title').textContent='Detail Pegawai';
-  document.getElementById('pt-sub').textContent=r.nama;
-  document.getElementById('pt-actions').innerHTML='';
-  currentPage='detail';
 }
-function dr(l,v){ return `<div class="dr"><span class="dr-l">${l}</span><span class="dr-v">${v||'—'}</span></div>`; }
 
-// ═══════════════════════════════════════════════════
-// IMPORT EXCEL
-// ═══════════════════════════════════════════════════
-const importCols={
-  asn:['NIP','Nama Lengkap','Pangkat/Golongan','Pendidikan','Jabatan','Jenis Kelamin','Unit Kerja','Sub Unit Kerja','TMT Pangkat','TMT KGB','Gaji Pokok'],
-  pppk:['NIPPPK PW','Nama Lengkap','Pendidikan','Jabatan','Jenis Kelamin','Unit Kerja','Sub Unit Kerja','Akhir Kontrak'],
-  pjlp:['No. Pesanan','Nama Lengkap','Pendidikan','Jenis Pekerjaan','Jabatan','Jenis Kelamin','Unit Kerja','Sub Unit Kerja','Akhir Kontrak']
-};
-const importMaps={
-  asn:(r)=>({id:'a'+Date.now()+Math.random(),nip:str(r['NIP']),nama:str(r['Nama Lengkap']),pangkat:str(r['Pangkat/Golongan']),pendidikan:str(r['Pendidikan']),jabatan:str(r['Jabatan']),jk:str(r['Jenis Kelamin']),unit:str(r['Unit Kerja']),subunit:str(r['Sub Unit Kerja']),tmt_pangkat:excelDate(r['TMT Pangkat']),tmt_kgb:excelDate(r['TMT KGB']),gaji:str(r['Gaji Pokok'])}),
-  pppk:(r)=>({id:'p'+Date.now()+Math.random(),nipppk:str(r['NIPPPK PW']),nama:str(r['Nama Lengkap']),pendidikan:str(r['Pendidikan']),jabatan:str(r['Jabatan']),jk:str(r['Jenis Kelamin']),unit:str(r['Unit Kerja']),subunit:str(r['Sub Unit Kerja']),akhir_kontrak:excelDate(r['Akhir Kontrak'])}),
-  pjlp:(r)=>({id:'j'+Date.now()+Math.random(),no_pesanan:str(r['No. Pesanan']),nama:str(r['Nama Lengkap']),pendidikan:str(r['Pendidikan']),jenis_pekerjaan:str(r['Jenis Pekerjaan']),jabatan:str(r['Jabatan']),jk:str(r['Jenis Kelamin']),unit:str(r['Unit Kerja']),subunit:str(r['Sub Unit Kerja']),akhir_kontrak:excelDate(r['Akhir Kontrak'])})
-};
-const importDupKey={asn:'nip',pppk:'nipppk',pjlp:'no_pesanan'};
+async function saveFonnteToken(){
+  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
+  if(!token){ showToast('Token tidak boleh kosong','error'); return; }
 
-function openImport(type){
-  if(!_xlsxReady){ showToast('Library Excel belum siap, coba lagi sebentar','error'); return; }
-  document.getElementById('modal-title').textContent=`Import Excel — ${pageConfigs[type].title}`;
-  const cols=importCols[type];
-  document.getElementById('modal-body').innerHTML=`
-    <div style="background:var(--primary-bg);border:1px solid var(--primary);border-radius:8px;padding:12px 14px;font-size:12px;margin-bottom:14px">
-      <strong>Format Kolom Excel (baris 1 = header):</strong><br>
-      <span style="font-family:var(--fmo);font-size:11px;color:var(--primary-tx)">${cols.join(' | ')}</span>
-    </div>
-    <div class="import-zone" id="iz" onclick="document.getElementById('import-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'${type}')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <div class="iz-title">Klik atau seret file .xlsx di sini</div>
-      <div class="iz-sub">Format: .xlsx · Maks 5MB</div>
-    </div>
-    <input type="file" id="import-file" accept=".xlsx" style="display:none" onchange="handleImportFile(event,'${type}')">
-    <div id="import-result" style="margin-top:12px"></div>`;
-  document.getElementById('modal-footer').innerHTML=`<button class="btn" onclick="closeModal()">Tutup</button>`;
-  document.getElementById('modal').style.display='flex';
+  // Coba UPDATE dulu, jika tidak ada row baru INSERT
+  const { data: existing } = await supa.from('settings')
+    .select('id').eq('setting_key','fonnte_token').maybeSingle();
+
+  let error;
+  if(existing){
+    ({ error } = await supa.from('settings')
+      .update({ setting_val: token })
+      .eq('setting_key','fonnte_token'));
+  } else {
+    ({ error } = await supa.from('settings')
+      .insert({ setting_key:'fonnte_token', setting_val: token }));
+  }
+
+  if(!error){
+    FONNTE_TOKEN = token;
+    showToast('✅ Token Fonnte berhasil disimpan','success');
+  } else {
+    showToast('Gagal simpan: '+error.message,'error');
+    console.error('saveFonnteToken error:', error);
+  }
 }
-function handleDrop(e,type){ e.preventDefault(); document.getElementById('iz').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) processImportFile(f,type); }
-function handleImportFile(e,type){ const f=e.target.files[0]; if(f) processImportFile(f,type); }
 
-function processImportFile(file, type){
-  if(!file.name.endsWith('.xlsx')){ showToast('File harus berformat .xlsx','error'); return; }
-  const reader=new FileReader();
-  reader.onload=(ev)=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
-      // Cari sheet yang sesuai dengan tipe data
-      const sheetNames=wb.SheetNames;
-      const typeMap={asn:'Data ASN',pppk:'PPPK PW',pjlp:'PJLP'};
-      let targetSheet=sheetNames[0];
-      const preferred=typeMap[type];
-      if(preferred&&sheetNames.includes(preferred)) targetSheet=preferred;
-      const ws=wb.Sheets[targetSheet];
+async function testFonnteToken(){
+  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
+  if(!token){ showToast('Isi token terlebih dahulu','error'); return; }
+  const noTest = prompt('Masukkan nomor WA untuk test (cth: 08123456789):','');
+  if(!noTest) return;
+  let nomor = noTest.replace(/\D/g,'');
+  if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
+  try{
+    const res = await fetch('https://api.fonnte.com/send',{
+      method:'POST',
+      headers:{ 'Authorization': token },
+      body: new URLSearchParams({ target:nomor, message:'✅ Test notifikasi dari E-Kepegawaian BPKAD berhasil!', countryCode:'62' })
+    });
+    const data = await res.json();
+    if(data.status===true) showToast('✅ WA terkirim! Fonnte berhasil terhubung.','success');
+    else showToast('Gagal: '+(data.reason||JSON.stringify(data)),'error');
+  }catch(e){ showToast('Error: '+e.message,'error'); }
+}
 
-      // Baca semua baris sebagai array mentah (tanpa asumsi baris header)
-      const rawRows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
-      if(!rawRows.length){ showToast('Sheet kosong','error'); return; }
+// ── WA Admin TTE ────────────────────────────────────────────
+async function loadWaAdminTTE(){
+  const el = document.getElementById('wa-admin-tte-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
+  if(data?.setting_val){ el.value = data.setting_val; WA_ADMIN_TTE = data.setting_val; }
+}
 
-      // Normalisasi nama kolom: hapus *, newline, dan whitespace berlebih
-      const normCol=v=>String(v||'').replace(/\*/g,'').replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+async function saveWaAdminTTE(){
+  const val = (document.getElementById('wa-admin-tte-input')?.value||'').trim();
+  if(!val){ showToast('Nomor WA tidak boleh kosong','error'); return; }
+  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','wa_admin_tte').maybeSingle();
+  let error;
+  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','wa_admin_tte')); }
+  else   { ({ error } = await supa.from('settings').insert({ setting_key:'wa_admin_tte', setting_val: val })); }
+  if(!error){
+    WA_ADMIN_TTE = val;
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update WA Admin TTE',null,{wa_admin_tte:val});
+    showToast('✅ Nomor WA Admin TTE berhasil disimpan','success');
+  } else { showToast('Gagal simpan: '+error.message,'error'); }
+}
 
-      // Cari baris header: baris pertama (dari 5 baris teratas) yang memuat semua kolom wajib
-      const reqCols=importCols[type];
-      let headerRowIdx=-1;
-      for(let i=0;i<Math.min(rawRows.length,5);i++){
-        const rowCols=rawRows[i].map(normCol);
-        const matched=reqCols.filter(rc=>rowCols.includes(rc));
-        if(matched.length===reqCols.length){ headerRowIdx=i; break; }
-      }
+// ── Email Admin TTE ─────────────────────────────────────────
+async function loadEmailAdminTTE(){
+  const el = document.getElementById('email-admin-tte-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
+  if(data?.setting_val){ el.value = data.setting_val; EMAIL_ADMIN_TTE = data.setting_val; }
+}
 
-      if(headerRowIdx===-1){
-        // Tampilkan debug: kolom apa yang terbaca vs yang dibutuhkan
-        const found=[...new Set(rawRows.slice(0,4).flatMap(r=>r.map(normCol).filter(Boolean)))];
-        const missing=reqCols.filter(rc=>!found.includes(rc));
-        document.getElementById('import-result').innerHTML=`
-          <div style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:12px;margin-bottom:8px">
-            <strong>Kolom tidak ditemukan:</strong><br>${missing.map(m=>`<code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px">${m}</code>`).join(' &nbsp; ')}
-          </div>
-          <div style="font-size:12px;color:var(--tx2);background:var(--bg2);border-radius:8px;padding:12px;line-height:1.8">
-            <strong>Kolom yang terbaca di file (${targetSheet}):</strong><br>
-            ${found.length?found.map(c=>`<code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px">${c}</code>`).join(' '):'(tidak ada)'}
-            <br><br>
-            <strong>Tips:</strong>
-            <ul style="margin:4px 0 0 16px">
-              <li>Nama kolom harus persis sama — termasuk spasi, tanda titik, dan huruf kapital</li>
-              <li>Gunakan file template resmi yang disediakan</li>
-              <li>Pastikan mengisi sheet yang sesuai: <em>${typeMap[type]||type}</em></li>
-              <li>Header harus di baris pertama sheet (baris 1)</li>
-            </ul>
-          </div>`;
+async function saveEmailAdminTTE(){
+  const val = (document.getElementById('email-admin-tte-input')?.value||'').trim();
+  if(!val){ showToast('Email tidak boleh kosong','error'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Format email tidak valid','error'); return; }
+  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','email_admin_tte').maybeSingle();
+  let error;
+  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','email_admin_tte')); }
+  else   { ({ error } = await supa.from('settings').insert({ setting_key:'email_admin_tte', setting_val: val })); }
+  if(!error){
+    EMAIL_ADMIN_TTE = val;
+    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Email Admin TTE',null,{email_admin_tte:val});
+    showToast('✅ Email Admin TTE berhasil disimpan','success');
+  } else { showToast('Gagal simpan: '+error.message,'error'); }
+}
+
+// ── EmailJS Config ───────────────────────────────────────────
+async function loadEmailJSConfig(){
+  const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
+  const ids  = ['emailjs-public-key-input','emailjs-service-id-input','emailjs-template-id-input'];
+  const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
+  for(let i=0;i<keys.length;i++){
+    const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
+    if(data?.setting_val){
+      const el = document.getElementById(ids[i]);
+      if(el) el.value = data.setting_val;
+      window[vars[i]] = data.setting_val;
+    }
+  }
+  // Init EmailJS jika public key sudah ada
+  if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+async function saveEmailJSConfig(){
+  const pairs = [
+    ['emailjs_public_key',   'emailjs-public-key-input',  'EMAILJS_PUBLIC_KEY'],
+    ['emailjs_service_id',   'emailjs-service-id-input',  'EMAILJS_SERVICE_ID'],
+    ['emailjs_template_id',  'emailjs-template-id-input', 'EMAILJS_TEMPLATE_ID'],
+  ];
+  for(const [key, elId, varName] of pairs){
+    const val = (document.getElementById(elId)?.value||'').trim();
+    if(!val){ showToast('Semua field EmailJS wajib diisi','error'); return; }
+    const { data: ex } = await supa.from('settings').select('id').eq('setting_key',key).maybeSingle();
+    let error;
+    if(ex){ ({ error } = await supa.from('settings').update({ setting_val:val }).eq('setting_key',key)); }
+    else   { ({ error } = await supa.from('settings').insert({ setting_key:key, setting_val:val })); }
+    if(error){ showToast('Gagal simpan '+key+': '+error.message,'error'); return; }
+    window[varName] = val;
+  }
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Konfigurasi EmailJS',null,{});
+  showToast('✅ Konfigurasi EmailJS berhasil disimpan','success');
+}
+
+async function testEmailJS(){
+  if(!EMAILJS_PUBLIC_KEY||!EMAILJS_SERVICE_ID||!EMAILJS_TEMPLATE_ID){
+    showToast('Isi dan simpan konfigurasi EmailJS dulu','error'); return;
+  }
+  if(!EMAIL_ADMIN_TTE){ showToast('Isi Email Admin TTE dulu','error'); return; }
+  try {
+    showToast('⏳ Mengirim email test...','info');
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email   : EMAIL_ADMIN_TTE,
+      to_name    : 'Admin TTE',
+      subject    : 'Test Email — E-Kepegawaian BPKAD',
+      message    : 'Email test dari sistem E-Kepegawaian BPKAD berhasil terkirim.',
+      from_name  : 'E-Kepegawaian BPKAD',
+      pdf_link   : '-',
+    });
+    showToast('✅ Email test berhasil dikirim ke '+EMAIL_ADMIN_TTE,'success');
+  } catch(e){ showToast('❌ Gagal: '+(e?.text||e?.message||JSON.stringify(e)),'error'); }
+}
+
+
+async function renderUserTable(){
+  const tb = document.getElementById('user-table-body');
+  if(!tb) return;
+  tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:14px">Memuat...</td></tr>`;
+
+  // Ambil profil semua user (admin bisa baca semua via RLS policy admin)
+  const { data, error } = await supa.from('profiles')
+    .select('id, label, role, created_at')
+    .order('created_at');
+
+  if(error){ tb.innerHTML = `<tr><td colspan="5" style="color:var(--red-tx);padding:12px">${error.message}</td></tr>`; return; }
+
+  USERS_CACHE = data || [];
+  const rows = USERS_CACHE.map(acc => {
+    const isMe    = session?.uid === acc.id;
+    const isAdmin = acc.role === 'admin';
+    const tgl     = acc.created_at ? acc.created_at.slice(0,10) : '—';
+    return `<tr style="border-bottom:1px solid var(--bd)">
+      <td style="padding:9px 12px"><div style="display:flex;align-items:center;gap:8px">
+        <div class="emp-av" style="width:28px;height:28px;font-size:10px;background:${isAdmin?'var(--primary-bg)':'var(--grn-bg)'};color:${isAdmin?'var(--primary-tx)':'var(--grn-tx)'}">
+          ${(acc.label||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <span style="font-weight:600">${acc.label||'—'}</span>
+        ${isMe?'<span class="badge b-blue" style="font-size:9px">Anda</span>':''}
+      </div></td>
+      <td style="padding:9px 12px"><span class="badge ${isAdmin?'b-blue':'b-green'}">${isAdmin?'Admin':'User'}</span></td>
+      <td style="padding:9px 12px;font-size:11px;color:var(--tx3)">${tgl}</td>
+      <td style="padding:9px 12px;white-space:nowrap">
+        <button class="btn btn-sm always-allow" onclick="openEditUser('${acc.id}')">Edit</button>
+        ${!isMe?`<button class="btn btn-sm btn-danger always-allow" onclick="hapusUser('${acc.id}','${acc.label}')">Hapus</button>`:''}
+      </td></tr>`;
+  }).join('');
+  tb.innerHTML = rows || `<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:16px">Tidak ada pengguna</td></tr>`;
+}
+
+// ── Tambah user baru via Supabase Auth ─────────────────────
+function openTambahUser(){
+  document.getElementById('modal-title').textContent = 'Undang Pengguna Baru';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="font-size:12px;color:var(--tx2);background:var(--primary-bg);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
+      Pengguna baru akan didaftarkan via Supabase Auth.<br>
+      Pastikan <strong>Email Confirmations</strong> di Supabase Auth Settings sudah dikonfigurasi.
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Email *</label>
+        <input type="email" id="u-email" placeholder="contoh: budi@bpkad.go.id" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label>Nama / Label *</label>
+        <input type="text" id="u-label" placeholder="contoh: Budi Santoso">
+      </div>
+      <div class="fg">
+        <label>Password *</label>
+        <div style="position:relative">
+          <input type="password" id="u-password" placeholder="Min. 8 karakter" autocomplete="new-password">
+          <button type="button" onclick="togglePwVis('u-password',this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Konfirmasi Password *</label>
+        <div style="position:relative">
+          <input type="password" id="u-password2" placeholder="Ulangi password" autocomplete="new-password">
+          <button type="button" onclick="togglePwVis('u-password2',this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
+        </div>
+      </div>
+      <div class="fg full">
+        <label>Role / Hak Akses *</label>
+        <div style="display:flex;gap:12px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:all .15s" id="role-admin-lbl">
+            <input type="radio" name="u-role" value="admin" style="accent-color:var(--primary)" onchange="highlightRoleCard()">
+            <div><div style="font-weight:600">Admin</div><div style="font-size:10px;color:var(--tx3)">Akses penuh — tambah, edit, hapus data</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:all .15s" id="role-user-lbl">
+            <input type="radio" name="u-role" value="user" checked style="accent-color:var(--primary)" onchange="highlightRoleCard()">
+            <div><div style="font-weight:600">User</div><div style="font-size:10px;color:var(--tx3)">Hanya lihat — tidak bisa ubah data</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div id="u-err" style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:6px;padding:8px 12px;display:none;margin-top:10px"></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="simpanTambahUser()">Buat Pengguna</button>`;
+  document.getElementById('modal').style.display = 'flex';
+  highlightRoleCard();
+}
+
+async function simpanTambahUser(){
+  const errEl   = document.getElementById('u-err');
+  const showErr = msg => { errEl.textContent=msg; errEl.style.display='block'; };
+  const email   = (document.getElementById('u-email')?.value||'').trim().toLowerCase();
+  const label   = (document.getElementById('u-label')?.value||'').trim();
+  const pw      = document.getElementById('u-password')?.value||'';
+  const pw2     = document.getElementById('u-password2')?.value||'';
+  const role    = document.querySelector('input[name="u-role"]:checked')?.value||'user';
+
+  if(!email)         { showErr('Email wajib diisi'); return; }
+  if(!label)         { showErr('Nama / label wajib diisi'); return; }
+  if(!pw)            { showErr('Password wajib diisi'); return; }
+  if(pw.length < 8)  { showErr('Password minimal 8 karakter'); return; }
+  if(pw !== pw2)     { showErr('Konfirmasi password tidak cocok'); return; }
+
+  // Simpan session admin sebelum signUp menggantikannya
+  const { data: { session: adminSession } } = await supa.auth.getSession();
+  if(!adminSession) { showErr('Session admin tidak ditemukan, coba refresh halaman.'); return; }
+  const adminRefreshToken = adminSession.refresh_token;
+
+  // Daftar user baru via signUp
+  const { data, error } = await supa.auth.signUp({
+    email,
+    password: pw,
+    options: { data: { label, role } }
+  });
+
+  if(error){
+    // Pulihkan session admin jika signUp gagal
+    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
+    showErr(error.message); return;
+  }
+  if(!data?.user){
+    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
+    showErr('Gagal membuat user, coba lagi.'); return;
+  }
+
+  // Upsert profil user baru
+  await supa.from('profiles').upsert({ id: data.user.id, label, role }, { onConflict: 'id' });
+
+  // Pulihkan session admin
+  await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
+
+  await logAudit(AUDIT_ACTION.TAMBAH, 'user', data.user.id,
+    `Tambah pengguna baru — ${label} (${email}) role: ${role}`, null, { email, label, role });
+
+  closeModal(); renderUserTable();
+  showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
+}
+
+// ── Edit user ──────────────────────────────────────────────
+function openEditUser(uid){
+  const acc = USERS_CACHE.find(u => u.id === uid);
+  if(!acc) return;
+  const isMe = session?.uid === uid;
+  document.getElementById('modal-title').textContent = `Edit Pengguna — ${acc.label}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="fg full">
+        <label>Nama / Label</label>
+        <input type="text" id="eu-label" value="${acc.label||''}" placeholder="Nama tampilan">
+      </div>
+      <div class="fg">
+        <label>Password Baru <span style="font-weight:400;color:var(--tx3)">(kosongkan jika tidak diubah)</span></label>
+        <div style="position:relative">
+          <input type="password" id="eu-password" placeholder="Min. 8 karakter" autocomplete="new-password">
+          <button type="button" onclick="togglePwVis('eu-password',this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Konfirmasi Password Baru</label>
+        <div style="position:relative">
+          <input type="password" id="eu-password2" placeholder="Ulangi password baru" autocomplete="new-password">
+          <button type="button" onclick="togglePwVis('eu-password2',this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
+        </div>
+      </div>
+      ${!isMe ? `<div class="fg full">
+        <label>Role / Hak Akses</label>
+        <div style="display:flex;gap:12px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1" id="erole-admin-lbl">
+            <input type="radio" name="eu-role" value="admin" ${acc.role==='admin'?'checked':''} style="accent-color:var(--primary)" onchange="highlightRoleCardEdit()">
+            <div><div style="font-weight:600">Admin</div><div style="font-size:10px;color:var(--tx3)">Akses penuh</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1" id="erole-user-lbl">
+            <input type="radio" name="eu-role" value="user" ${acc.role==='user'?'checked':''} style="accent-color:var(--primary)" onchange="highlightRoleCardEdit()">
+            <div><div style="font-weight:600">User</div><div style="font-size:10px;color:var(--tx3)">Hanya lihat</div></div>
+          </label>
+        </div>
+      </div>` : '<div class="fg full" style="font-size:12px;color:var(--tx3);background:var(--amb-bg);padding:10px 12px;border-radius:8px">⚠ Role akun Anda tidak bisa diubah sendiri.</div>'}
+    </div>
+    <div id="eu-err" style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:6px;padding:8px 12px;display:none;margin-top:10px"></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="simpanEditUser('${uid}')">Simpan Perubahan</button>`;
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(highlightRoleCardEdit, 50);
+}
+
+async function simpanEditUser(uid){
+  const errEl   = document.getElementById('eu-err');
+  const showErr = msg => { errEl.textContent=msg; errEl.style.display='block'; };
+  const label   = (document.getElementById('eu-label')?.value||'').trim();
+  const pw      = document.getElementById('eu-password')?.value||'';
+  const pw2     = document.getElementById('eu-password2')?.value||'';
+  const isMe    = session?.uid === uid;
+  const role    = isMe ? session.role : (document.querySelector('input[name="eu-role"]:checked')?.value||'user');
+
+  if(!label)        { showErr('Nama / label wajib diisi'); return; }
+  if(pw && pw.length < 8) { showErr('Password minimal 8 karakter'); return; }
+  if(pw && pw !== pw2)    { showErr('Konfirmasi password tidak cocok'); return; }
+
+  // Update profil
+  const { error: profErr } = await supa.from('profiles').update({ label, role }).eq('id', uid);
+  if(profErr){ showErr(profErr.message); return; }
+
+  // Update password — hanya bisa untuk akun sendiri via updateUser
+  if(pw){
+    if(isMe){
+      const { error: pwErr } = await supa.auth.updateUser({ password: pw });
+      if(pwErr){ showErr('Profil tersimpan, tapi password gagal diubah: ' + pwErr.message); return; }
+    } else {
+      // Password user lain hanya bisa diubah via Supabase Dashboard
+      showToast(`Profil "${label}" diperbarui. Password user lain hanya bisa diubah via Supabase Dashboard.`, 'success');
+      closeModal(); renderUserTable(); return;
+    }
+  }
+
+  // Update tampilan jika akun sendiri
+  if(isMe){
+    session.label = label;
+    document.getElementById('user-label').textContent = label;
+    document.getElementById('user-av').textContent = label.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  }
+
+  closeModal(); renderUserTable();
+  await logAudit(AUDIT_ACTION.EDIT, 'user', uid,
+    `Edit pengguna — ${label} (role: ${role})${pw?' + ganti password':''}`, null, { uid, label, role });
+  showToast(`Pengguna "${label}" diperbarui`, 'success');
+}
+
+// ── Hapus user ─────────────────────────────────────────────
+function hapusUser(uid, label){
+  if(session?.uid === uid){ showToast('Tidak dapat menghapus akun sendiri','error'); return; }
+  showConfirm('Hapus Pengguna', `Hapus pengguna <strong>${label}</strong>? Tindakan ini tidak dapat dibatalkan.`, async ()=>{
+    // Hapus dari profiles — auth.users akan cascade delete via FK
+    const { error } = await supa.from('profiles').delete().eq('id', uid);
+    if(!error){
+      await logAudit(AUDIT_ACTION.HAPUS, 'user', uid,
+        `Hapus pengguna — ${label}`, { uid, label }, null);
+      renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success');
+    }
+    else showToast(error.message, 'error');
+  });
+}
+
+// ── UI helpers ─────────────────────────────────────────────
+function highlightRoleCard(){
+  const v  = document.querySelector('input[name="u-role"]:checked')?.value;
+  const al = document.getElementById('role-admin-lbl');
+  const ul = document.getElementById('role-user-lbl');
+  if(al) al.style.borderColor = v==='admin' ? 'var(--primary)' : 'var(--bd2)';
+  if(ul) ul.style.borderColor = v==='user'  ? 'var(--primary)' : 'var(--bd2)';
+}
+function highlightRoleCardEdit(){
+  const v  = document.querySelector('input[name="eu-role"]:checked')?.value;
+  const al = document.getElementById('erole-admin-lbl');
+  const ul = document.getElementById('erole-user-lbl');
+  if(al) al.style.borderColor = v==='admin' ? 'var(--primary)' : 'var(--bd2)';
+  if(ul) ul.style.borderColor = v==='user'  ? 'var(--primary)' : 'var(--bd2)';
+}
+function togglePwVis(id, btn){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Nomor Urut Surat Cuti ──────────────────────────────────
+// ── Libur Nasional Manager ────────────────────────────────────
+async function renderLiburNasional(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  const list = HARI_LIBUR[String(yr)] || [];
+  const container = document.getElementById('libur-list');
+  if(!container) return;
+
+  container.innerHTML = list.length
+    ? list.map(d => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:monospace;font-size:13px;flex:1">${d}</span>
+          <span style="font-size:11px;color:var(--tx3)">${new Date(d+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})}</span>
+          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="hapusLibur('${yr}','${d}')">✕</button>
+        </div>`).join('')
+    : '<div style="color:var(--tx3);font-size:12px;padding:8px 0">Belum ada data libur untuk tahun ini.</div>';
+
+  document.getElementById('libur-count').textContent = `${list.length} hari libur`;
+}
+
+async function tambahLiburManual(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  const tgl = document.getElementById('libur-tgl-input')?.value;
+  if(!tgl){ showToast('Pilih tanggal dulu','error'); return; }
+  const list = [...(HARI_LIBUR[String(yr)]||[])];
+  if(list.includes(tgl)){ showToast('Tanggal sudah ada','error'); return; }
+  list.push(tgl);
+  await simpanLiburManual(yr, list);
+  document.getElementById('libur-tgl-input').value = '';
+  renderLiburNasional();
+}
+
+async function hapusLibur(yr, tgl){
+  const list = (HARI_LIBUR[String(yr)]||[]).filter(d => d !== tgl);
+  await simpanLiburManual(yr, list);
+  renderLiburNasional();
+}
+
+async function syncLiburDariAPI(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  showToast('Mengambil data dari API...','info');
+  const fromAPI = await fetchLiburFromAPI(yr);
+  if(!fromAPI){ showToast('API tidak tersedia, coba lagi nanti','error'); return; }
+  // Merge dengan yang sudah ada (union)
+  const existing = HARI_LIBUR[String(yr)] || [];
+  const merged = [...new Set([...existing, ...fromAPI])].sort();
+  await simpanLiburManual(yr, merged);
+  renderLiburNasional();
+}
+
+async function resetLiburKeAPI(){
+  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
+  if(!confirm(`Reset libur ${yr} dari API? Data manual akan ditimpa.`)) return;
+  // Hapus dari DB dulu supaya loadLiburNasional ambil ulang dari API
+  await supa.from('settings').delete().eq('setting_key', `libur_${yr}`);
+  delete HARI_LIBUR[String(yr)];
+  await loadLiburNasional(yr);
+  renderLiburNasional();
+  showToast(`✅ Libur ${yr} direset dari API`,'success');
+}
+
+
+// ── Tabel Gaji PNS ────────────────────────────────────────
+// Cache tabel gaji dari DB
+let TABEL_GAJI_PNS = null;
+
+const GOL_URUT = [
+  'I/a','I/b','I/c','I/d',
+  'II/a','II/b','II/c','II/d',
+  'III/a','III/b','III/c','III/d',
+  'IV/a','IV/b','IV/c','IV/d','IV/e'
+];
+// Pola MKG sesuai tabel PP 5/2024
+const _S_MK_IA      = [0,2,4,6,8,10,12,14,16,18,20,22,24,26];
+const _S_MK_I_BCD   = [3,5,7,9,11,13,15,17,19,21,23,25,27];
+const _S_MK_IIA     = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
+const _S_MK_II_BCD  = [3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
+const _S_MK_STD     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
+
+function getMKList(gol){
+  if(gol === 'I/a')                          return _S_MK_IA;
+  if(['I/b','I/c','I/d'].includes(gol))      return _S_MK_I_BCD;
+  if(gol === 'II/a')                         return _S_MK_IIA;
+  if(['II/b','II/c','II/d'].includes(gol))   return _S_MK_II_BCD;
+  return _S_MK_STD;
+}
+
+// Load tabel gaji dari DB
+async function loadTabelGaji(){
+  try {
+    const { data } = await supa.from('settings')
+      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
+    if(data?.setting_val){
+      TABEL_GAJI_PNS = JSON.parse(data.setting_val);
+      console.log('✅ Tabel gaji loaded dari DB');
+    }
+  } catch(e){ console.warn('loadTabelGaji:', e); }
+}
+
+// Auto-seed: isi tabel gaji ke DB dari data hardcode GAJI_PNS (kgb.js)
+// Hanya berjalan jika tabel di DB masih kosong / belum pernah diisi
+async function seedTabelGajiFromHardcode(){
+  try {
+    // Cek apakah sudah ada data di DB
+    const { data: existing } = await supa.from('settings')
+      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
+
+    if(existing?.setting_val){
+      // Sudah ada — cek apakah semua nilai 0 (belum pernah diisi)
+      const parsed = JSON.parse(existing.setting_val);
+      const hasValue = Object.values(parsed).some(mkObj =>
+        Object.values(mkObj).some(v => v > 0)
+      );
+      if(hasValue){
+        console.log('ℹ️ Tabel gaji DB sudah berisi data, seed dilewati.');
         return;
       }
+    }
 
-      // Bangun peta kolom: nama kolom → indeks
-      const headerRow=rawRows[headerRowIdx];
-      const colMap={};
-      headerRow.forEach((v,i)=>{ const n=normCol(v); if(n) colMap[n]=i; });
+    // DB kosong atau semua 0 — seed dari GAJI_PNS (hardcode kgb.js)
+    if(typeof GAJI_PNS === 'undefined'){
+      console.warn('seedTabelGaji: GAJI_PNS tidak ditemukan');
+      return;
+    }
 
-      // Konversi baris data menjadi objek
-      const dataRows=rawRows.slice(headerRowIdx+1).filter(r=>r.some(c=>String(c||'').trim()!==''));
-      const rows=dataRows.map(r=>{
-        const obj={};
-        reqCols.forEach(col=>{ const raw=r[colMap[col]]; obj[col]=(raw===undefined||raw===null)?'':raw; });
-        return obj;
+    const seedData = {};
+    GOL_URUT.forEach(gol => {
+      seedData[gol] = {};
+      getMKList(gol).forEach(mk => {
+        seedData[gol][mk] = GAJI_PNS[gol]?.[mk] || 0;
       });
-
-      if(!rows.length){ showToast('Tidak ada baris data di bawah header','error'); return; }
-      validateAndImport(rows, type, headerRowIdx+2);
-    } catch(err){
-      document.getElementById('import-result').innerHTML=`<div style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px">Gagal membaca file: <strong>${err.message}</strong></div>`;
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function validateAndImport(rows, type, dataStartRow=2){
-  const dupKey=importDupKey[type];
-  const errors=[];
-  const valid=[];
-  const dups=[];
-  rows.forEach((r,i)=>{
-    const mapped=importMaps[type](r);
-    const rowNum=dataStartRow+i;
-    // required check
-    if(!mapped.nama){ errors.push({row:rowNum,msg:'Nama Lengkap kosong'}); return; }
-    const keyVal=mapped[dupKey];
-    if(!keyVal){ errors.push({row:rowNum,msg:`${dupKey.toUpperCase()} kosong`}); return; }
-    // check dup in DB
-    if(DB[type].find(x=>x[dupKey]===keyVal)){ dups.push({row:rowNum,key:keyVal,mapped}); return; }
-    // check dup in current batch
-    if(valid.find(x=>x[dupKey]===keyVal)){ errors.push({row:rowNum,msg:`${dupKey.toUpperCase()} duplikat dalam file`}); return; }
-    valid.push(mapped);
-  });
-
-  if(errors.length){
-    document.getElementById('import-result').innerHTML=`
-      <div style="color:var(--red-tx);font-size:12px;margin-bottom:8px;font-weight:700">⚠ ${errors.length} baris mengandung error:</div>
-      <table class="validation-table">
-        <thead><tr><th>Baris</th><th>Keterangan Error</th></tr></thead>
-        <tbody>${errors.map(e=>`<tr><td class="vt-err">Baris ${e.row}</td><td class="vt-err">${e.msg}</td></tr>`).join('')}</tbody>
-      </table>
-      <div style="font-size:12px;color:var(--tx2);margin-top:8px">Perbaiki file lalu upload ulang.</div>`;
-    return;
-  }
-
-  if(dups.length){
-    // ask confirmation per dup
-    processDuplicates(dups, valid, type, 0);
-  } else {
-    finalizeImport(valid, type);
-  }
-}
-
-let _pendingImport={};
-function processDuplicates(dups,valid,type,idx){
-  if(idx>=dups.length){ finalizeImport(valid,type); return; }
-  const d=dups[idx];
-  const dupKey=importDupKey[type];
-  showConfirm(
-    `Duplikat Ditemukan (${idx+1}/${dups.length})`,
-    `${dupKey.toUpperCase()} <strong>${d.key}</strong> (Baris ${d.row}) sudah ada di sistem.\nApakah data lama ingin ditimpa dengan data baru?`,
-    ()=>{ // timpa
-      const exIdx=DB[type].findIndex(x=>x[dupKey]===d.key);
-      if(exIdx>=0) DB[type][exIdx]={...DB[type][exIdx],...d.mapped};
-      processDuplicates(dups,valid,type,idx+1);
-    },
-    ()=>{ // skip
-      processDuplicates(dups,valid,type,idx+1);
-    },
-    'Timpa Data Lama','Lewati'
-  );
-}
-async function finalizeImport(valid, type){
-  const res=document.getElementById('import-result');
-  res.innerHTML=`<div style="color:var(--tx3);font-size:12px;padding:8px">Mengunggah ${valid.length} data ke Supabase...</div>`;
-  try{
-    const keyMap={asn:'nip',pppk:'nipppk',pjlp:'no_pesanan'};
-    const key=keyMap[type];
-    const existingKeys=DB[type].map(r=>r[key]);
-    const toInsert=valid.filter(r=>!existingKeys.includes(r[key])).map(r=>{
-      const o={...r}; Object.keys(o).forEach(k=>{ if(o[k]===''||o[k]===undefined) delete o[k]; }); return o;
     });
-    const skipped=valid.length-toInsert.length;
-    if(toInsert.length){
-      const {error}=await supa.from(type).insert(toInsert);
-      if(error) throw new Error(error.message);
-      await logAudit(AUDIT_ACTION.TAMBAH, type, null,
-        `Import Excel ${type.toUpperCase()} — ${toInsert.length} data baru ditambahkan${skipped?`, ${skipped} duplikat dilewati`:''}`,
-        null, { jumlah: toInsert.length, skipped });
+
+    const val = JSON.stringify(seedData);
+    if(existing){
+      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
+    } else {
+      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
     }
-    await reloadType(type); refreshTable(type); renderDashboard();
-    res.innerHTML=`<div style="color:var(--grn-tx);font-size:13px;font-weight:700;background:var(--grn-bg);border:1px solid var(--grn-bd);border-radius:8px;padding:12px">✓ Import berhasil — ${toInsert.length} data disimpan${skipped?`, ${skipped} duplikat dilewati`:''}.</div>`;
-    document.getElementById('modal-footer').innerHTML=`<button class="btn btn-success" onclick="closeModal()">Selesai</button>`;
-    showToast(`Import berhasil: ${toInsert.length} data tersimpan`,'success');
-  }catch(e){
-    res.innerHTML=`<div style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border-radius:8px;padding:10px">✗ ${e.message}</div>`;
+
+    // Update cache lokal juga
+    TABEL_GAJI_PNS = seedData;
+    console.log('✅ Tabel gaji berhasil di-seed otomatis ke DB dari data hardcode PP 5/2024');
+  } catch(e){
+    console.warn('seedTabelGajiFromHardcode error:', e);
   }
 }
 
-// ═══════════════════════════════════════════════════
-// EXPORT EXCEL
-// ═══════════════════════════════════════════════════
-function exportExcel(type){
-  if(!_xlsxReady){ showToast('Library Excel belum siap, coba lagi sebentar','error'); return; }
-  let data,name;
-  if(type==='kp'){
-    data=DB.asn.map(a=>{ const k=calcKP(a); return {NIP:a.nip,'Nama ASN':a.nama,'Golongan Saat Ini':a.pangkat,'Golongan Berikutnya':k.nextPangkat,'Pendidikan':a.pendidikan,'Unit Kerja':a.unit,'TMT Pangkat':a.tmt_pangkat,'Tgl Jatuh Tempo':fmtDate(k.dueDate),'Status':k.status,'Keterangan':k.keterangan}; });
-    name='KP';
-  } else if(type==='kgb'){
-    data=DB.asn.map(a=>{ const k=calcKGB(a); return {NIP:a.nip,'Nama ASN':a.nama,'Unit Kerja':a.unit,'Golongan':a.pangkat,'TMT KGB':a.tmt_kgb,'Gaji Saat Ini':k.gajiSkrg,'Tgl KGB Berikutnya':fmtDate(k.due),'Status':k.status}; });
-    name='KGB';
-  } else if(type==='asn'){
-    data=DB.asn.map(r=>({NIP:r.nip,'Nama Lengkap':r.nama,'Pangkat/Golongan':r.pangkat,Pendidikan:r.pendidikan,Jabatan:r.jabatan,'Jenis Kelamin':r.jk,'Unit Kerja':r.unit,'Sub Unit':r.subunit,'TMT Pangkat':r.tmt_pangkat,'TMT KGB':r.tmt_kgb,'Gaji Pokok':r.gaji,'Masa Kerja Tahun':r.masa_kerja_tahun||0,'Masa Kerja Bulan':r.masa_kerja_bulan||0}));
-    name='ASN';
-  } else if(type==='pppk'){
-    data=DB.pppk.map(r=>({'NIPPPK PW':r.nipppk,'Nama Lengkap':r.nama,Pendidikan:r.pendidikan,Jabatan:r.jabatan,'Jenis Kelamin':r.jk,'Unit Kerja':r.unit,'Sub Unit':r.subunit,'Akhir Kontrak':r.akhir_kontrak}));
-    name='PPPK_PW';
-  } else if(type==='pjlp'){
-    data=DB.pjlp.map(r=>({'No. Pesanan':r.no_pesanan,'Nama Lengkap':r.nama,Pendidikan:r.pendidikan,'Jenis Pekerjaan':r.jenis_pekerjaan,'Jabatan':r.jabatan||'','Jenis Kelamin':r.jk||'','Unit Kerja':r.unit,'Sub Unit':r.subunit,'Akhir Kontrak':r.akhir_kontrak}));
-    name='PJLP';
+// Simpan tabel gaji ke DB
+async function saveTabelGaji(){
+  if(!TABEL_GAJI_PNS){ showToast('Tidak ada data untuk disimpan','error'); return; }
+  // Ambil semua nilai dari input
+  GOL_URUT.forEach(gol => {
+    if(!TABEL_GAJI_PNS[gol]) TABEL_GAJI_PNS[gol] = {};
+    getMKList(gol).forEach(mk => {
+      const el = document.getElementById(`gaji_${gol.replace('/','_')}_${mk}`);
+      if(el) TABEL_GAJI_PNS[gol][mk] = parseInt(el.value.replace(/[^0-9]/g,''))||0;
+    });
+  });
+  const val = JSON.stringify(TABEL_GAJI_PNS);
+  try {
+    const { data: ex } = await supa.from('settings').select('id').eq('setting_key','tabel_gaji_pns').maybeSingle();
+    if(ex){
+      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
+    } else {
+      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
+    }
+    showToast('✅ Tabel gaji berhasil disimpan','success');
+    await logAudit(AUDIT_ACTION.SETTING, 'settings', null,
+      'Update tabel gaji pokok PNS', null, null);
+  } catch(e){ showToast('Gagal: '+e.message,'error'); }
+}
+
+// Render form tabel gaji di Pengaturan
+async function renderTabelGajiForm(){
+  const container = document.getElementById('tabel-gaji-container');
+  if(!container) return;
+
+  // Load dari DB dulu jika belum
+  if(!TABEL_GAJI_PNS) await loadTabelGaji();
+  if(!TABEL_GAJI_PNS){
+    // Inisialisasi kosong
+    TABEL_GAJI_PNS = {};
+    GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
   }
-  if(!data) return;
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb,ws,name);
-  XLSX.writeFile(wb,`SIMPEG_${name}_${today()}.xlsx`);
-  showToast(`Export ${name} berhasil`,'success');
+
+  // Header gabungan semua kolom masa kerja (union dari semua pola MKG)
+  const ALL_MK = [...new Set([
+    ..._S_MK_IA, ..._S_MK_I_BCD,
+    ..._S_MK_IIA, ..._S_MK_II_BCD,
+    ..._S_MK_STD
+  ])].sort((a,b)=>a-b);
+  const thMK = ALL_MK.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
+
+  const rows = GOL_URUT.map(gol => {
+    const mkForGol = getMKList(gol);
+    const cells = ALL_MK.map(mk => {
+      if(!mkForGol.includes(mk)){
+        // Kolom tidak berlaku untuk golongan ini — tampil abu-abu
+        return `<td style="padding:2px;background:var(--bg2);text-align:center;color:var(--tx3);font-size:10px">-</td>`;
+      }
+      const id = `gaji_${gol.replace('/','_')}_${mk}`;
+      const val = TABEL_GAJI_PNS[gol]?.[mk] || 0;
+      return `<td style="padding:2px"><input type="text" id="${id}" value="${val?Number(val).toLocaleString('id-ID'):''}"
+        style="width:88px;font-size:11px;text-align:right;padding:3px 4px"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+        onfocus="this.select()"></td>`;
+    }).join('');
+    return `<tr><td style="padding:4px 8px;font-weight:700;font-size:12px;white-space:nowrap;position:sticky;left:0;background:var(--bg1)">${gol}</td>${cells}</tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--bg2)">
+            <th style="padding:6px 8px;text-align:left;position:sticky;left:0;background:var(--bg2);min-width:60px">Gol.</th>
+            ${thMK}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="saveTabelGaji()">💾 Simpan Tabel Gaji</button>
+      <button class="btn" onclick="resetTabelGaji()">↺ Reset ke Default PP 5/2024</button>
+      <span style="font-size:11px;color:var(--tx3)">PP No. 5 Tahun 2024</span>
+    </div>`;
+}
+
+// Reset ke nilai default PP 5/2024 dari data hardcode GAJI_PNS
+function resetTabelGaji(){
+  if(!confirm('Reset tabel gaji ke data default PP 5/2024? Perubahan yang belum disimpan akan hilang.')) return;
+  if(typeof GAJI_PNS === 'undefined'){
+    showToast('Data default tidak ditemukan','error'); return;
+  }
+  TABEL_GAJI_PNS = {};
+  GOL_URUT.forEach(g => {
+    TABEL_GAJI_PNS[g] = {};
+    getMKList(g).forEach(mk => { TABEL_GAJI_PNS[g][mk] = GAJI_PNS[g]?.[mk] || 0; });
+  });
+  renderTabelGajiForm();
+  showToast('✅ Tabel direset ke data PP 5/2024 — klik Simpan untuk menyimpan','info');
+}
+
+async function loadNoUrutCuti(){
+  const el = document.getElementById('no-urut-cuti-input'); if(!el) return;
+  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','no_urut_cuti').maybeSingle();
+  el.value = data?.setting_val || '1';
+}
+
+async function saveNoUrutCuti(){
+  const val = parseInt(document.getElementById('no-urut-cuti-input')?.value)||1;
+  if(val < 1){ showToast('Nomor urut minimal 1','error'); return; }
+  const { data: existing } = await supa.from('settings').select('id').eq('setting_key','no_urut_cuti').maybeSingle();
+  let error;
+  if(existing){
+    ({ error } = await supa.from('settings').update({ setting_val: String(val) }).eq('setting_key','no_urut_cuti'));
+  } else {
+    ({ error } = await supa.from('settings').insert({ setting_key:'no_urut_cuti', setting_val: String(val) }));
+  }
+  if(!error){
+    NO_URUT_CUTI = val;
+    showToast('✅ Nomor urut surat cuti disimpan','success');
+  } else {
+    showToast('Gagal: '+error.message,'error');
+  }
+}
+
+// ── Template Pesan WA ──────────────────────────────────────
+const WA_TMPL_LABELS = {
+  wa_tmpl_pengajuan:     '📋 Pengajuan Baru → Atasan Langsung',
+  wa_tmpl_step1:         '✅ Disetujui Atasan Langsung → Pejabat yang Berwenang Memberikan Cuti',
+  wa_tmpl_step1_pegawai: '📢 Disetujui Atasan Langsung → Pegawai',
+  wa_tmpl_step2:         '📢 Disetujui Pejabat yang Berwenang Memberikan Cuti → Pegawai',
+  wa_tmpl_approved:      '🎉 Disetujui Final → Semua Pihak',
+  wa_tmpl_rejected:      '❌ Ditolak → Semua Pihak',
+};
+
+async function renderWATemplatesForm(){
+  const el = document.getElementById('wa-templates-form'); if(!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px 0">Memuat template...</div>';
+  const keys = Object.keys(WA_TMPL_LABELS);
+  const { data } = await supa.from('settings').select('setting_key,setting_val').in('setting_key', keys);
+  const vals = {};
+  if(data) data.forEach(r=>{ vals[r.setting_key]=r.setting_val; });
+  el.innerHTML = keys.map(k=>`
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:5px">${WA_TMPL_LABELS[k]}</label>
+      <textarea id="tmpl-${k}" rows="7" style="width:100%;resize:vertical;font-size:12px;font-family:monospace;line-height:1.6">${vals[k]||''}</textarea>
+    </div>`).join('');
+}
+
+async function saveWATemplates(){
+  const keys = Object.keys(WA_TMPL_LABELS);
+  const upserts = keys.map(k=>({
+    setting_key: k,
+    setting_val: document.getElementById('tmpl-'+k)?.value||''
+  }));
+  const { error } = await supa.from('settings').upsert(upserts, { onConflict:'setting_key' });
+  if(!error){
+    // Update cache lokal
+    if(typeof WA_TEMPLATES !== 'undefined')
+      upserts.forEach(u=>{ WA_TEMPLATES[u.setting_key]=u.setting_val; });
+    showToast('✅ Semua template berhasil disimpan','success');
+  } else {
+    showToast('Gagal: '+error.message,'error');
+  }
 }

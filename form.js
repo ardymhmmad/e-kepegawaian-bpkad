@@ -1,788 +1,1411 @@
-// ═══════════════════════════════════════════════════
-// RENDER SETTINGS PAGE
-// ═══════════════════════════════════════════════════
-function renderSettings(){
-  if(_logoData) updateLogoSettingsPreview(_logoData);
-  const sui = document.getElementById('settings-user-info');
-  if(sui && session) sui.textContent = `${session.label} (${session.email})`;
-  const umSection = document.getElementById('user-mgmt-section');
-  if(umSection) umSection.style.display = session?.role === 'admin' ? 'block' : 'none';
-  loadFonnteToken();
-  loadWaAdminTTE();
-  loadEmailAdminTTE();
-  loadEmailJSConfig();
-  loadNoUrutCuti();
-  renderWATemplatesForm();
-  setTimeout(renderLiburNasional, 300);
-  setTimeout(renderTabelGajiForm, 100);
-  renderUserTable();
+// ═══════════════════════════════════════════════════════════════
+// CUTI MODULE V2 — Pengajuan Cuti + WA Fonnte + Mandiri
+// ═══════════════════════════════════════════════════════════════
+
+const JENIS_CUTI = [
+  'Cuti Tahunan',
+  'Cuti Sakit',
+  'Cuti Melahirkan',
+  'Cuti Besar',
+  'Cuti Alasan Penting',
+  'Cuti Di Luar Tanggungan Negara',
+];
+
+// ── Konfigurasi jenis cuti ─────────────────────────────────
+// kurangiTahunan : apakah mengurangi sisa cuti tahunan
+// bolehLebih     : apakah boleh melebihi jatah (tidak diblokir)
+// hariKalender   : hitung hari kalender bukan hari kerja
+const JENIS_CUTI_CONFIG = {
+  'Cuti Tahunan'                      : { kurangiTahunan:true,  bolehLebih:false, hariKalender:false },
+  'Cuti Sakit'                        : { kurangiTahunan:false, bolehLebih:true,  hariKalender:false },
+  'Cuti Melahirkan'                   : { kurangiTahunan:false, bolehLebih:true,  hariKalender:true  },
+  'Cuti Besar'                        : { kurangiTahunan:true,  bolehLebih:true,  hariKalender:false },
+  'Cuti Alasan Penting'               : { kurangiTahunan:true,  bolehLebih:true,  hariKalender:false },
+  'Cuti Di Luar Tanggungan Negara'    : { kurangiTahunan:false, bolehLebih:true,  hariKalender:false },
+};
+function getCutiConfig(jenis){ return JENIS_CUTI_CONFIG[jenis] || JENIS_CUTI_CONFIG['Cuti Tahunan']; }
+
+// Hitung hari kalender (inklusif)
+function hitungHariKalender(s, e){
+  if(!s||!e) return 0;
+  const parse = str => { const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d,0,0,0); };
+  const start=parse(s), end=parse(e);
+  if(end<start) return 0;
+  return Math.round((end-start)/(1000*60*60*24))+1;
 }
 
-// ── Silent loader — dipanggil saat init app, tidak butuh DOM Pengaturan ──
-async function loadFonnteTokenSilent(){
+
+
+// ── Hari libur nasional — hybrid (API + manual override DB) ───
+// Data fallback bawaan (dipakai jika DB kosong & API gagal)
+const HARI_LIBUR_FALLBACK = {
+  '2025':['2025-01-01','2025-01-27','2025-01-28','2025-01-29','2025-03-28','2025-03-29',
+          '2025-03-31','2025-04-01','2025-04-18','2025-05-01','2025-05-12','2025-05-13',
+          '2025-05-29','2025-06-01','2025-06-06','2025-07-07','2025-08-17','2025-09-05',
+          '2025-10-02','2025-12-25','2025-12-26'],
+  '2026':['2026-01-01','2026-02-17','2026-03-20','2026-04-02','2026-04-03','2026-05-01',
+          '2026-05-14','2026-05-25','2026-06-01','2026-06-22','2026-08-17','2026-10-23',
+          '2026-12-25']
+};
+
+// Cache libur dari DB / API — diisi saat init
+let HARI_LIBUR = { ...HARI_LIBUR_FALLBACK };
+
+// Ambil libur dari API publik (bypasscors via api.harilibur.net)
+async function fetchLiburFromAPI(tahun){
   try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
-    if(data?.setting_val) FONNTE_TOKEN = data.setting_val;
-  } catch(e){ console.warn('loadFonnteTokenSilent:', e.message); }
+    const res = await fetch(`https://api.harilibur.net/api?month=all&year=${tahun}`);
+    if(!res.ok) return null;
+    const json = await res.json();
+    // Format: [{holiday_date:"2026-01-01", holiday_name:"...", is_national_holiday:true}]
+    const tanggal = json
+      .filter(h => h.is_national_holiday)
+      .map(h => h.holiday_date);
+    return tanggal.length ? tanggal : null;
+  } catch(e){
+    console.warn('API libur gagal:', e);
+    return null;
+  }
 }
 
-async function loadEmailAdminTTESilent(){
+// Load libur dari DB (settings key: libur_TAHUN), fallback ke API, fallback ke hardcode
+async function loadLiburNasional(tahun){
+  const yr = String(tahun);
+  // 1. Cek DB dulu
   try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
-    if(data?.setting_val) EMAIL_ADMIN_TTE = data.setting_val;
-  } catch(e){ console.warn('loadEmailAdminTTESilent:', e.message); }
-}
-
-async function loadWaAdminTTESilent(){
-  try {
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
-    if(data?.setting_val) WA_ADMIN_TTE = data.setting_val;
-  } catch(e){ console.warn('loadWaAdminTTESilent:', e.message); }
-}
-
-async function loadEmailJSSilent(){
-  try {
-    const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
-    const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
-    for(let i=0;i<keys.length;i++){
-      const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
-      if(data?.setting_val) window[vars[i]] = data.setting_val;
+    const { data } = await supa.from('settings')
+      .select('setting_val').eq('setting_key', `libur_${yr}`).maybeSingle();
+    if(data?.setting_val){
+      HARI_LIBUR[yr] = JSON.parse(data.setting_val);
+      console.log(`✅ Libur ${yr} dari DB (${HARI_LIBUR[yr].length} hari)`);
+      return;
     }
-    if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  } catch(e){ console.warn('loadEmailJSSilent:', e.message); }
-}
+  } catch(e){ console.warn('DB libur error:', e); }
 
-// ── Fonnte Token ───────────────────────────────────────────
-async function loadFonnteToken(){
-  const el = document.getElementById('fonnte-token-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','fonnte_token').maybeSingle();
-  if(data?.setting_val){
-    el.value = data.setting_val;
-    FONNTE_TOKEN = data.setting_val; // update variabel global langsung
+  // 2. Coba API
+  const fromAPI = await fetchLiburFromAPI(tahun);
+  if(fromAPI){
+    HARI_LIBUR[yr] = fromAPI;
+    // Simpan ke DB supaya tersedia offline
+    try {
+      const { data: ex } = await supa.from('settings').select('id').eq('setting_key',`libur_${yr}`).maybeSingle();
+      if(ex){
+        await supa.from('settings').update({ setting_val: JSON.stringify(fromAPI) }).eq('setting_key',`libur_${yr}`);
+      } else {
+        await supa.from('settings').insert({ setting_key:`libur_${yr}`, setting_val: JSON.stringify(fromAPI) });
+      }
+    } catch(e){ console.warn('Gagal simpan libur ke DB:', e); }
+    console.log(`✅ Libur ${yr} dari API (${fromAPI.length} hari)`);
+    return;
+  }
+
+  // 3. Fallback hardcode
+  if(HARI_LIBUR_FALLBACK[yr]){
+    HARI_LIBUR[yr] = HARI_LIBUR_FALLBACK[yr];
+    console.log(`⚠️ Libur ${yr} dari fallback hardcode`);
   }
 }
 
-async function saveFonnteToken(){
-  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
-  if(!token){ showToast('Token tidak boleh kosong','error'); return; }
+function getLiburSet(yr){ return new Set(HARI_LIBUR[String(yr)]||[]); }
 
-  // Coba UPDATE dulu, jika tidak ada row baru INSERT
-  const { data: existing } = await supa.from('settings')
-    .select('id').eq('setting_key','fonnte_token').maybeSingle();
-
-  let error;
-  if(existing){
-    ({ error } = await supa.from('settings')
-      .update({ setting_val: token })
-      .eq('setting_key','fonnte_token'));
+// Tambah / hapus libur manual dan simpan ke DB
+async function simpanLiburManual(tahun, listTanggal){
+  const yr = String(tahun);
+  HARI_LIBUR[yr] = [...new Set(listTanggal)].sort();
+  const val = JSON.stringify(HARI_LIBUR[yr]);
+  const { data: ex } = await supa.from('settings').select('id').eq('setting_key',`libur_${yr}`).maybeSingle();
+  if(ex){
+    await supa.from('settings').update({ setting_val: val }).eq('setting_key',`libur_${yr}`);
   } else {
-    ({ error } = await supa.from('settings')
-      .insert({ setting_key:'fonnte_token', setting_val: token }));
+    await supa.from('settings').insert({ setting_key:`libur_${yr}`, setting_val: val });
   }
-
-  if(!error){
-    FONNTE_TOKEN = token;
-    showToast('✅ Token Fonnte berhasil disimpan','success');
-  } else {
-    showToast('Gagal simpan: '+error.message,'error');
-    console.error('saveFonnteToken error:', error);
-  }
+  showToast(`✅ Libur nasional ${yr} disimpan (${HARI_LIBUR[yr].length} hari)`,'success');
 }
 
-async function testFonnteToken(){
-  const token = (document.getElementById('fonnte-token-input')?.value||'').trim();
-  if(!token){ showToast('Isi token terlebih dahulu','error'); return; }
-  const noTest = prompt('Masukkan nomor WA untuk test (cth: 08123456789):','');
-  if(!noTest) return;
-  let nomor = noTest.replace(/\D/g,'');
+function parseDateLocal(str){
+  if(!str) return null;
+  const [y,m,d]=str.split('-').map(Number);
+  return new Date(y,m-1,d);
+}
+function fmtDateLocal(dt){
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+
+function hitungHariKerja(s,e){
+  if(!s||!e) return 0;
+  // Parse lokal — hindari UTC shift
+  const parseLoc = str => {
+    const [y,m,d] = str.split('-').map(Number);
+    return new Date(y, m-1, d, 0, 0, 0);
+  };
+  const toDS = dt =>
+    dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+
+  const start = parseLoc(s), end = parseLoc(e);
+  if(end < start) return 0;
+
+  // Gabung libur semua tahun yang dicakup rentang
+  const liburSet = new Set();
+  for(let yr = start.getFullYear(); yr <= end.getFullYear(); yr++){
+    getLiburSet(yr).forEach(d => liburSet.add(d));
+  }
+
+  let n = 0;
+  const cur = new Date(start);
+  while(cur <= end){
+    const dow = cur.getDay(); // 0=Minggu, 6=Sabtu
+    const ds  = toDS(cur);
+    // Hanya Senin(1)–Jumat(5) dan bukan libur nasional
+    if(dow >= 1 && dow <= 5 && !liburSet.has(ds)) n++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return n;
+}
+
+// ── Storage ───────────────────────────────────────────────────
+let DEF_ALOKASI=12;
+function saveCuti(){} function loadCuti(){ DB.cuti=[]; }
+let CARRY_OVER_ENABLED=true, CARRY_OVER_MAX=999;
+function saveAlokasi(){} function loadAlokasi(){ DB.alokasi={}; }
+
+function getAlokasiTahun(asnId,tahun){ return DB.alokasi?.[asnId]?.[tahun]?.alokasi??DEF_ALOKASI; }
+function getTerpakaiTahun(asnId,tahun){ return DB.cuti.filter(c=>c.asn_id===asnId&&c.status==='approved'&&c.tahun===tahun&&getCutiConfig(c.jenis_cuti||'Cuti Tahunan').kurangiTahunan).reduce((s,c)=>s+(c.hari_kerja||0),0); }
+function getSisaMurni(asnId,tahun){ return Math.max(0,getAlokasiTahun(asnId,tahun)-getTerpakaiTahun(asnId,tahun)); }
+function getCarryOver(asnId,tahun){
+  if(!CARRY_OVER_ENABLED) return 0;
+  const ovr=DB.alokasi?.[asnId]?.[tahun]?.carryover_override;
+  if(ovr!==undefined&&ovr!==null) return Math.max(0,ovr);
+  return Math.min(getSisaMurni(asnId,tahun-1),CARRY_OVER_MAX);
+}
+function getTotalAlokasi(asnId,tahun){ return getAlokasiTahun(asnId,tahun)+getCarryOver(asnId,tahun); }
+function getSisaTahun(asnId,tahun){ return Math.max(0,getTotalAlokasi(asnId,tahun)-getTerpakaiTahun(asnId,tahun)); }
+// Nomor urut surat cuti — diload dari settings saat init
+let NO_URUT_CUTI = 1;
+
+function generateNoSurat(tahun){
+  const yr = tahun || new Date().getFullYear();
+  // Hitung jumlah surat approved tahun ini untuk dapat urutan berikutnya
+  const sudahAda = DB.cuti.filter(c => c.status === 'approved' && c.tahun === yr && c.no_surat).length;
+  const urut = Math.max(NO_URUT_CUTI + sudahAda - 1, sudahAda) || 1;
+  return `${String(urut).padStart(3,'0')}/CUTI/BPKAD/${yr}`;
+}
+
+function updateCutiBadge(){
+  // Hanya cuti yang belum final admin (step1 = menunggu Kasubbag, step2 = menunggu Kabid)
+  const n=DB.cuti.filter(c=>c.status==='step1'||c.status==='step2').length;
+  const el=document.getElementById('cuti-badge');
+  if(el) el.textContent=n;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FONNTE — Kirim WA dengan template dari database
+// ═══════════════════════════════════════════════════════════════
+let WA_TEMPLATES = {};
+
+async function loadWATemplates(){
+  const keys = ['wa_tmpl_pengajuan','wa_tmpl_step1','wa_tmpl_step1_pegawai',
+                 'wa_tmpl_step2','wa_tmpl_approved','wa_tmpl_rejected'];
+  const { data } = await supa.from('settings')
+    .select('setting_key,setting_val')
+    .in('setting_key', keys);
+  if(data) data.forEach(r=>{ WA_TEMPLATES[r.setting_key]=r.setting_val; });
+}
+
+function renderTemplate(tmpl, data){
+  if(!tmpl) return '';
+  return tmpl
+    .replace(/{nama}/g,         data.nama        || '—')
+    .replace(/{nip}/g,          data.nip         || '—')
+    .replace(/{jenis_cuti}/g,   data.jenis_cuti  || 'Cuti Tahunan')
+    .replace(/{tgl_mulai}/g,    fmt(data.tgl_mulai)  || '—')
+    .replace(/{tgl_selesai}/g,  fmt(data.tgl_selesai) || '—')
+    .replace(/{hari_kerja}/g,   data.hari_kerja  || '—')
+    .replace(/{no_surat}/g,     data.no_surat    || '—')
+    .replace(/{alasan}/g,       data.alasan      || '—')
+    .replace(/{disetujui_oleh}/g, data.disetujui_oleh || '—')
+    .replace(/{sisa_cuti}/g,    data.sisa_cuti   || '—');
+}
+
+function getCutiData(c, extra={}){
+  const asnId = c.asn_id;
+  const tahun = c.tahun || new Date().getFullYear();
+  const sisa  = getSisaTahun(asnId, tahun);
+  return { ...c, sisa_cuti: sisa, ...extra };
+}
+
+async function kirimWA(target, pesan){
+  if(!FONNTE_TOKEN){ console.warn('FONNTE_TOKEN belum diisi'); return false; }
+  if(!target) return false;
+  let nomor = target.replace(/\D/g,'');
   if(nomor.startsWith('0')) nomor='62'+nomor.slice(1);
   try{
     const res = await fetch('https://api.fonnte.com/send',{
       method:'POST',
-      headers:{ 'Authorization': token },
-      body: new URLSearchParams({ target:nomor, message:'✅ Test notifikasi dari E-Kepegawaian BPKAD berhasil!', countryCode:'62' })
+      headers:{ 'Authorization': FONNTE_TOKEN },
+      body: new URLSearchParams({ target: nomor, message: pesan, countryCode:'62' })
     });
     const data = await res.json();
-    if(data.status===true) showToast('✅ WA terkirim! Fonnte berhasil terhubung.','success');
-    else showToast('Gagal: '+(data.reason||JSON.stringify(data)),'error');
-  }catch(e){ showToast('Error: '+e.message,'error'); }
+    return data.status === true;
+  } catch(e){ console.error('WA error:',e); return false; }
 }
 
-// ── WA Admin TTE ────────────────────────────────────────────
-async function loadWaAdminTTE(){
-  const el = document.getElementById('wa-admin-tte-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','wa_admin_tte').maybeSingle();
-  if(data?.setting_val){ el.value = data.setting_val; WA_ADMIN_TTE = data.setting_val; }
-}
-
-async function saveWaAdminTTE(){
-  const val = (document.getElementById('wa-admin-tte-input')?.value||'').trim();
-  if(!val){ showToast('Nomor WA tidak boleh kosong','error'); return; }
-  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','wa_admin_tte').maybeSingle();
-  let error;
-  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','wa_admin_tte')); }
-  else   { ({ error } = await supa.from('settings').insert({ setting_key:'wa_admin_tte', setting_val: val })); }
-  if(!error){
-    WA_ADMIN_TTE = val;
-    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update WA Admin TTE',null,{wa_admin_tte:val});
-    showToast('✅ Nomor WA Admin TTE berhasil disimpan','success');
-  } else { showToast('Gagal simpan: '+error.message,'error'); }
-}
-
-// ── Email Admin TTE ─────────────────────────────────────────
-async function loadEmailAdminTTE(){
-  const el = document.getElementById('email-admin-tte-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','email_admin_tte').maybeSingle();
-  if(data?.setting_val){ el.value = data.setting_val; EMAIL_ADMIN_TTE = data.setting_val; }
-}
-
-async function saveEmailAdminTTE(){
-  const val = (document.getElementById('email-admin-tte-input')?.value||'').trim();
-  if(!val){ showToast('Email tidak boleh kosong','error'); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Format email tidak valid','error'); return; }
-  const { data: ex } = await supa.from('settings').select('id').eq('setting_key','email_admin_tte').maybeSingle();
-  let error;
-  if(ex){ ({ error } = await supa.from('settings').update({ setting_val: val }).eq('setting_key','email_admin_tte')); }
-  else   { ({ error } = await supa.from('settings').insert({ setting_key:'email_admin_tte', setting_val: val })); }
-  if(!error){
-    EMAIL_ADMIN_TTE = val;
-    await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Email Admin TTE',null,{email_admin_tte:val});
-    showToast('✅ Email Admin TTE berhasil disimpan','success');
-  } else { showToast('Gagal simpan: '+error.message,'error'); }
-}
-
-// ── EmailJS Config ───────────────────────────────────────────
-async function loadEmailJSConfig(){
-  const keys = ['emailjs_public_key','emailjs_service_id','emailjs_template_id'];
-  const ids  = ['emailjs-public-key-input','emailjs-service-id-input','emailjs-template-id-input'];
-  const vars = ['EMAILJS_PUBLIC_KEY','EMAILJS_SERVICE_ID','EMAILJS_TEMPLATE_ID'];
-  for(let i=0;i<keys.length;i++){
-    const { data } = await supa.from('settings').select('setting_val').eq('setting_key',keys[i]).maybeSingle();
-    if(data?.setting_val){
-      const el = document.getElementById(ids[i]);
-      if(el) el.value = data.setting_val;
-      window[vars[i]] = data.setting_val;
-    }
+// ═══════════════════════════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderCutiPage(){
+  const unitSel=document.getElementById('cuti-f-unit');
+  if(unitSel&&unitSel.options.length<=1)
+    Object.keys(UNITS).forEach(u=>unitSel.add(new Option(u,u)));
+  const yearSel=document.getElementById('cuti-f-year');
+  if(yearSel&&yearSel.options.length<=1){
+    const yrs=[...new Set(DB.cuti.map(c=>c.tahun))].sort((a,b)=>b-a);
+    if(!yrs.includes(new Date().getFullYear())) yrs.unshift(new Date().getFullYear());
+    yrs.forEach(y=>yearSel.add(new Option(y,y)));
   }
-  // Init EmailJS jika public key sudah ada
-  if(EMAILJS_PUBLIC_KEY) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-}
-
-async function saveEmailJSConfig(){
-  const pairs = [
-    ['emailjs_public_key',   'emailjs-public-key-input',  'EMAILJS_PUBLIC_KEY'],
-    ['emailjs_service_id',   'emailjs-service-id-input',  'EMAILJS_SERVICE_ID'],
-    ['emailjs_template_id',  'emailjs-template-id-input', 'EMAILJS_TEMPLATE_ID'],
-  ];
-  for(const [key, elId, varName] of pairs){
-    const val = (document.getElementById(elId)?.value||'').trim();
-    if(!val){ showToast('Semua field EmailJS wajib diisi','error'); return; }
-    const { data: ex } = await supa.from('settings').select('id').eq('setting_key',key).maybeSingle();
-    let error;
-    if(ex){ ({ error } = await supa.from('settings').update({ setting_val:val }).eq('setting_key',key)); }
-    else   { ({ error } = await supa.from('settings').insert({ setting_key:key, setting_val:val })); }
-    if(error){ showToast('Gagal simpan '+key+': '+error.message,'error'); return; }
-    window[varName] = val;
-  }
-  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-  await logAudit(AUDIT_ACTION.SETTING,'settings',null,'Update Konfigurasi EmailJS',null,{});
-  showToast('✅ Konfigurasi EmailJS berhasil disimpan','success');
-}
-
-async function testEmailJS(){
-  if(!EMAILJS_PUBLIC_KEY||!EMAILJS_SERVICE_ID||!EMAILJS_TEMPLATE_ID){
-    showToast('Isi dan simpan konfigurasi EmailJS dulu','error'); return;
-  }
-  if(!EMAIL_ADMIN_TTE){ showToast('Isi Email Admin TTE dulu','error'); return; }
-  try {
-    showToast('⏳ Mengirim email test...','info');
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email   : EMAIL_ADMIN_TTE,
-      to_name    : 'Admin TTE',
-      subject    : 'Test Email — E-Kepegawaian BPKAD',
-      message    : 'Email test dari sistem E-Kepegawaian BPKAD berhasil terkirim.',
-      from_name  : 'E-Kepegawaian BPKAD',
-      pdf_link   : '-',
-    });
-    showToast('✅ Email test berhasil dikirim ke '+EMAIL_ADMIN_TTE,'success');
-  } catch(e){ showToast('❌ Gagal: '+(e?.text||e?.message||JSON.stringify(e)),'error'); }
-}
-
-
-async function renderUserTable(){
-  const tb = document.getElementById('user-table-body');
-  if(!tb) return;
-  tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:14px">Memuat...</td></tr>`;
-
-  // Ambil profil semua user (admin bisa baca semua via RLS policy admin)
-  const { data, error } = await supa.from('profiles')
-    .select('id, label, role, created_at')
-    .order('created_at');
-
-  if(error){ tb.innerHTML = `<tr><td colspan="5" style="color:var(--red-tx);padding:12px">${error.message}</td></tr>`; return; }
-
-  USERS_CACHE = data || [];
-  const rows = USERS_CACHE.map(acc => {
-    const isMe    = session?.uid === acc.id;
-    const isAdmin = acc.role === 'admin';
-    const tgl     = acc.created_at ? acc.created_at.slice(0,10) : '—';
-    return `<tr style="border-bottom:1px solid var(--bd)">
-      <td style="padding:9px 12px"><div style="display:flex;align-items:center;gap:8px">
-        <div class="emp-av" style="width:28px;height:28px;font-size:10px;background:${isAdmin?'var(--primary-bg)':'var(--grn-bg)'};color:${isAdmin?'var(--primary-tx)':'var(--grn-tx)'}">
-          ${(acc.label||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-        <span style="font-weight:600">${acc.label||'—'}</span>
-        ${isMe?'<span class="badge b-blue" style="font-size:9px">Anda</span>':''}
-      </div></td>
-      <td style="padding:9px 12px"><span class="badge ${isAdmin?'b-blue':'b-green'}">${isAdmin?'Admin':'User'}</span></td>
-      <td style="padding:9px 12px;font-size:11px;color:var(--tx3)">${tgl}</td>
-      <td style="padding:9px 12px;white-space:nowrap">
-        <button class="btn btn-sm always-allow" onclick="openEditUser('${acc.id}')">Edit</button>
-        ${!isMe?`<button class="btn btn-sm btn-danger always-allow" onclick="hapusUser('${acc.id}','${acc.label}')">Hapus</button>`:''}
-      </td></tr>`;
-  }).join('');
-  tb.innerHTML = rows || `<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:16px">Tidak ada pengguna</td></tr>`;
-}
-
-// ── Tambah user baru via Supabase Auth ─────────────────────
-function openTambahUser(){
-  document.getElementById('modal-title').textContent = 'Undang Pengguna Baru';
-  document.getElementById('modal-body').innerHTML = `
-    <div style="font-size:12px;color:var(--tx2);background:var(--primary-bg);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
-      Pengguna baru akan didaftarkan via Supabase Auth.<br>
-      Pastikan <strong>Email Confirmations</strong> di Supabase Auth Settings sudah dikonfigurasi.
-    </div>
-    <div class="form-grid">
-      <div class="fg">
-        <label>Email *</label>
-        <input type="email" id="u-email" placeholder="contoh: budi@bpkad.go.id" autocomplete="off">
-      </div>
-      <div class="fg">
-        <label>Nama / Label *</label>
-        <input type="text" id="u-label" placeholder="contoh: Budi Santoso">
-      </div>
-      <div class="fg">
-        <label>Password *</label>
-        <div style="position:relative">
-          <input type="password" id="u-password" placeholder="Min. 8 karakter" autocomplete="new-password">
-          <button type="button" onclick="togglePwVis('u-password',this)"
-            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
-        </div>
-      </div>
-      <div class="fg">
-        <label>Konfirmasi Password *</label>
-        <div style="position:relative">
-          <input type="password" id="u-password2" placeholder="Ulangi password" autocomplete="new-password">
-          <button type="button" onclick="togglePwVis('u-password2',this)"
-            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
-        </div>
-      </div>
-      <div class="fg full">
-        <label>Role / Hak Akses *</label>
-        <div style="display:flex;gap:12px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:all .15s" id="role-admin-lbl">
-            <input type="radio" name="u-role" value="admin" style="accent-color:var(--primary)" onchange="highlightRoleCard()">
-            <div><div style="font-weight:600">Admin</div><div style="font-size:10px;color:var(--tx3)">Akses penuh — tambah, edit, hapus data</div></div>
-          </label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:all .15s" id="role-user-lbl">
-            <input type="radio" name="u-role" value="user" checked style="accent-color:var(--primary)" onchange="highlightRoleCard()">
-            <div><div style="font-weight:600">User</div><div style="font-size:10px;color:var(--tx3)">Hanya lihat — tidak bisa ubah data</div></div>
-          </label>
-        </div>
-      </div>
-    </div>
-    <div id="u-err" style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:6px;padding:8px 12px;display:none;margin-top:10px"></div>`;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="simpanTambahUser()">Buat Pengguna</button>`;
-  document.getElementById('modal').style.display = 'flex';
-  highlightRoleCard();
-}
-
-async function simpanTambahUser(){
-  const errEl   = document.getElementById('u-err');
-  const showErr = msg => { errEl.textContent=msg; errEl.style.display='block'; };
-  const email   = (document.getElementById('u-email')?.value||'').trim().toLowerCase();
-  const label   = (document.getElementById('u-label')?.value||'').trim();
-  const pw      = document.getElementById('u-password')?.value||'';
-  const pw2     = document.getElementById('u-password2')?.value||'';
-  const role    = document.querySelector('input[name="u-role"]:checked')?.value||'user';
-
-  if(!email)         { showErr('Email wajib diisi'); return; }
-  if(!label)         { showErr('Nama / label wajib diisi'); return; }
-  if(!pw)            { showErr('Password wajib diisi'); return; }
-  if(pw.length < 8)  { showErr('Password minimal 8 karakter'); return; }
-  if(pw !== pw2)     { showErr('Konfirmasi password tidak cocok'); return; }
-
-  // Simpan session admin sebelum signUp menggantikannya
-  const { data: { session: adminSession } } = await supa.auth.getSession();
-  if(!adminSession) { showErr('Session admin tidak ditemukan, coba refresh halaman.'); return; }
-  const adminRefreshToken = adminSession.refresh_token;
-
-  // Daftar user baru via signUp
-  const { data, error } = await supa.auth.signUp({
-    email,
-    password: pw,
-    options: { data: { label, role } }
-  });
-
-  if(error){
-    // Pulihkan session admin jika signUp gagal
-    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
-    showErr(error.message); return;
-  }
-  if(!data?.user){
-    await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
-    showErr('Gagal membuat user, coba lagi.'); return;
-  }
-
-  // Upsert profil user baru
-  await supa.from('profiles').upsert({ id: data.user.id, label, role }, { onConflict: 'id' });
-
-  // Pulihkan session admin
-  await supa.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminRefreshToken });
-
-  await logAudit(AUDIT_ACTION.TAMBAH, 'user', data.user.id,
-    `Tambah pengguna baru — ${label} (${email}) role: ${role}`, null, { email, label, role });
-
-  closeModal(); renderUserTable();
-  showToast(`Pengguna "${label}" berhasil dibuat`, 'success');
-}
-
-// ── Edit user ──────────────────────────────────────────────
-function openEditUser(uid){
-  const acc = USERS_CACHE.find(u => u.id === uid);
-  if(!acc) return;
-  const isMe = session?.uid === uid;
-  document.getElementById('modal-title').textContent = `Edit Pengguna — ${acc.label}`;
-  document.getElementById('modal-body').innerHTML = `
-    <div class="form-grid">
-      <div class="fg full">
-        <label>Nama / Label</label>
-        <input type="text" id="eu-label" value="${acc.label||''}" placeholder="Nama tampilan">
-      </div>
-      <div class="fg">
-        <label>Password Baru <span style="font-weight:400;color:var(--tx3)">(kosongkan jika tidak diubah)</span></label>
-        <div style="position:relative">
-          <input type="password" id="eu-password" placeholder="Min. 8 karakter" autocomplete="new-password">
-          <button type="button" onclick="togglePwVis('eu-password',this)"
-            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
-        </div>
-      </div>
-      <div class="fg">
-        <label>Konfirmasi Password Baru</label>
-        <div style="position:relative">
-          <input type="password" id="eu-password2" placeholder="Ulangi password baru" autocomplete="new-password">
-          <button type="button" onclick="togglePwVis('eu-password2',this)"
-            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0">👁</button>
-        </div>
-      </div>
-      ${!isMe ? `<div class="fg full">
-        <label>Role / Hak Akses</label>
-        <div style="display:flex;gap:12px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1" id="erole-admin-lbl">
-            <input type="radio" name="eu-role" value="admin" ${acc.role==='admin'?'checked':''} style="accent-color:var(--primary)" onchange="highlightRoleCardEdit()">
-            <div><div style="font-weight:600">Admin</div><div style="font-size:10px;color:var(--tx3)">Akses penuh</div></div>
-          </label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:10px 16px;border:1.5px solid var(--bd2);border-radius:8px;flex:1" id="erole-user-lbl">
-            <input type="radio" name="eu-role" value="user" ${acc.role==='user'?'checked':''} style="accent-color:var(--primary)" onchange="highlightRoleCardEdit()">
-            <div><div style="font-weight:600">User</div><div style="font-size:10px;color:var(--tx3)">Hanya lihat</div></div>
-          </label>
-        </div>
-      </div>` : '<div class="fg full" style="font-size:12px;color:var(--tx3);background:var(--amb-bg);padding:10px 12px;border-radius:8px">⚠ Role akun Anda tidak bisa diubah sendiri.</div>'}
-    </div>
-    <div id="eu-err" style="color:var(--red-tx);font-size:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:6px;padding:8px 12px;display:none;margin-top:10px"></div>`;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="simpanEditUser('${uid}')">Simpan Perubahan</button>`;
-  document.getElementById('modal').style.display = 'flex';
-  setTimeout(highlightRoleCardEdit, 50);
-}
-
-async function simpanEditUser(uid){
-  const errEl   = document.getElementById('eu-err');
-  const showErr = msg => { errEl.textContent=msg; errEl.style.display='block'; };
-  const label   = (document.getElementById('eu-label')?.value||'').trim();
-  const pw      = document.getElementById('eu-password')?.value||'';
-  const pw2     = document.getElementById('eu-password2')?.value||'';
-  const isMe    = session?.uid === uid;
-  const role    = isMe ? session.role : (document.querySelector('input[name="eu-role"]:checked')?.value||'user');
-
-  if(!label)        { showErr('Nama / label wajib diisi'); return; }
-  if(pw && pw.length < 8) { showErr('Password minimal 8 karakter'); return; }
-  if(pw && pw !== pw2)    { showErr('Konfirmasi password tidak cocok'); return; }
-
-  // Update profil
-  const { error: profErr } = await supa.from('profiles').update({ label, role }).eq('id', uid);
-  if(profErr){ showErr(profErr.message); return; }
-
-  // Update password — hanya bisa untuk akun sendiri via updateUser
-  if(pw){
-    if(isMe){
-      const { error: pwErr } = await supa.auth.updateUser({ password: pw });
-      if(pwErr){ showErr('Profil tersimpan, tapi password gagal diubah: ' + pwErr.message); return; }
-    } else {
-      // Password user lain hanya bisa diubah via Supabase Dashboard
-      showToast(`Profil "${label}" diperbarui. Password user lain hanya bisa diubah via Supabase Dashboard.`, 'success');
-      closeModal(); renderUserTable(); return;
-    }
-  }
-
-  // Update tampilan jika akun sendiri
-  if(isMe){
-    session.label = label;
-    document.getElementById('user-label').textContent = label;
-    document.getElementById('user-av').textContent = label.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  }
-
-  closeModal(); renderUserTable();
-  await logAudit(AUDIT_ACTION.EDIT, 'user', uid,
-    `Edit pengguna — ${label} (role: ${role})${pw?' + ganti password':''}`, null, { uid, label, role });
-  showToast(`Pengguna "${label}" diperbarui`, 'success');
-}
-
-// ── Hapus user ─────────────────────────────────────────────
-function hapusUser(uid, label){
-  if(session?.uid === uid){ showToast('Tidak dapat menghapus akun sendiri','error'); return; }
-  showConfirm('Hapus Pengguna', `Hapus pengguna <strong>${label}</strong>? Tindakan ini tidak dapat dibatalkan.`, async ()=>{
-    // Hapus dari profiles — auth.users akan cascade delete via FK
-    const { error } = await supa.from('profiles').delete().eq('id', uid);
-    if(!error){
-      await logAudit(AUDIT_ACTION.HAPUS, 'user', uid,
-        `Hapus pengguna — ${label}`, { uid, label }, null);
-      renderUserTable(); showToast(`Pengguna "${label}" dihapus dari sistem`,'success');
-    }
-    else showToast(error.message, 'error');
+  renderCutiTable();
+  ['cuti-search','cuti-f-unit','cuti-f-status','cuti-f-year'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&!el._cw){ el.addEventListener('input',renderCutiTable); el.addEventListener('change',renderCutiTable); el._cw=true; }
   });
 }
 
-// ── UI helpers ─────────────────────────────────────────────
-function highlightRoleCard(){
-  const v  = document.querySelector('input[name="u-role"]:checked')?.value;
-  const al = document.getElementById('role-admin-lbl');
-  const ul = document.getElementById('role-user-lbl');
-  if(al) al.style.borderColor = v==='admin' ? 'var(--primary)' : 'var(--bd2)';
-  if(ul) ul.style.borderColor = v==='user'  ? 'var(--primary)' : 'var(--bd2)';
-}
-function highlightRoleCardEdit(){
-  const v  = document.querySelector('input[name="eu-role"]:checked')?.value;
-  const al = document.getElementById('erole-admin-lbl');
-  const ul = document.getElementById('erole-user-lbl');
-  if(al) al.style.borderColor = v==='admin' ? 'var(--primary)' : 'var(--bd2)';
-  if(ul) ul.style.borderColor = v==='user'  ? 'var(--primary)' : 'var(--bd2)';
-}
-function togglePwVis(id, btn){
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.type = el.type === 'password' ? 'text' : 'password';
-  btn.textContent = el.type === 'password' ? '👁' : '🙈';
-}
+function renderCutiTable(){
+  const q=(document.getElementById('cuti-search')?.value||'').toLowerCase();
+  const unit=document.getElementById('cuti-f-unit')?.value||'';
+  const stat=document.getElementById('cuti-f-status')?.value||'';
+  const yr=document.getElementById('cuti-f-year')?.value||'';
+  const isAdmin=session?.role==='admin';
 
-// ── Nomor Urut Surat Cuti ──────────────────────────────────
-// ── Libur Nasional Manager ────────────────────────────────────
-async function renderLiburNasional(){
-  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
-  const list = HARI_LIBUR[String(yr)] || [];
-  const container = document.getElementById('libur-list');
-  if(!container) return;
+  let data=[...DB.cuti].filter(c=>{
+    // User biasa hanya lihat pengajuan milik sendiri (by email)
+    if(!isAdmin && c.diajukan_oleh && c.diajukan_oleh!=='admin' && c.diajukan_oleh!==session?.email) return false;
+    if(q&&!c.nama.toLowerCase().includes(q)&&!c.nip.includes(q)) return false;
+    if(unit&&c.unit!==unit) return false;
+    if(stat&&c.status!==stat) return false;
+    if(yr&&String(c.tahun)!==yr) return false;
+    return true;
+  }).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
-  container.innerHTML = list.length
-    ? list.map(d => `
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-          <span style="font-family:monospace;font-size:13px;flex:1">${d}</span>
-          <span style="font-size:11px;color:var(--tx3)">${new Date(d+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})}</span>
-          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="hapusLibur('${yr}','${d}')">✕</button>
-        </div>`).join('')
-    : '<div style="color:var(--tx3);font-size:12px;padding:8px 0">Belum ada data libur untuk tahun ini.</div>';
+  document.getElementById('cuti-count').textContent=`Pengajuan Cuti (${data.length})`;
+  updateCutiBadge();
 
-  document.getElementById('libur-count').textContent = `${list.length} hari libur`;
-}
+  const heads=['No Surat','Nama / NIP','Jenis','Tgl Mulai','Tgl Selesai','Hari Kerja','Status','Approval','Aksi'];
+  const th=document.getElementById('cuti-thead');
+  if(th) th.innerHTML='<tr>'+(isAdmin?'<th style="width:32px"><input type="checkbox" id="chk-all-cuti" onchange="toggleAllCutiCheck(this)" style="accent-color:var(--primary)"></th>':'')+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>';
 
-async function tambahLiburManual(){
-  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
-  const tgl = document.getElementById('libur-tgl-input')?.value;
-  if(!tgl){ showToast('Pilih tanggal dulu','error'); return; }
-  const list = [...(HARI_LIBUR[String(yr)]||[])];
-  if(list.includes(tgl)){ showToast('Tanggal sudah ada','error'); return; }
-  list.push(tgl);
-  await simpanLiburManual(yr, list);
-  document.getElementById('libur-tgl-input').value = '';
-  renderLiburNasional();
-}
+  const pg=pageNums['cuti']||1, pages=Math.ceil(data.length/PER_PAGE)||1, cur=Math.min(pg,pages);
+  pageNums['cuti']=cur;
+  const slice=data.slice((cur-1)*PER_PAGE,cur*PER_PAGE);
 
-async function hapusLibur(yr, tgl){
-  const list = (HARI_LIBUR[String(yr)]||[]).filter(d => d !== tgl);
-  await simpanLiburManual(yr, list);
-  renderLiburNasional();
-}
+  const tb=document.getElementById('cuti-tbody');
+  if(tb) tb.innerHTML=slice.length
+    ? slice.map(c=>`<tr>
+        ${isAdmin?`<td style="width:32px"><input type="checkbox" class="cuti-chk" value="${c.id}" style="accent-color:var(--primary)"></td>`:''}
+        <td class="td-mono" style="font-size:10px">${c.no_surat||'—'}</td>
+        <td><div style="font-weight:600;font-size:12px">${c.nama}</div><div class="emp-av-nip">${c.nip}</div></td>
+        <td style="font-size:11px">${c.jenis_cuti||'Cuti Tahunan'}</td>
+        <td style="font-size:11px">${fmt(c.tgl_mulai)}</td>
+        <td style="font-size:11px">${fmt(c.tgl_selesai)}</td>
+        <td style="text-align:center"><span class="badge b-blue">${c.hari_kerja} hari</span></td>
+        <td>${cutiStatusBadge(c.status)}</td>
+        <td>${cutiApprovalMini(c)}</td>
+        <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="openCutiDetail('${c.id}')">Detail</button>
+          ${c.status==='approved'?`<button class="btn btn-sm btn-success" onclick="cetakSuratCuti('${c.id}')">Cetak</button>`:''}
+          ${c.status==='draft'&&(isAdmin||c.diajukan_oleh===session?.email)?`<button class="btn btn-sm" onclick="openAjukanCuti('${c.id}')">Edit</button>`:''}
+          ${['draft','step1'].includes(c.status)&&isAdmin?`<button class="btn btn-sm btn-danger" onclick="batalkanCuti('${c.id}')">Batal</button>`:''}
+          ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="hapusCuti('${c.id}')" title="Hapus permanen">🗑</button>`:''}
+        </td>
+      </tr>`).join('')
+    : `<tr><td colspan="${heads.length+(isAdmin?1:0)}" style="text-align:center;color:var(--tx3);padding:24px">Belum ada pengajuan cuti</td></tr>`;
 
-async function syncLiburDariAPI(){
-  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
-  showToast('Mengambil data dari API...','info');
-  const fromAPI = await fetchLiburFromAPI(yr);
-  if(!fromAPI){ showToast('API tidak tersedia, coba lagi nanti','error'); return; }
-  // Merge dengan yang sudah ada (union)
-  const existing = HARI_LIBUR[String(yr)] || [];
-  const merged = [...new Set([...existing, ...fromAPI])].sort();
-  await simpanLiburManual(yr, merged);
-  renderLiburNasional();
-}
-
-async function resetLiburKeAPI(){
-  const yr = document.getElementById('libur-tahun-select')?.value || new Date().getFullYear();
-  if(!confirm(`Reset libur ${yr} dari API? Data manual akan ditimpa.`)) return;
-  // Hapus dari DB dulu supaya loadLiburNasional ambil ulang dari API
-  await supa.from('settings').delete().eq('setting_key', `libur_${yr}`);
-  delete HARI_LIBUR[String(yr)];
-  await loadLiburNasional(yr);
-  renderLiburNasional();
-  showToast(`✅ Libur ${yr} direset dari API`,'success');
-}
-
-
-// ── Tabel Gaji PNS ────────────────────────────────────────
-// Cache tabel gaji dari DB
-let TABEL_GAJI_PNS = null;
-
-const GOL_URUT = [
-  'I/a','I/b','I/c','I/d',
-  'II/a','II/b','II/c','II/d',
-  'III/a','III/b','III/c','III/d',
-  'IV/a','IV/b','IV/c','IV/d','IV/e'
-];
-// Pola MKG sesuai tabel PP 5/2024
-const _S_MK_IA      = [0,2,4,6,8,10,12,14,16,18,20,22,24,26];
-const _S_MK_I_BCD   = [3,5,7,9,11,13,15,17,19,21,23,25,27];
-const _S_MK_IIA     = [0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
-const _S_MK_II_BCD  = [3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33];
-const _S_MK_STD     = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32];
-
-function getMKList(gol){
-  if(gol === 'I/a')                          return _S_MK_IA;
-  if(['I/b','I/c','I/d'].includes(gol))      return _S_MK_I_BCD;
-  if(gol === 'II/a')                         return _S_MK_IIA;
-  if(['II/b','II/c','II/d'].includes(gol))   return _S_MK_II_BCD;
-  return _S_MK_STD;
-}
-
-// Load tabel gaji dari DB
-async function loadTabelGaji(){
-  try {
-    const { data } = await supa.from('settings')
-      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
-    if(data?.setting_val){
-      TABEL_GAJI_PNS = JSON.parse(data.setting_val);
-      console.log('✅ Tabel gaji loaded dari DB');
-    }
-  } catch(e){ console.warn('loadTabelGaji:', e); }
-}
-
-// Auto-seed: isi tabel gaji ke DB dari data hardcode GAJI_PNS (kgb.js)
-// Hanya berjalan jika tabel di DB masih kosong / belum pernah diisi
-async function seedTabelGajiFromHardcode(){
-  try {
-    // Cek apakah sudah ada data di DB
-    const { data: existing } = await supa.from('settings')
-      .select('setting_val').eq('setting_key','tabel_gaji_pns').maybeSingle();
-
-    if(existing?.setting_val){
-      // Sudah ada — cek apakah semua nilai 0 (belum pernah diisi)
-      const parsed = JSON.parse(existing.setting_val);
-      const hasValue = Object.values(parsed).some(mkObj =>
-        Object.values(mkObj).some(v => v > 0)
-      );
-      if(hasValue){
-        console.log('ℹ️ Tabel gaji DB sudah berisi data, seed dilewati.');
-        return;
-      }
-    }
-
-    // DB kosong atau semua 0 — seed dari GAJI_PNS (hardcode kgb.js)
-    if(typeof GAJI_PNS === 'undefined'){
-      console.warn('seedTabelGaji: GAJI_PNS tidak ditemukan');
-      return;
-    }
-
-    const seedData = {};
-    GOL_URUT.forEach(gol => {
-      seedData[gol] = {};
-      getMKList(gol).forEach(mk => {
-        seedData[gol][mk] = GAJI_PNS[gol]?.[mk] || 0;
-      });
-    });
-
-    const val = JSON.stringify(seedData);
-    if(existing){
-      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
-    } else {
-      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
-    }
-
-    // Update cache lokal juga
-    TABEL_GAJI_PNS = seedData;
-    console.log('✅ Tabel gaji berhasil di-seed otomatis ke DB dari data hardcode PP 5/2024');
-  } catch(e){
-    console.warn('seedTabelGajiFromHardcode error:', e);
+  const pgEl=document.getElementById('cuti-pg');
+  if(pgEl){
+    let h=`<span class="pg-info">${data.length} pengajuan</span>`;
+    if(cur>1) h+=`<button class="pg-btn" onclick="pageNums.cuti=${cur-1};renderCutiTable()">‹</button>`;
+    for(let i=Math.max(1,cur-2);i<=Math.min(pages,cur+2);i++) h+=`<button class="pg-btn${i===cur?' active':''}" onclick="pageNums.cuti=${i};renderCutiTable()">${i}</button>`;
+    if(cur<pages) h+=`<button class="pg-btn" onclick="pageNums.cuti=${cur+1};renderCutiTable()">›</button>`;
+    pgEl.innerHTML=h;
   }
 }
 
-// Simpan tabel gaji ke DB
-async function saveTabelGaji(){
-  if(!TABEL_GAJI_PNS){ showToast('Tidak ada data untuk disimpan','error'); return; }
-  // Ambil semua nilai dari input
-  GOL_URUT.forEach(gol => {
-    if(!TABEL_GAJI_PNS[gol]) TABEL_GAJI_PNS[gol] = {};
-    getMKList(gol).forEach(mk => {
-      const el = document.getElementById(`gaji_${gol.replace('/','_')}_${mk}`);
-      if(el) TABEL_GAJI_PNS[gol][mk] = parseInt(el.value.replace(/[^0-9]/g,''))||0;
-    });
-  });
-  const val = JSON.stringify(TABEL_GAJI_PNS);
-  try {
-    const { data: ex } = await supa.from('settings').select('id').eq('setting_key','tabel_gaji_pns').maybeSingle();
-    if(ex){
-      await supa.from('settings').update({ setting_val: val }).eq('setting_key','tabel_gaji_pns');
-    } else {
-      await supa.from('settings').insert({ setting_key:'tabel_gaji_pns', setting_val: val });
-    }
-    showToast('✅ Tabel gaji berhasil disimpan','success');
-    await logAudit(AUDIT_ACTION.SETTING, 'settings', null,
-      'Update tabel gaji pokok PNS', null, null);
-  } catch(e){ showToast('Gagal: '+e.message,'error'); }
+function cutiStatusBadge(s){
+  const m={draft:'<span class="badge b-draft">Draft</span>',step1:'<span class="badge b-step1">Menunggu Kasubbag</span>',step2:'<span class="badge b-step2">Menunggu Kabid</span>',approved:'<span class="badge b-approved">Disetujui</span>',rejected:'<span class="badge b-rejected">Ditolak</span>',cancelled:'<span class="badge b-cancelled">Dibatalkan</span>'};
+  return m[s]||`<span class="badge b-gray">${s}</span>`;
+}
+function cutiApprovalMini(c){
+  const icon=s=>s==='done'?'✓':s==='rejected'?'✗':s==='active'?'●':'○';
+  const cls=s=>s==='done'?'b-green':s==='active'?'b-blue':s==='rejected'?'b-red':'b-gray';
+  const s1=c.status==='step2'||c.status==='approved'?'done':c.status==='step1'?'active':c.status==='rejected'&&c.step===1?'rejected':'pending';
+  const s2=c.status==='approved'?'done':c.status==='step2'?'active':c.status==='rejected'&&c.step===2?'rejected':'pending';
+  const s3=c.status==='approved'?'done':c.status==='rejected'&&c.step===3?'rejected':'pending';
+  return `<div style="display:flex;gap:3px;align-items:center;font-size:10px;flex-wrap:wrap">
+    <span class="badge ${cls(s1)}" style="padding:1px 5px">${icon(s1)} Kasubbag</span>
+    <span style="color:var(--tx3)">›</span>
+    <span class="badge ${cls(s2)}" style="padding:1px 5px">${icon(s2)} Kabid</span>
+    <span style="color:var(--tx3)">›</span>
+    <span class="badge ${cls(s3)}" style="padding:1px 5px">${icon(s3)} Admin</span>
+  </div>`;
 }
 
-// Render form tabel gaji di Pengaturan
-async function renderTabelGajiForm(){
-  const container = document.getElementById('tabel-gaji-container');
-  if(!container) return;
+// ═══════════════════════════════════════════════════════════════
+// FORM PENGAJUAN
+// ═══════════════════════════════════════════════════════════════
+let _calState={ month:new Date().getMonth(), year:new Date().getFullYear(), start:null, end:null };
 
-  // Load dari DB dulu jika belum
-  if(!TABEL_GAJI_PNS) await loadTabelGaji();
-  if(!TABEL_GAJI_PNS){
-    // Inisialisasi kosong
-    TABEL_GAJI_PNS = {};
-    GOL_URUT.forEach(g => { TABEL_GAJI_PNS[g] = {}; getMKList(g).forEach(mk => TABEL_GAJI_PNS[g][mk]=0); });
+function openAjukanCuti(editId=null){
+  const isAdmin = session?.role==='admin';
+  const ex = editId ? DB.cuti.find(c=>c.id===editId) : null;
+
+  // User biasa hanya bisa ajukan untuk dirinya sendiri
+  let asnOpts='';
+  if(isAdmin){
+    asnOpts=DB.asn.map(a=>`<option value="${a.id}" data-nip="${a.nip}" data-hp="${a.no_hp||''}"${ex?.asn_id===a.id?' selected':''}>${a.nama} — ${a.nip}</option>`).join('');
+  } else {
+    // Cari ASN berdasarkan email session — user hanya lihat dirinya
+    const asnSelf = DB.asn.find(a=>a.email===session?.email);
+    if(!asnSelf){ showToast('Data ASN Anda tidak ditemukan. Hubungi admin.','error'); return; }
+    asnOpts=`<option value="${asnSelf.id}" data-nip="${asnSelf.nip}" data-hp="${asnSelf.no_hp||''}" selected>${asnSelf.nama} — ${asnSelf.nip}</option>`;
   }
 
-  // Header gabungan semua kolom masa kerja (union dari semua pola MKG)
-  const ALL_MK = [...new Set([
-    ..._S_MK_IA, ..._S_MK_I_BCD,
-    ..._S_MK_IIA, ..._S_MK_II_BCD,
-    ..._S_MK_STD
-  ])].sort((a,b)=>a-b);
-  const thMK = ALL_MK.map(mk=>`<th style="min-width:90px;text-align:center;font-size:10px;padding:4px 2px">${mk} Thn</th>`).join('');
+  document.getElementById('modal-title').textContent=editId?'Edit Pengajuan Cuti':'Ajukan Cuti Baru';
+  document.getElementById('modal-box').style.maxWidth='860px';
+  const initS=ex?.tgl_mulai||'', initE=ex?.tgl_selesai||'';
+  const jenisSel=JENIS_CUTI.map(j=>`<option value="${j}"${(ex?.jenis_cuti||'Cuti Tahunan')===j?' selected':''}>${j}</option>`).join('');
 
-  const rows = GOL_URUT.map(gol => {
-    const mkForGol = getMKList(gol);
-    const cells = ALL_MK.map(mk => {
-      if(!mkForGol.includes(mk)){
-        // Kolom tidak berlaku untuk golongan ini — tampil abu-abu
-        return `<td style="padding:2px;background:var(--bg2);text-align:center;color:var(--tx3);font-size:10px">-</td>`;
-      }
-      const id = `gaji_${gol.replace('/','_')}_${mk}`;
-      const val = TABEL_GAJI_PNS[gol]?.[mk] || 0;
-      return `<td style="padding:2px"><input type="text" id="${id}" value="${val?Number(val).toLocaleString('id-ID'):''}"
-        style="width:88px;font-size:11px;text-align:right;padding:3px 4px"
-        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-        onfocus="this.select()"></td>`;
-    }).join('');
-    return `<tr><td style="padding:4px 8px;font-weight:700;font-size:12px;white-space:nowrap;position:sticky;left:0;background:var(--bg1)">${gol}</td>${cells}</tr>`;
-  }).join('');
-
-  container.innerHTML = `
-    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
-      <table style="border-collapse:collapse;font-size:12px">
-        <thead>
-          <tr style="background:var(--bg2)">
-            <th style="padding:6px 8px;text-align:left;position:sticky;left:0;background:var(--bg2);min-width:60px">Gol.</th>
-            ${thMK}
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-      <button class="btn btn-primary" onclick="saveTabelGaji()">💾 Simpan Tabel Gaji</button>
-      <button class="btn" onclick="resetTabelGaji()">↺ Reset ke Default PP 5/2024</button>
-      <span style="font-size:11px;color:var(--tx3)">PP No. 5 Tahun 2024</span>
+  document.getElementById('modal-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:18px">
+      <div>
+        <div class="fg" style="margin-bottom:11px">
+          <label>Pegawai ASN *</label>
+          <select id="ca-asn" style="width:100%" onchange="onCaAsnChange()" ${!isAdmin?'disabled':''}>${asnOpts}</select>
+        </div>
+        <div class="form-grid" style="margin-bottom:11px">
+          <div class="fg">
+            <label>Jenis Cuti *</label>
+            <select id="ca-jenis" style="width:100%" onchange="onCaJenisChange()">${jenisSel}</select>
+          </div>
+        </div>
+        <div id="ca-alokasi-info" style="font-size:11px;background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:11px;min-height:44px"></div>
+        <div class="form-grid" style="margin-bottom:11px">
+          <div class="fg">
+            <label>Tanggal Mulai *</label>
+            <input type="date" id="ca-mulai" value="${initS}" oninput="onCaDateChange()">
+          </div>
+          <div class="fg">
+            <label>Tanggal Selesai *</label>
+            <input type="date" id="ca-selesai" value="${initE}" oninput="onCaDateChange()">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--primary-bg);border-radius:9px;margin-bottom:11px">
+          <div>
+            <div style="font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Hari Kerja</div>
+            <div id="ca-hari" style="font-size:28px;font-weight:700;color:var(--primary);line-height:1">${ex?.hari_kerja||'—'}</div>
+          </div>
+          <div id="ca-hari-note" style="flex:1;font-size:11px;color:var(--tx2)">Pilih tanggal mulai dan selesai</div>
+          <div id="ca-sisa-chip" style="font-size:11px;text-align:right"></div>
+        </div>
+        <div class="fg" style="margin-bottom:11px">
+          <label>Keperluan / Keterangan</label>
+          <textarea id="ca-keperluan" rows="3" style="width:100%;resize:none" placeholder="Uraikan keperluan cuti...">${ex?.keperluan||''}</textarea>
+        </div>
+        <div class="fg" style="margin-bottom:11px">
+          <label>Alamat Selama Cuti</label>
+          <input type="text" id="ca-alamat" value="${ex?.alamat||''}" placeholder="Alamat lengkap selama menjalani cuti">
+        </div>
+        <!-- Nomor WA untuk notifikasi -->
+        <div style="background:var(--grn-bg);border:1px solid var(--grn-bd);border-radius:9px;padding:12px;margin-bottom:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--grn-tx);margin-bottom:8px">📱 Notifikasi WhatsApp (opsional)</div>
+          <div class="form-grid">
+            <div class="fg">
+              <label>No WA Pegawai</label>
+              <input type="text" id="ca-wa-pegawai" value="${ex?.wa_pegawai||''}" placeholder="cth: 08123456789">
+            </div>
+            <div class="fg">
+              <label>No WA Kepala Subbagian</label>
+              <input type="text" id="ca-wa-atasan1" value="${ex?.wa_atasan1||''}" placeholder="cth: 08123456789">
+            </div>
+            <div class="fg full">
+              <label>No WA Kepala Bidang</label>
+              <input type="text" id="ca-wa-atasan2" value="${ex?.wa_atasan2||''}" placeholder="cth: 08123456789">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em">Pilih Tanggal di Kalender</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <button class="btn btn-sm" onclick="moveCalendar(-1)">‹</button>
+          <span id="cal-lbl" style="font-size:12px;font-weight:600;color:var(--tx1)"></span>
+          <button class="btn btn-sm" onclick="moveCalendar(1)">›</button>
+        </div>
+        <div class="cuti-cal" id="cuti-cal-grid"></div>
+        <div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--tx2)">
+          <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--primary);margin-right:3px;vertical-align:middle"></span>Dipilih</span>
+          <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--primary-bg);margin-right:3px;vertical-align:middle"></span>Rentang</span>
+          <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--red-bg);margin-right:3px;vertical-align:middle"></span>Hari Libur</span>
+          <span style="color:var(--red-tx);font-weight:700">S M</span><span>= Sabtu/Minggu</span>
+        </div>
+      </div>
     </div>`;
+
+  document.getElementById('modal-footer').innerHTML=`
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="simpanCuti(${editId?`'${editId}'`:'null'})">
+      ${editId?'Simpan Perubahan':'Ajukan Cuti'}
+    </button>`;
+
+  document.getElementById('modal').style.display='flex';
+  _calState={ month:new Date().getMonth(), year:new Date().getFullYear(),
+    start:initS?parseDateLocal(initS):null, end:initE?parseDateLocal(initE):null };
+  renderCalendar();
+  onCaAsnChange();
+  if(initS&&initE) onCaDateChange();
 }
 
-// Reset ke nilai default PP 5/2024 dari data hardcode GAJI_PNS
-function resetTabelGaji(){
-  if(!confirm('Reset tabel gaji ke data default PP 5/2024? Perubahan yang belum disimpan akan hilang.')) return;
-  if(typeof GAJI_PNS === 'undefined'){
-    showToast('Data default tidak ditemukan','error'); return;
+function onCaAsnChange(){
+  const sel=document.getElementById('ca-asn'); if(!sel?.value) return;
+  const asn=DB.asn.find(a=>a.id===sel.value); if(!asn) return;
+  // Auto-isi nomor WA pegawai jika ada
+  const waEl=document.getElementById('ca-wa-pegawai');
+  if(waEl&&!waEl.value&&asn.no_hp) waEl.value=asn.no_hp;
+  const yr=new Date().getFullYear();
+  const al=getAlokasiTahun(asn.id,yr), tp=getTerpakaiTahun(asn.id,yr), ss=getSisaTahun(asn.id,yr);
+  const pct=Math.min(100,Math.round(tp/al*100));
+  const col=ss<=3?'var(--red-tx)':ss<=7?'var(--amb-tx)':'var(--grn-tx)';
+  document.getElementById('ca-alokasi-info').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+      <span style="font-weight:600;font-size:11px">Sisa Cuti ${yr}</span>
+      <span style="font-size:13px;font-weight:700;color:${col}">${ss} <span style="font-size:10px;font-weight:400;color:var(--tx3)">/ ${al} hari</span></span>
+    </div>
+    <div class="leave-bar-track"><div class="leave-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:3px">${tp} hari terpakai · ${al} hari alokasi</div>`;
+  checkSisaWarning();
+}
+
+function onCaDateChange(){
+  const s=document.getElementById('ca-mulai')?.value, e=document.getElementById('ca-selesai')?.value;
+  const jenis=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const cfg=getCutiConfig(jenis);
+  const n = cfg.hariKalender ? hitungHariKalender(s,e) : hitungHariKerja(s,e);
+  const el=document.getElementById('ca-hari'); if(el) el.textContent=n||'—';
+  const note=document.getElementById('ca-hari-note');
+  const satuanLabel = cfg.hariKalender ? 'hari kalender' : 'hari kerja';
+  if(note){
+    if(s&&e&&n>0) note.textContent=`${n} ${satuanLabel} dari ${fmt(s)} s.d. ${fmt(e)}`;
+    else if(s&&e&&n===0) note.innerHTML=`<span style="color:var(--red-tx)">Tidak ada hari dalam rentang ini</span>`;
+    else note.textContent='Pilih tanggal mulai dan selesai';
   }
-  TABEL_GAJI_PNS = {};
-  GOL_URUT.forEach(g => {
-    TABEL_GAJI_PNS[g] = {};
-    getMKList(g).forEach(mk => { TABEL_GAJI_PNS[g][mk] = GAJI_PNS[g]?.[mk] || 0; });
+  if(s) _calState.start=parseDateLocal(s);
+  if(e) _calState.end=parseDateLocal(e);
+  renderCalendar(); checkSisaWarning();
+}
+
+function checkSisaWarning(){
+  const asnSel=document.getElementById('ca-asn'); if(!asnSel?.value) return;
+  const hari=parseInt(document.getElementById('ca-hari')?.textContent)||0; if(!hari) return;
+  const jenis=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const cfg=getCutiConfig(jenis);
+  const yr=new Date().getFullYear();
+  const chip=document.getElementById('ca-sisa-chip'); if(!chip) return;
+
+  if(!cfg.kurangiTahunan){
+    // Jenis ini tidak mengurangi cuti tahunan — tidak perlu warning sisa
+    chip.innerHTML=`<span style="color:var(--tx2);font-size:11px">ℹ Tidak mengurangi cuti tahunan</span>`;
+    return;
+  }
+  const sisa=getSisaTahun(asnSel.value,yr);
+  if(hari>sisa){
+    if(cfg.bolehLebih){
+      chip.innerHTML=`<span style="color:var(--amb-tx);font-weight:700">⚠ Melebihi sisa (${sisa} hari)<br><span style="font-size:10px;font-weight:400">Diperbolehkan untuk ${jenis}</span></span>`;
+    } else {
+      chip.innerHTML=`<span style="color:var(--red-tx);font-weight:700">⚠ Melebihi sisa<br>${sisa} hari tersisa</span>`;
+    }
+  } else {
+    chip.innerHTML=`<span style="color:var(--grn-tx);font-weight:600">✓ Cukup<br>${sisa-hari} sisa</span>`;
+  }
+}
+
+function onCaJenisChange(){
+  const jenis=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const cfg=getCutiConfig(jenis);
+  // Update label satuan hari
+  const lblHari=document.getElementById('ca-hari-label');
+  if(lblHari) lblHari.textContent = cfg.hariKalender ? 'Hari Kalender' : 'Hari Kerja';
+  // Jika Cuti Melahirkan, otomatis isi 3 bulan dari tgl mulai
+  if(jenis==='Cuti Melahirkan'){
+    const mulaiEl=document.getElementById('ca-mulai');
+    if(mulaiEl?.value){
+      const s=mulaiEl.value;
+      const [y,m,d]=s.split('-').map(Number);
+      // +3 bulan: bulan ke-(m+3), hari sama, lalu mundur 1 hari
+      // Contoh: 21 Apr → 21 Jul - 1 hari = 20 Jul? Tidak.
+      // Aturan: mulai 21 Apr → selesai 20 Jul (tepat 3 bulan kalender = 90/91 hari)
+      // Atau: mulai 21 Apr → selesai 21 Jul - 1 = 20 Jul
+      // Sesuai permintaan: mulai 21 Apr → selesai 21 Jul (tanggal sama bulan+3)
+      const end=new Date(y, m-1+3, d); // bulan JS 0-based, jadi m-1+3
+      const endStr=end.getFullYear()+'-'+String(end.getMonth()+1).padStart(2,'0')+'-'+String(end.getDate()).padStart(2,'0');
+      const selesaiEl=document.getElementById('ca-selesai');
+      if(selesaiEl){ selesaiEl.value=endStr; }
+    }
+  }
+  onCaDateChange();
+}
+
+function moveCalendar(dir){
+  _calState.month+=dir;
+  if(_calState.month>11){_calState.month=0;_calState.year++;}
+  if(_calState.month<0){_calState.month=11;_calState.year--;}
+  renderCalendar();
+}
+
+function renderCalendar(){
+  const {month,year,start,end}=_calState;
+  const libur=getLiburSet(year);
+  const MNAMES=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const DAY_H=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const lbl=document.getElementById('cal-lbl'); if(lbl) lbl.textContent=`${MNAMES[month]} ${year}`;
+  const grid=document.getElementById('cuti-cal-grid'); if(!grid) return;
+  let h=DAY_H.map(d=>`<div class="cuti-cal-head">${d}</div>`).join('');
+  const fd=new Date(year,month,1).getDay(), dim=new Date(year,month+1,0).getDate();
+  for(let i=0;i<fd;i++) h+=`<div class="cuti-cal-day other-month"></div>`;
+  for(let d=1;d<=dim;d++){
+    const cur=new Date(year,month,d), dow=cur.getDay();
+    const ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    const isWE=dow===0||dow===6, isHL=libur.has(ds);
+    const isSt=start&&ds===fmtDateLocal(start), isEn=end&&ds===fmtDateLocal(end);
+    const inRng=start&&end&&cur>start&&cur<end;
+    let cls='cuti-cal-day';
+    if(isWE) cls+=' weekend'; if(isHL) cls+=' holiday';
+    if(isSt||isEn) cls+=' selected'; else if(inRng) cls+=' in-range';
+    h+=`<div class="${cls}" onclick="pickDate('${ds}')">${d}</div>`;
+  }
+  grid.innerHTML=h;
+}
+
+function pickDate(ds){
+  const d=parseDateLocal(ds);
+  const mulai=document.getElementById('ca-mulai'), selesai=document.getElementById('ca-selesai');
+  if(!_calState.start||(_calState.start&&_calState.end)){
+    _calState.start=d; _calState.end=null;
+    if(mulai) mulai.value=ds; if(selesai) selesai.value='';
+    document.getElementById('ca-hari').textContent='—';
+    document.getElementById('ca-hari-note').textContent='Pilih tanggal selesai';
+  } else {
+    if(d<_calState.start){_calState.end=_calState.start;_calState.start=d;}
+    else _calState.end=d;
+    if(mulai)   mulai.value=_calState.start.toISOString().slice(0,10);
+    if(selesai) selesai.value=_calState.end.toISOString().slice(0,10);
+    onCaDateChange();
+  }
+  renderCalendar();
+}
+
+async function simpanCuti(editId=null){
+  const asnSel=document.getElementById('ca-asn');
+  if(!asnSel?.value){ showToast('Pilih pegawai','error'); return; }
+  const mulai=document.getElementById('ca-mulai')?.value;
+  const selesai=document.getElementById('ca-selesai')?.value;
+  if(!mulai||!selesai){ showToast('Isi tanggal mulai dan selesai','error'); return; }
+  const jenis_cuti_tmp=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const cfg_tmp=getCutiConfig(jenis_cuti_tmp);
+  const hari = cfg_tmp.hariKalender ? hitungHariKalender(mulai,selesai) : hitungHariKerja(mulai,selesai);
+  if(hari<=0){ showToast('Tidak ada hari dalam rentang ini','error'); return; }
+  const asn=DB.asn.find(a=>a.id===asnSel.value);
+  const keperluan=document.getElementById('ca-keperluan')?.value||'';
+  const alamat=document.getElementById('ca-alamat')?.value||'';
+  const jenis_cuti=document.getElementById('ca-jenis')?.value||'Cuti Tahunan';
+  const wa_pegawai=document.getElementById('ca-wa-pegawai')?.value||'';
+  const wa_atasan1=document.getElementById('ca-wa-atasan1')?.value||'';
+  const wa_atasan2=document.getElementById('ca-wa-atasan2')?.value||'';
+  const btn=document.querySelector('#modal-footer .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
+  try{
+    let error, newId=editId;
+    if(editId){
+      ({error}=await supa.from('cuti').update({tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari,keperluan,alamat,jenis_cuti,wa_pegawai,wa_atasan1,wa_atasan2}).eq('id',editId));
+    } else {
+      const payload={
+        asn_id:asn.id,nip:asn.nip,nama:asn.nama,unit:asn.unit,
+        tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari,keperluan,alamat,
+        jenis_cuti,wa_pegawai,wa_atasan1,wa_atasan2,
+        status:'draft',step:0,tahun:new Date().getFullYear(),
+        diajukan_oleh: session?.role==='admin' ? 'admin' : (session?.email||'admin')
+      };
+      const res=await supa.from('cuti').insert(payload).select().single();
+      error=res.error; if(res.data) newId=res.data.id;
+    }
+    if(error) throw new Error(error.message);
+    await logAudit(
+      editId ? AUDIT_ACTION.EDIT : AUDIT_ACTION.TAMBAH,
+      'cuti', newId,
+      editId
+        ? `Edit pengajuan cuti — ${asn?.nama||''} (${jenis_cuti})`
+        : `Ajukan cuti baru — ${asn?.nama||''} (${jenis_cuti}, ${hari} hari)`,
+      null,
+      {asn_id:asn?.id,nama:asn?.nama,jenis_cuti,tgl_mulai:mulai,tgl_selesai:selesai,hari_kerja:hari}
+    );
+    await loadCutiFromServer(); closeModal(); renderCutiTable(); updateCutiBadge();
+    showToast(editId?'Pengajuan diperbarui':'Pengajuan cuti dibuat','success');
+  }catch(e){ showToast('Error: '+e.message,'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=editId?'Simpan Perubahan':'Ajukan Cuti'; } }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETAIL & APPROVAL
+// ═══════════════════════════════════════════════════════════════
+function openCutiDetail(id){
+  const c=DB.cuti.find(x=>x.id===id); if(!c) return;
+  const asn=DB.asn.find(a=>a.id===c.asn_id);
+  const yr=c.tahun||new Date().getFullYear();
+  const al=getAlokasiTahun(c.asn_id,yr), tp=getTerpakaiTahun(c.asn_id,yr), ss=getSisaTahun(c.asn_id,yr);
+  const _cfgCuti=getCutiConfig(c.jenis_cuti||'Cuti Tahunan');
+  const pct=Math.min(100,Math.round(tp/al*100)), col=ss<=3?'var(--red-tx)':ss<=7?'var(--amb-tx)':'var(--grn-tx)';
+  const isAdmin=session?.role==='admin';
+
+  const steps=[
+    {label:'Kepala Subbagian',by:c.step1_by,at:c.step1_at,note:c.step1_note},
+    {label:'Kepala Bidang',   by:c.step2_by,at:c.step2_at,note:c.step2_note},
+    {label:'Admin (Final)',   by:c.final_by,at:c.final_at,note:c.final_note},
+  ];
+  const stepState=(i)=>{
+    if(c.status==='approved') return 'done';
+    if(c.status==='step1'&&i===0) return 'active';
+    if(c.status==='step2'&&i<=1) return i===0?'done':'active';
+    if(c.status==='rejected'){
+      if(i===0&&c.step===1) return 'rejected';
+      if(i===1&&c.step===2) return 'rejected';
+      if(i===2&&c.step===3) return 'rejected';
+      if(c.step>i+1) return 'done';
+    }
+    return 'pending';
+  };
+
+  const actionBtns=()=>{
+    if(!isAdmin) return '';
+    if(c.status==='draft') return `<button class="btn btn-primary" onclick="ajukanStep1('${c.id}')">Ajukan ke Kepala Subbagian</button>`;
+    if(c.status==='step1') return `
+      <button class="btn btn-success" onclick="approveStep('${c.id}',1)">✓ Setujui (Kasubbag)</button>
+      <button class="btn btn-danger"  onclick="rejectStep('${c.id}',1)">✗ Tolak</button>`;
+    if(c.status==='step2') return `
+      <button class="btn btn-success" onclick="approveStep('${c.id}',2)">✓ Setujui (Kabid)</button>
+      <button class="btn btn-danger"  onclick="rejectStep('${c.id}',2)">✗ Tolak</button>
+      <button class="btn btn-primary" onclick="approveStep('${c.id}',3)">✓ Final Admin</button>`;
+    if(c.status==='approved') return `<button class="btn btn-success" onclick="cetakSuratCuti('${c.id}')">🖨 Cetak Surat</button>`;
+    return '';
+  };
+
+  document.getElementById('cuti-detail-content').innerHTML=`
+    <button class="btn btn-sm" onclick="showPage('cuti',document.querySelector('.ni.active'))" style="margin-bottom:14px">← Kembali ke Daftar</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="cc">
+        <div class="cc-title"><span class="cc-title-dot"></span>Data Pegawai</div>
+        <table style="font-size:12px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:var(--tx3);width:120px">Nama</td><td style="font-weight:600">${c.nama}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">NIP</td><td>${c.nip}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Unit</td><td>${c.unit||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Pangkat</td><td>${asn?.pangkat||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Jabatan</td><td>${asn?.jabatan||'—'}</td></tr>
+        </table>
+      </div>
+      <div class="cc">
+        <div class="cc-title"><span class="cc-title-dot" style="background:var(--grn-tx)"></span>Detail Cuti</div>
+        <table style="font-size:12px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:var(--tx3);width:120px">Jenis</td><td style="font-weight:600">${c.jenis_cuti||'Cuti Tahunan'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Mulai</td><td>${fmt(c.tgl_mulai)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Selesai</td><td>${fmt(c.tgl_selesai)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Hari Kerja</td><td><span class="badge b-blue">${c.hari_kerja} hari</span></td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Status</td><td>${cutiStatusBadge(c.status)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Keperluan</td><td>${c.keperluan||'—'}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--tx3)">Alamat</td><td>${c.alamat||'—'}</td></tr>
+          ${c.no_surat?`<tr><td style="padding:4px 0;color:var(--tx3)">No. Surat</td><td style="font-weight:700;color:var(--primary)">${c.no_surat}</td></tr>`:''}
+        </table>
+      </div>
+    </div>
+    <!-- Alokasi -->
+    <div class="cc" style="margin-bottom:16px">
+      <div class="cc-title"><span class="cc-title-dot" style="background:var(--amb-tx)"></span>Alokasi Cuti ${yr}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--tx2)">Sisa Cuti</span>
+        <span style="font-size:16px;font-weight:700;color:${col}">${ss} <span style="font-size:11px;font-weight:400;color:var(--tx3)">/ ${al} hari</span></span>
+      </div>
+      <div class="leave-bar-track"><div class="leave-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${tp} hari terpakai</div>
+    </div>
+    <!-- Timeline approval -->
+    <div class="cc" style="margin-bottom:16px">
+      <div class="cc-title"><span class="cc-title-dot" style="background:#8b5cf6"></span>Alur Persetujuan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${steps.map((s,i)=>{
+          const st=stepState(i);
+          const bc=st==='done'?'var(--grn-bg)':st==='active'?'var(--primary-bg)':st==='rejected'?'var(--red-bg)':'var(--bg2)';
+          const tc=st==='done'?'var(--grn-tx)':st==='active'?'var(--primary-tx)':st==='rejected'?'var(--red-tx)':'var(--tx3)';
+          const ic=st==='done'?'✓':st==='rejected'?'✗':st==='active'?'●':'○';
+          return `<div style="flex:1;min-width:140px;background:${bc};border-radius:10px;padding:10px 12px">
+            <div style="font-size:11px;font-weight:700;color:${tc};margin-bottom:4px">${ic} ${s.label}</div>
+            ${s.by?`<div style="font-size:10px;color:var(--tx2)">${s.by}</div>`:''}
+            ${s.at?`<div style="font-size:10px;color:var(--tx3)">${new Date(s.at).toLocaleDateString('id-ID')}</div>`:''}
+            ${s.note?`<div style="font-size:10px;color:var(--red-tx);margin-top:3px;font-style:italic">"${s.note}"</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <!-- Tombol aksi -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${actionBtns()}</div>`;
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-cuti-detail').classList.add('active');
+  document.getElementById('pt-title').textContent='Detail Pengajuan Cuti';
+  document.getElementById('pt-sub').textContent=c.nama;
+  document.getElementById('pt-actions').innerHTML='';
+  currentPage='cuti-detail';
+}
+
+async function ajukanStep1(id){
+  const {error}=await supa.from('cuti').update({status:'step1',step:1}).eq('id',id);
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
+    `Ajukan ke Kepala Subbagian — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, {status:'step1',step:1});
+  if(c?.wa_atasan1){
+    const pesan=renderTemplate(WA_TEMPLATES.wa_tmpl_pengajuan, getCutiData(c));
+    await kirimWA(c.wa_atasan1, pesan);
+  }
+  openCutiDetail(id); updateCutiBadge();
+  showToast('Diajukan ke Kepala Subbagian','success');
+}
+
+async function approveStep(id,step){
+  const now=new Date().toISOString();
+  const who=session?.label||'Admin';
+  let upd={};
+  if(step===1)      upd={step1_by:who,step1_at:now,status:'step2',step:2};
+  else if(step===2) upd={step2_by:who,step2_at:now,status:'step2',step:2};
+  else if(step===3){
+    const {count}=await supa.from('cuti').select('*',{count:'exact',head:true}).eq('status','approved').eq('tahun',new Date().getFullYear());
+    const no=String((count||0)+1).padStart(3,'0');
+    upd={final_by:who,final_at:now,status:'approved',step:3,no_surat:`${no}/CUTI/BPKAD/${new Date().getFullYear()}`};
+  }
+  const {error}=await supa.from('cuti').update(upd).eq('id',id);
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.APPROVE, 'cuti', id,
+    `Approve cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''})`, null, upd);
+
+  // ── Notifikasi WA sesuai step ──────────────────────
+  if(step===1){
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, renderTemplate(WA_TEMPLATES.wa_tmpl_step1, d));
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step1_pegawai, d));
+    showToast('Disetujui Kasubbag — WA dikirim ke Kabid & pegawai','success');
+
+  } else if(step===2){
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_step2, d));
+    showToast('Disetujui Kabid — menunggu persetujuan final Admin','success');
+
+  } else if(step===3){
+    const d=getCutiData(c,{disetujui_oleh:who});
+    if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, renderTemplate(WA_TEMPLATES.wa_tmpl_approved, d));
+    const pesanFinal=renderTemplate(WA_TEMPLATES.wa_tmpl_approved, d);
+    if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanFinal);
+    if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanFinal);
+    showToast(`✅ Cuti disetujui! No. Surat: ${c?.no_surat||'-'} — WA terkirim ke semua pihak`,'success');
+  }
+
+  openCutiDetail(id); updateCutiBadge();
+}
+
+async function rejectStep(id,step){
+  const note=prompt('Alasan penolakan (wajib):','');
+  if(!note||!note.trim()){ showToast('Alasan wajib diisi','error'); return; }
+  const now=new Date().toISOString(), who=session?.label||'Admin';
+  let upd={status:'rejected',step};
+  if(step===1) upd={...upd,step1_by:who,step1_at:now,step1_note:note.trim()};
+  else         upd={...upd,step2_by:who,step2_at:now,step2_note:note.trim()};
+  const {error}=await supa.from('cuti').update(upd).eq('id',id);
+  if(error){ showToast(error.message,'error'); return; }
+  await loadCutiFromServer();
+  const c=DB.cuti.find(x=>x.id===id);
+  await logAudit(AUDIT_ACTION.REJECT, 'cuti', id,
+    `Tolak cuti step ${step} — ${c?.nama||id} (${c?.jenis_cuti||''}) — Alasan: ${note.trim()}`, null, upd);
+  const d=getCutiData(c,{disetujui_oleh:who, alasan:note.trim()});
+  const pesanTolak=renderTemplate(WA_TEMPLATES.wa_tmpl_rejected, d);
+  if(c?.wa_pegawai) await kirimWA(c.wa_pegawai, pesanTolak);
+  if(c?.wa_atasan1) await kirimWA(c.wa_atasan1, pesanTolak);
+  if(c?.wa_atasan2) await kirimWA(c.wa_atasan2, pesanTolak);
+  openCutiDetail(id); updateCutiBadge();
+  showToast('Pengajuan ditolak — WA terkirim ke semua pihak','error');
+}
+
+function batalkanCuti(id){
+  showConfirm('Batalkan Cuti','Batalkan pengajuan cuti ini?',async()=>{
+    const oldRec = DB.cuti.find(x=>x.id===id);
+    const {error}=await supa.from('cuti').update({status:'cancelled'}).eq('id',id);
+    if(!error){
+      await logAudit(AUDIT_ACTION.CANCEL, 'cuti', id,
+        `Batalkan cuti — ${oldRec?.nama||id} (${oldRec?.jenis_cuti||''})`, oldRec, null);
+      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge(); showToast('Dibatalkan','success');
+    }
+    else showToast(error.message,'error');
   });
-  renderTabelGajiForm();
-  showToast('✅ Tabel direset ke data PP 5/2024 — klik Simpan untuk menyimpan','info');
 }
 
-async function loadNoUrutCuti(){
-  const el = document.getElementById('no-urut-cuti-input'); if(!el) return;
-  const { data } = await supa.from('settings').select('setting_val').eq('setting_key','no_urut_cuti').maybeSingle();
-  el.value = data?.setting_val || '1';
+function hapusCuti(id,dariDetail=false){
+  const c=DB.cuti.find(x=>x.id===id);
+  const warn=c?.status==='approved'?'<br><span style="color:var(--red-tx);font-weight:700">⚠ Cuti ini sudah disetujui.</span>':'';
+  showConfirm('Hapus Riwayat Cuti',`Hapus permanen riwayat ini?${warn}`,async()=>{
+    const {error}=await supa.from('cuti').delete().eq('id',id);
+    if(!error){
+      await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id,
+        `Hapus riwayat cuti — ${c?.nama||id} (${c?.jenis_cuti||''})`, c, null);
+      await loadCutiFromServer();
+      if(dariDetail) showPage('cuti',document.querySelector('.ni.active'));
+      else renderCutiTable();
+      updateCutiBadge(); showToast('Riwayat dihapus','success');
+    } else showToast(error.message,'error');
+  });
 }
 
-async function saveNoUrutCuti(){
-  const val = parseInt(document.getElementById('no-urut-cuti-input')?.value)||1;
-  if(val < 1){ showToast('Nomor urut minimal 1','error'); return; }
-  const { data: existing } = await supa.from('settings').select('id').eq('setting_key','no_urut_cuti').maybeSingle();
-  let error;
-  if(existing){
-    ({ error } = await supa.from('settings').update({ setting_val: String(val) }).eq('setting_key','no_urut_cuti'));
-  } else {
-    ({ error } = await supa.from('settings').insert({ setting_key:'no_urut_cuti', setting_val: String(val) }));
+function hapusCutiTerpilih(){
+  const ids=[...document.querySelectorAll('.cuti-chk:checked')].map(el=>el.value);
+  if(!ids.length){ showToast('Pilih riwayat terlebih dahulu','error'); return; }
+  showConfirm('Hapus Riwayat Terpilih',`Hapus permanen <strong>${ids.length} riwayat</strong>?`,async()=>{
+    // Simpan data sebelum dihapus untuk audit
+    const oldRecs = ids.map(id => DB.cuti.find(x=>x.id===id||x.id===parseInt(id))).filter(Boolean);
+    const {error}=await supa.from('cuti').delete().in('id',ids);
+    if(!error){
+      // Log satu per satu agar setiap riwayat tercatat
+      for(const rec of oldRecs){
+        await logAudit(AUDIT_ACTION.HAPUS, 'cuti', rec.id,
+          `Hapus riwayat cuti — ${rec.nama||rec.id} (${rec.jenis_cuti||''})`, rec, null);
+      }
+      // Jika ada id yang tidak ketemu di cache, log generic
+      if(oldRecs.length < ids.length){
+        const loggedIds = oldRecs.map(r=>String(r.id));
+        for(const id of ids){
+          if(!loggedIds.includes(String(id))){
+            await logAudit(AUDIT_ACTION.HAPUS, 'cuti', id, `Hapus riwayat cuti — id: ${id}`, null, null);
+          }
+        }
+      }
+      await loadCutiFromServer(); renderCutiTable(); updateCutiBadge();
+      showToast(`${ids.length} riwayat dihapus`,'success');
+    }
+    else showToast(error.message,'error');
+  });
+}
+
+function toggleAllCutiCheck(el){
+  document.querySelectorAll('.cuti-chk').forEach(chk=>chk.checked=el.checked);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CETAK SURAT CUTI — Format Resmi Kantor BPKAD
+// ═══════════════════════════════════════════════════════════════
+function cetakSuratCuti(id){
+  const c=DB.cuti.find(x=>x.id===id);
+  if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
+
+  // Hitung nomor surat default — pakai NO_URUT_CUTI dari Pengaturan
+  const tahunCuti = c.tahun || new Date().getFullYear();
+  const nomorUrut = c.no_surat
+    ? c.no_surat.split('/')[0].trim()
+    : String(NO_URUT_CUTI).padStart(3,'0');
+  const nomorDefault = `800.1.11.4/${nomorUrut}/BPKAD/${tahunCuti}`;
+
+  // Popup konfirmasi nomor surat
+  document.getElementById('modal-title').textContent = '🖨 Konfirmasi Nomor Surat';
+  document.getElementById('modal-box').style.maxWidth = '480px';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="margin-bottom:14px;font-size:13px;color:var(--tx2);line-height:1.6">
+      Periksa dan sesuaikan nomor surat sebelum dicetak.<br>
+      <span style="font-size:11px;color:var(--tx3)">Format: 800.1.11.4/<strong>NOMOR-URUT</strong>/BPKAD/${tahunCuti}</span>
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label style="font-weight:700">Nomor Surat *</label>
+      <input type="text" id="input-no-surat" value="${nomorDefault}"
+        style="font-family:monospace;font-size:13px;font-weight:600;letter-spacing:.02em">
+      <div style="font-size:10px;color:var(--tx3);margin-top:4px">Edit bagian nomor urut jika perlu</div>
+    </div>
+    <div style="background:var(--primary-bg);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tx2)">
+      <div><strong>Pegawai:</strong> ${c.nama} — ${c.nip}</div>
+      <div><strong>Jenis Cuti:</strong> ${c.jenis_cuti||'Cuti Tahunan'}</div>
+      <div><strong>Tanggal:</strong> ${fmt(c.tgl_mulai)} s.d. ${fmt(c.tgl_selesai)} (${c.hari_kerja} hari kerja)</div>
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="eksekusiCetakSurat('${id}','ttd')">🖨 TTD Biasa (Cetak)</button>
+    <button class="btn btn-success" onclick="eksekusiCetakSurat('${id}','tte')" title="Kirim ke Admin TTE via WhatsApp">📲 TTE (Kirim WA)</button>`;
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>{ document.getElementById('input-no-surat')?.focus(); }, 100);
+}
+
+async function eksekusiCetakSurat(id, mode='ttd'){
+  const nomorSuratInput = (document.getElementById('input-no-surat')?.value||'').trim();
+  if(!nomorSuratInput){ showToast('Nomor surat tidak boleh kosong','error'); return; }
+
+  // Validasi TTE sebelum tutup modal
+  if(mode==='tte'){
+    if(!FONNTE_TOKEN){ showToast('Token Fonnte belum diisi di Pengaturan','error'); return; }
+    if(!WA_ADMIN_TTE){ showToast('Nomor WA Admin TTE belum diisi di Pengaturan','error'); return; }
+    if(!EMAIL_ADMIN_TTE){ showToast('Email Admin TTE belum diisi di Pengaturan','error'); return; }
   }
-  if(!error){
-    NO_URUT_CUTI = val;
-    showToast('✅ Nomor urut surat cuti disimpan','success');
+
+  // Simpan nomor surat ke database
+  await supa.from('cuti').update({ no_surat: nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput }).eq('id', id);
+  const idx = DB.cuti.findIndex(x=>x.id===id);
+  if(idx>=0) DB.cuti[idx].no_surat = nomorSuratInput.split('/')[1]?.trim() || nomorSuratInput;
+
+  closeModal();
+
+  if(mode==='tte'){
+    // ── Mode TTE: generate PDF surat → upload Supabase → kirim link via WA ──
+    const c = DB.cuti.find(x=>x.id===id);
+    const tglMulai   = c?.tgl_mulai   ? new Date(c.tgl_mulai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+    const tglSelesai = c?.tgl_selesai ? new Date(c.tgl_selesai).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : '–';
+
+    const pesan =
+`📋 *PERMOHONAN TTE — SURAT CUTI*
+
+Kepada Yth. Admin TTE
+Mohon dilakukan Tanda Tangan Elektronik untuk Surat Cuti berikut:
+
+👤 *Nama       :* ${c?.nama||'–'}
+🪪 *NIP        :* ${c?.nip||'–'}
+🏢 *Unit       :* ${c?.unit||'–'}
+📄 *Nomor Surat:* ${nomorSuratInput}
+📝 *Jenis Cuti :* ${c?.jenis_cuti||'Cuti Tahunan'}
+📅 *Tgl Mulai  :* ${tglMulai}
+📅 *Tgl Selesai:* ${tglSelesai}
+⏱ *Hari Kerja :* ${c?.hari_kerja||'–'} hari
+
+Harap segera diproses. Terima kasih.
+— E-Kepegawaian BPKAD`;
+
+    // Render HTML surat ke #print-surat dulu (tanpa print)
+    _doCetakSurat(id, nomorSuratInput, 'tte');
+
+    showToast('⏳ Membuat PDF Surat Cuti...','info');
+    setTimeout(async ()=>{
+      try {
+        const namaFile  = `Surat_Cuti_${c?.nip||id}_${nomorSuratInput.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+        const pdfBase64 = await generatePdfBase64('print-surat');
+        const subject   = `Permohonan TTE — Surat Cuti ${c?.nama||''} (${nomorSuratInput})`;
+
+        // Kirim WA notifikasi + Email PDF secara bersamaan
+        const pesanWA = pesan + `\n\n📧 _PDF dikirim ke email Admin TTE_`;
+        const [waOk, emailOk] = await Promise.all([
+          kirimWA(WA_ADMIN_TTE, pesanWA),
+          kirimEmailTTE(subject, pesan.replace(/\n/g,'<br>'), pdfBase64, namaFile),
+        ]);
+
+        if(waOk && emailOk){
+          showToast('✅ Notifikasi WA + PDF email berhasil dikirim ke Admin TTE','success');
+        } else if(emailOk){
+          showToast('✅ PDF email terkirim, WA gagal','warning');
+        } else if(waOk){
+          showToast('⚠️ WA terkirim, email PDF gagal','warning');
+        } else {
+          showToast('❌ Gagal kirim WA dan email ke Admin TTE','error');
+        }
+      } catch(err){
+        console.error('[TTE Cuti]', err);
+        showToast('⚠️ PDF gagal dibuat: '+err.message,'warning');
+      }
+      document.getElementById('print-surat').style.display='none';
+      await logAudit(AUDIT_ACTION.SETTING,'cuti',id,
+        `Kirim Surat Cuti TTE — ${c?.nama||id} (${nomorSuratInput})`,null,null);
+    }, 600);
+
   } else {
-    showToast('Gagal: '+error.message,'error');
+    // ── Mode TTD Biasa: cetak langsung ──
+    _doCetakSurat(id, nomorSuratInput, 'ttd');
   }
 }
 
-// ── Template Pesan WA ──────────────────────────────────────
-const WA_TMPL_LABELS = {
-  wa_tmpl_pengajuan:     '📋 Pengajuan Baru → Atasan Langsung',
-  wa_tmpl_step1:         '✅ Disetujui Atasan Langsung → Pejabat yang Berwenang Memberikan Cuti',
-  wa_tmpl_step1_pegawai: '📢 Disetujui Atasan Langsung → Pegawai',
-  wa_tmpl_step2:         '📢 Disetujui Pejabat yang Berwenang Memberikan Cuti → Pegawai',
-  wa_tmpl_approved:      '🎉 Disetujui Final → Semua Pihak',
-  wa_tmpl_rejected:      '❌ Ditolak → Semua Pihak',
-};
+function _doCetakSurat(id, nomorSuratOverride, mode='ttd'){
+  const c=DB.cuti.find(x=>x.id===id);
+  if(!c||c.status!=='approved'){ showToast('Surat hanya dapat dicetak setelah disetujui','error'); return; }
+  const asn=DB.asn.find(a=>a.id===c.asn_id);
+  const tahun=c.tahun||new Date().getFullYear();
+  const sisa=getSisaTahun(c.asn_id, tahun);
 
-async function renderWATemplatesForm(){
-  const el = document.getElementById('wa-templates-form'); if(!el) return;
-  el.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px 0">Memuat template...</div>';
-  const keys = Object.keys(WA_TMPL_LABELS);
-  const { data } = await supa.from('settings').select('setting_key,setting_val').in('setting_key', keys);
-  const vals = {};
-  if(data) data.forEach(r=>{ vals[r.setting_key]=r.setting_val; });
-  el.innerHTML = keys.map(k=>`
-    <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:5px">${WA_TMPL_LABELS[k]}</label>
-      <textarea id="tmpl-${k}" rows="7" style="width:100%;resize:vertical;font-size:12px;font-family:monospace;line-height:1.6">${vals[k]||''}</textarea>
-    </div>`).join('');
+  const tglLong=d=>{
+    if(!d) return '_______________';
+    const dt=new Date(d);
+    return `${dt.getDate()} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][dt.getMonth()]} ${dt.getFullYear()}`;
+  };
+
+  const nomorSurat = nomorSuratOverride || `800.1.11.4/${c.no_surat||'___'}/BPKAD/${tahun}`;
+  const jenisCuti  = c.jenis_cuti || 'Cuti Tahunan';
+  const jenisCutiLabel = jenisCuti === 'Cuti Tahunan' ? `${jenisCuti} ${tahun}` : jenisCuti;
+  const jenisPeg   = 'Pegawai Negeri Sipil';
+
+  // Untuk TTE: nama, NIP, pangkat dikosongkan
+  const _nama    = mode==='tte' ? '' : c.nama;
+  const _nip     = mode==='tte' ? '' : c.nip;
+  const _pangkat = mode==='tte' ? '' : (asn?.pangkat || '_______________');
+
+  const logoHtml = _logoData
+    ? `<img src="${_logoData}" style="width:105px;height:105px;object-fit:contain">`
+    : `<div style="width:68px;height:68px;border:1px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;text-align:center">LOGO</div>`;
+
+  document.getElementById('print-surat').innerHTML=`
+  <div class="surat-print" style="font-family:'Times New Roman',serif;font-size:12pt;color:#000">
+    <!-- KOP SURAT -->
+    <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:4px">
+      <tr style="border:none">
+        <td style="width:130px;text-align:center;vertical-align:middle;border:none">${logoHtml}</td>
+        <td style="text-align:center;vertical-align:middle;padding:0 8px;border:none">
+          <div style="font-size:14pt;font-weight:700;color:#000">PEMERINTAH PROVINSI KALIMANTAN SELATAN</div>
+          <div style="font-size:18pt;font-weight:700;color:#000">BADAN PENGELOLAAN KEUANGAN</div>
+          <div style="font-size:18pt;font-weight:700;color:#000">DAN ASET DAERAH</div>
+          <div style="font-size:10pt;color:#000">Jl. Raya Dharma Praja, Banjarbaru Kalimantan Selatan</div>
+          <div style="font-size:10pt;color:#000">(Kawasan Perkantoran Pemerintah Provinsi Kalsel)</div>
+          <div style="font-size:10pt;color:#000">Laman : https://bpkad.kalselprov.go.id,&nbsp; Pos-el : bpkad@kalselprov.go.id</div>
+        </td>
+      </tr>
+    </table>
+    <hr style="border:none;border-top:3px solid #000;margin:2px 0">
+    <hr style="border:none;border-top:1px solid #000;margin:2px 0 10px">
+
+    <!-- JUDUL -->
+    <div style="text-align:center;margin-bottom:6px;color:#000">
+      <div style="font-size:14pt;font-weight:700;text-decoration:underline;color:#000">SURAT IZIN ${jenisCuti.toUpperCase()}</div>
+      <div style="font-size:12pt;color:#000">Nomor : ${nomorSurat}</div>
+    </div>
+
+    <!-- ISI SURAT -->
+    <div style="font-size:12pt;color:#000;margin-top:12px;line-height:1.4">
+
+  <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:6px">
+    <tr style="border:none">
+      <td style="
+        width:30px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        1.
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Diberikan ${jenisCutiLabel} kepada ${jenisPeg} :
+      </td>
+    </tr>
+  </table>
+
+  <table style="
+    width:100%;
+    border-collapse:collapse;
+    border:none;
+    margin-left:24px;
+    margin-bottom:8px;
+    table-layout:fixed;
+  ">
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Nama
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        <span style="font-weight:normal">
+  ${_nama}
+</span>
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        NIP
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${_nip}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Pangkat/Gol. Ruang
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${_pangkat}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Jabatan
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        ${asn?.jabatan || '_______________'}
+      </td>
+    </tr>
+
+    <tr style="border:none">
+      <td style="
+        width:175px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Unit Kerja
+      </td>
+
+      <td style="
+        width:15px;
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        :
+      </td>
+
+      <td style="
+        padding:2px 0;
+        vertical-align:top;
+        border:none;
+        font-size:12pt;
+        color:#000;
+      ">
+        Badan Pengelolaan Keuangan dan Aset Daerah Prov. Kalsel
+      </td>
+    </tr>
+
+  </table>
+
+      <p style="margin:8px 0;text-align:justify;font-size:12pt;color:#000;line-height:1.6">
+        Selama <strong>${c.hari_kerja} (${terbilang(c.hari_kerja)})</strong> ${getCutiConfig(c.jenis_cuti||'Cuti Tahunan').hariKalender?'Hari Kalender':'Hari Kerja'}, terhitung mulai tanggal
+        <strong>${tglLong(c.tgl_mulai)}</strong> sampai dengan <strong>${tglLong(c.tgl_selesai)}</strong>,
+        Adapun sisa Cuti selama <strong>${sisa} hari kerja</strong> akan diambil tahun berjalan ${tahun}
+        dengan ketentuan sebagai berikut :
+      </p>
+
+      <div style="margin-left:24px">
+
+  <div style="display:flex;margin-bottom:6px">
+    <div style="width:20px">a.</div>
+    <div style="flex:1;text-align:justify;line-height:1.6">
+      Sebelum menjalankan ${jenisCutiLabel} wajib menyerahkan pekerjaannya kepada Atasan Langsung atau pejabat yang ditentukan.
+    </div>
+  </div>
+
+  <div style="display:flex;margin-bottom:6px">
+    <div style="width:20px">b.</div>
+    <div style="flex:1;text-align:justify;line-height:1.6">
+      Setelah selesai menjalankan ${jenisCutiLabel} wajib melaporkan diri kepada Atasan Langsungnya dan bekerja kembali sebagaimana mestinya.
+    </div>
+  </div>
+
+  <div style="display:flex;margin-bottom:6px">
+    <div style="width:20px">c.</div>
+    <div style="flex:1">
+      Alamat Cuti : ${c.alamat||'_______________________________________________'}
+    </div>
+  </div>
+
+</div>
+
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:3px">
+        <tr style="border:none">
+          <td style="padding:2px 0;width:30px;vertical-align:top;border:none;font-size:12pt;color:#000">2.</td>
+          <td style="padding:2px 0;text-align:justify;border:none;font-size:12pt;color:#000">Demikian Surat Izin ${jenisCuti} ini diterbitkan untuk dapat dipergunakan sebagaimana mestinya.</td>
+        </tr>
+      </table>
+
+     <!-- TANDA TANGAN -->
+<table style="width:100%;border-collapse:collapse;border:none;margin-bottom:15px">
+  <tr style="border:none">
+    <td style="width:47%;border:none"></td>
+    
+    <td style="
+      text-align:left;
+      font-family:'Arial',serif;
+      font-size:11pt;
+      line-height:1.4;
+      border:none;
+      vertical-align:top
+    ">
+      
+      <div style="margin-left:40px">
+        Banjarbaru, ${tglLong(new Date().toISOString())}
+      </div>
+
+      <div style="display:flex;gap:0">
+        <span style="min-width:40px">a.n.</span>
+        
+        <span>
+          KEPALA BADAN PENGELOLAAN<br>
+          KEUANGAN DAN ASET DAERAH<br>
+          PROVINSI KALIMANTAN SELATAN,<br>
+          SEKRETARIS,
+          <div style="height:50px"></div>
+
+          H. Fatkhan, S.E., M.M<br>
+          Pembina Tingkat I (IV/b)<br>
+          NIP. 197505182010011001
+        </span>
+        
+        
+      </div>
+
+      <div style="height:30px"></div>
+    </td>
+  </tr>
+</table>
+      <!-- TEMBUSAN -->
+      <div style="font-size:9pt;color:#000;line-height:1.7">
+        <div>Tembusan :</div>
+        <div style="margin-left:4px">1. Kepala Badan Pengelolaan Keuangan dan Aset Daerah</div>
+        <div style="margin-left:4px">2. Yang bersangkutan</div>
+        <div style="margin-left:4px">3. Arsip</div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('print-surat').style.display='block';
+  if(mode !== 'tte'){
+    window.print();
+    setTimeout(()=>{ document.getElementById('print-surat').style.display='none'; },1500);
+  }
 }
 
-async function saveWATemplates(){
-  const keys = Object.keys(WA_TMPL_LABELS);
-  const upserts = keys.map(k=>({
-    setting_key: k,
-    setting_val: document.getElementById('tmpl-'+k)?.value||''
-  }));
-  const { error } = await supa.from('settings').upsert(upserts, { onConflict:'setting_key' });
-  if(!error){
-    // Update cache lokal
-    if(typeof WA_TEMPLATES !== 'undefined')
-      upserts.forEach(u=>{ WA_TEMPLATES[u.setting_key]=u.setting_val; });
-    showToast('✅ Semua template berhasil disimpan','success');
-  } else {
-    showToast('Gagal: '+error.message,'error');
+function terbilang(n){
+  if(!n||n<=0) return 'nol';
+  const sat=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan'];
+  const bls=['','sepuluh','dua puluh','tiga puluh','empat puluh','lima puluh',
+             'enam puluh','tujuh puluh','delapan puluh','sembilan puluh'];
+  const bls11=['sebelas','dua belas','tiga belas','empat belas','lima belas',
+               'enam belas','tujuh belas','delapan belas','sembilan belas'];
+  if(n<=9)   return sat[n];
+  if(n===10) return 'sepuluh';
+  if(n<=19)  return bls11[n-11];
+  if(n<100){
+    const p=Math.floor(n/10), s=n%10;
+    return bls[p]+(s?' '+sat[s]:'');
   }
+  if(n<200){
+    const s=n%100;
+    return 'seratus'+(s?' '+terbilang(s):'');
+  }
+  if(n<1000){
+    const p=Math.floor(n/100), s=n%100;
+    return sat[p]+' ratus'+(s?' '+terbilang(s):'');
+  }
+  return String(n);
 }
