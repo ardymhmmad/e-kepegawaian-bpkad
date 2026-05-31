@@ -95,6 +95,42 @@ async function init(){
     loadLiburNasional(tahunIni + 1),
   ]);
 
-  // Cek tabel audit trail — tampilkan panduan jika belum ada
+  // Cek tabel audit trail
   if(typeof checkAuditTable === 'function') checkAuditTable();
+
+  // Auto-update masa kerja golongan semua ASN berdasarkan TMT KGB
+  autoUpdateMasaKerja();
+}
+
+// Update masa_kerja_tahun & masa_kerja_bulan semua ASN dari TMT KGB
+async function autoUpdateMasaKerja(){
+  try {
+    const updates = DB.asn
+      .filter(a => a.tmt_kgb)
+      .map(a => {
+        const mk = hitungMasaKerjaGolongan(a.tmt_kgb);
+        return { id: a.id, tahun: mk.tahun, bulan: mk.bulan };
+      })
+      .filter(u => {
+        const a = DB.asn.find(x=>x.id===u.id);
+        return a && (a.masa_kerja_tahun !== u.tahun || a.masa_kerja_bulan !== u.bulan);
+      });
+
+    if(!updates.length) return;
+
+    // Update secara batch (paralel, max 5 sekaligus)
+    for(let i=0; i<updates.length; i+=5){
+      const batch = updates.slice(i, i+5);
+      await Promise.all(batch.map(u =>
+        supa.from('asn').update({
+          masa_kerja_tahun: u.tahun,
+          masa_kerja_bulan: u.bulan
+        }).eq('id', u.id)
+      ));
+    }
+
+    // Reload data ASN setelah update
+    await reloadType('asn');
+    console.log(`[MKG] Auto-update ${updates.length} ASN selesai`);
+  } catch(e){ console.warn('[MKG] autoUpdateMasaKerja error:', e.message); }
 }
