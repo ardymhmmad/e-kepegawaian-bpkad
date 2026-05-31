@@ -244,7 +244,7 @@ function eksekusiCetakSKKGB(id, mode='ttd'){
   const _noSblm      = (document.getElementById('sk-no-sblm')?.value||'').trim();
   const tglNomorSblm = (_tglSblmDate ? fmtTglIndoStr(_tglSblmDate) : '')
     + (_tglSblmDate && _noSblm ? ' / ' : '')
-    + (_noSblm ? +_noSblm : '');
+    + (_noSblm ? 'No. '+_noSblm : '');
   const tmtSblm      = document.getElementById('sk-tmt-sblm')?.value||'';
   const mkLamaTh     = parseInt(document.getElementById('sk-mk-lama-th')?.value)||0;
   const mkLamaBl     = parseInt(document.getElementById('sk-mk-lama-bl')?.value)||0;
