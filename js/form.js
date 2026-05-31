@@ -31,6 +31,29 @@ const formDefs={
   ]
 };
 
+// Hitung masa kerja golongan dari TMT KGB sampai hari ini
+function hitungMasaKerjaGolongan(tmtKgb){
+  if(!tmtKgb) return { tahun:0, bulan:0 };
+  const tmt  = new Date(tmtKgb);
+  const now  = new Date();
+  let tahun  = now.getFullYear() - tmt.getFullYear();
+  let bulan  = now.getMonth()    - tmt.getMonth();
+  if(bulan < 0){ tahun--; bulan += 12; }
+  if(tahun < 0){ tahun = 0; bulan = 0; }
+  return { tahun, bulan };
+}
+
+// Update field masa kerja di form berdasarkan nilai tmt_kgb
+function updateMasaKerjaForm(){
+  const tmtEl = document.getElementById('ff_tmt_kgb');
+  const thEl  = document.getElementById('ff_masa_kerja_tahun');
+  const blEl  = document.getElementById('ff_masa_kerja_bulan');
+  if(!tmtEl||!thEl||!blEl) return;
+  const { tahun, bulan } = hitungMasaKerjaGolongan(tmtEl.value);
+  thEl.value = tahun;
+  blEl.value = bulan;
+}
+
 function buildFormHTML(type, data={}){
   const defs=formDefs[type]; if(!defs) return '';
   document.getElementById('modal-box').style.maxWidth='700px';
@@ -43,6 +66,18 @@ function buildFormHTML(type, data={}){
     h+=`<div class="fg"><label>${f.l}${f.req?' *':''}</label>`;
     if(f.t==='select'){
       h+=`<select id="ff_${f.id}"><option value="">\u2014 Pilih \u2014</option>${f.opts.map(o=>`<option value="${o}"${data[f.id]===o?' selected':''}>${o}</option>`).join('')}</select>`;
+    } else if(type==='asn' && f.id==='tmt_kgb'){
+      // Tambah onchange untuk auto-hitung masa kerja saat TMT KGB diubah
+      h+=`<input type="date" id="ff_tmt_kgb" value="${data.tmt_kgb||''}" onchange="updateMasaKerjaForm()">`;
+    } else if(type==='asn' && (f.id==='masa_kerja_tahun'||f.id==='masa_kerja_bulan')){
+      // Hitung otomatis dari TMT KGB jika tidak ada data awal
+      const autoVal = data[f.id] != null && data[f.id] !== ''
+        ? data[f.id]
+        : (()=>{
+            const mk = hitungMasaKerjaGolongan(data.tmt_kgb);
+            return f.id==='masa_kerja_tahun' ? mk.tahun : mk.bulan;
+          })();
+      h+=`<input type="number" id="ff_${f.id}" value="${autoVal}" placeholder="${f.l}" min="0">`;
     } else {
       h+=`<input type="${f.t}" id="ff_${f.id}" value="${data[f.id]||''}" placeholder="${f.l}">`;
     }
@@ -68,6 +103,12 @@ function openAddForm(type){
 }
 async function saveAdd(type){
   const obj=collectForm(type);
+  // Auto-hitung masa kerja golongan dari TMT KGB saat simpan
+  if(type==='asn' && obj.tmt_kgb){
+    const mk = hitungMasaKerjaGolongan(obj.tmt_kgb);
+    obj.masa_kerja_tahun = mk.tahun;
+    obj.masa_kerja_bulan = mk.bulan;
+  }
   const reqs=formDefs[type].filter(f=>f.req);
   for(const f of reqs){ if(!obj[f.id]){ showToast(`Field "${f.l}" wajib diisi`,'error'); return; } }
   Object.keys(obj).forEach(k=>{ if(obj[k]===''||obj[k]===null) delete obj[k]; });
@@ -94,6 +135,12 @@ function openEditForm(type,id){
 async function saveEdit(type,id){
   const oldRec=DB[type].find(r=>r.id===id)||{};
   const obj=collectForm(type);
+  // Auto-hitung masa kerja golongan dari TMT KGB saat simpan
+  if(type==='asn' && obj.tmt_kgb){
+    const mk = hitungMasaKerjaGolongan(obj.tmt_kgb);
+    obj.masa_kerja_tahun = mk.tahun;
+    obj.masa_kerja_bulan = mk.bulan;
+  }
   Object.keys(obj).forEach(k=>{ if(obj[k]==='') obj[k]=null; });
   const btn=document.querySelector('#modal-footer .btn-primary');
   if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
